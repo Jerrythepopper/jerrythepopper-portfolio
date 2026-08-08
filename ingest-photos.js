@@ -5,6 +5,15 @@
    輸入： originals\<系列key>\  任意檔名的 jpg / jpeg / png
           系列key = hasselblad | portraits | street | nature | 3d | film | market | rotation
 
+   排序決定鏈（每個系列各自判定，序號 _0 起就是照這個順序編）：
+     ① originals\<系列>\order.json  ← 有就照它的 order 陣列（sort-studio.html 拖曳產生）
+        · json 沒列到的檔案排在尾端（檔名序）＋ console 警告
+        · 列了但資料夾裡沒有的檔案跳過 ＋ console 警告
+        · 另可帶 cover 欄位＝封面檔名 → 換算成該檔在最終序的 index，寫進 data.js 的 coverIdx
+     ② 無 order.json → 依 EXIF DateTimeOriginal 升冪（拍攝時間；讀不到的排尾端）
+     ③ 兩者皆無 → 檔名字母序（歷來行為）
+     order.json 本身不是圖片、不會被轉檔，也不會進 photos\。
+
    輸出（photos\）：
      {prefix}_{i}.avif / .webp          ← 主檔＝1600 tier（若原圖較小＝最大可用 tier）
      {prefix}_{i}@{size}.avif / .webp   ← 其餘 tier（800 / 2560）
@@ -63,8 +72,9 @@ const Q_BOOST_LARGE = 3;               // 2560 tier 加成（大檔要留細節�
 const HI_CHROMA_TIER = 2560;           // 這一 tier 起改用最高色度規格（同上，見檔頭）
 const LQIP_W = 24;                     // blur-up 微型圖寬度
 
-const IN_EXT = /\.(jpe?g|png)$/i;
+const IN_EXT = /\.(jpe?g|png)$/i;       // 可轉檔的輸入（order.json 天然不在其中）
 const OUT_RE = /^(.+?)_(\d+)(@\d+)?\.(avif|webp)$/;
+const ORDER_FILE = 'order.json';        // 排序指示檔（sort-studio.html 產生）
 const kb = (b) => (b / 1024).toFixed(1) + ' KB';
 
 // ---------- 色彩管理 ----------
@@ -123,6 +133,128 @@ function tiersFor(srcLong) {
   return t.length ? t : [srcLong];
 }
 
+// ---------- EXIF 拍攝時間 ----------
+/* sharp 的 metadata().exif 只給「未解析的原始 EXIF buffer」（libvips 不代解），所以這裡
+   自己走一段最小 TIFF 解析：只為了取 DateTimeOriginal(0x9003)，取不到再退 DateTimeDigitized
+   (0x9004) / DateTime(0x0132)。回傳可比大小的數字（毫秒），讀不到回 null。
+   注意：這是「讀取端」的解析，輸出仍不帶任何 metadata（見檔頭隱私段）。 */
+const EXIF_TYPE_SIZE = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8 };
+
+function parseExifDate(buf) {
+  if (!buf || buf.length < 16) return null;
+  let base = 0;
+  if (buf.length >= 6 && buf.toString('latin1', 0, 6) === 'Exif\0\0') base = 6;   // JPEG APP1 前綴
+  const bo = buf.toString('latin1', base, base + 2);
+  if (bo !== 'II' && bo !== 'MM') return null;
+  const le = bo === 'II';
+  const u16 = (o) => (o + 2 <= buf.length ? (le ? buf.readUInt16LE(o) : buf.readUInt16BE(o)) : 0);
+  const u32 = (o) => (o + 4 <= buf.length ? (le ? buf.readUInt32LE(o) : buf.readUInt32BE(o)) : 0);
+  if (u16(base + 2) !== 42) return null;
+
+  const tags = {};                       // tag → 值（ASCII 為字串、數值型為 number）
+  const readIfd = (off, depth) => {
+    if (depth > 2 || off + 2 > buf.length) return;
+    const n = u16(off);
+    if (n > 512) return;                 // 壞檔防呆
+    for (let i = 0; i < n; i++) {
+      const e = off + 2 + i * 12;
+      if (e + 12 > buf.length) return;
+      const tag = u16(e), type = u16(e + 2), count = u32(e + 4);
+      const unit = EXIF_TYPE_SIZE[type];
+      if (!unit) continue;
+      const size = unit * count;
+      const valOff = size <= 4 ? e + 8 : base + u32(e + 8);
+      if (valOff < 0 || valOff + Math.min(size, 4) > buf.length) continue;
+      if (tag === 0x8769) {                                        // Exif SubIFD（DateTimeOriginal 住這裡）
+        const sub = u32(e + 8);
+        if (sub) readIfd(base + sub, depth + 1);
+        continue;
+      }
+      if (type === 2) {                                                                    // ASCII
+        const end = Math.min(valOff + size, buf.length);
+        tags[tag] = buf.toString('latin1', valOff, end).replace(/\0.*$/, '').trim();
+      } else if (type === 3) tags[tag] = u16(valOff);
+      else if (type === 4) tags[tag] = u32(valOff);
+    }
+  };
+  readIfd(base + u32(base + 4), 0);
+
+  const s = tags[0x9003] || tags[0x9004] || tags[0x0132];
+  if (!s) return null;
+  const m = /^(\d{4})[:\-](\d{2})[:\-](\d{2})[ T](\d{2}):(\d{2}):(\d{2})/.exec(s);
+  if (!m) return null;
+  let t = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+  const sub = tags[0x9291];                                   // SubSecTimeOriginal（同秒的排序穩定用）
+  if (sub) t += Math.min(999, +('0.' + String(sub)) * 1000 || 0);
+  return t;
+}
+
+async function exifDate(inFile) {
+  try {
+    const m = await sharp(inFile).metadata();
+    return parseExifDate(m.exif);
+  } catch (e) { return null; }
+}
+
+// ---------- 排序決定鏈（order.json → EXIF 時間 → 檔名） ----------
+const ORDER_LABEL = { order: 'order.json（sort-studio 指定）', exif: 'EXIF 拍攝時間', name: '檔名字母序' };
+
+async function resolveOrder(dir) {
+  const imgs = fs.readdirSync(dir).filter((f) => IN_EXT.test(f));
+  const warns = [];
+  let files = imgs.slice().sort();        // ③ 保底＝歷來行為
+  let source = 'name', cover = null;
+
+  // ① order.json
+  const jsonPath = path.join(dir, ORDER_FILE);
+  if (fs.existsSync(jsonPath)) {
+    let data = null;
+    try { data = JSON.parse(fs.readFileSync(jsonPath, 'utf8')); }
+    catch (e) { warns.push(`${ORDER_FILE} 解析失敗（${e.message}），改用其他排序依據`); }
+    if (data && Array.isArray(data.order)) {
+      const have = new Set(imgs), seen = new Set(), listed = [];
+      for (const nm of data.order) {
+        if (typeof nm !== 'string') continue;
+        if (seen.has(nm)) { warns.push(`${ORDER_FILE} 重複列出「${nm}」，只採用第一次`); continue; }
+        seen.add(nm);
+        if (!have.has(nm)) { warns.push(`${ORDER_FILE} 列了「${nm}」但資料夾裡沒有這個檔，已跳過`); continue; }
+        listed.push(nm);
+      }
+      const rest = imgs.filter((f) => !seen.has(f)).sort();
+      if (rest.length) warns.push(`${rest.length} 個檔案沒被 ${ORDER_FILE} 列到，已排在尾端：${rest.join('、')}`);
+      files = listed.concat(rest);
+      source = 'order';
+      if (typeof data.cover === 'string' && data.cover) {
+        if (files.includes(data.cover)) cover = data.cover;
+        else warns.push(`${ORDER_FILE} 的 cover「${data.cover}」不在檔案清單裡，已忽略`);
+      }
+    } else if (data) {
+      warns.push(`${ORDER_FILE} 沒有 order 陣列，改用其他排序依據`);
+    }
+  }
+
+  // ② EXIF 拍攝時間（只在沒有可用 order.json 時才問）
+  if (source === 'name' && files.length) {
+    const dated = [];
+    for (const f of files) dated.push({ f, t: await exifDate(path.join(dir, f)) });
+    const nDated = dated.filter((d) => d.t != null).length;
+    if (nDated) {
+      dated.sort((a, b) => {
+        if (a.t == null && b.t == null) return a.f < b.f ? -1 : a.f > b.f ? 1 : 0;
+        if (a.t == null) return 1;                       // 讀不到時間的排尾端
+        if (b.t == null) return -1;
+        return a.t - b.t || (a.f < b.f ? -1 : a.f > b.f ? 1 : 0);
+      });
+      files = dated.map((d) => d.f);
+      source = 'exif';
+      const noDate = dated.length - nDated;
+      if (noDate) warns.push(`${noDate} 張讀不到 EXIF 拍攝時間，已排在尾端（檔名序）`);
+    }
+  }
+
+  return { files, cover, source, warns };
+}
+
 // ---------- 單張處理 ----------
 async function processOne(inFile, prefix, i) {
   const src = await probeSource(inFile);
@@ -159,8 +291,8 @@ async function processOne(inFile, prefix, i) {
 }
 
 // ---------- data.js 改寫 ----------
-function patchDataJs(results) {
-  let src = fs.readFileSync(DATA_JS, 'utf8');
+function patchDataJs(results, dataJsPath = DATA_JS) {   // 第二參數只給單元測試指到 stub 用
+  let src = fs.readFileSync(dataJsPath, 'utf8');
   const before = src;
 
   // range() 支援第三參數 ext（預設 jpg ＝ 舊行為，既有條目零回歸）
@@ -180,6 +312,17 @@ function patchDataJs(results) {
     src = src.replace(re, `$1range('${r.prefix}', ${r.count}, 'webp')`);
   }
 
+  // coverIdx：order.json 指定封面時，改寫 SECTIONS 裡對應系列的 coverIdx
+  for (const r of results) {
+    if (!(r.coverIdx >= 0)) continue;
+    const re = new RegExp(`(id: '${r.key}'[\\s\\S]*?coverIdx: )\\d+`);
+    if (!re.test(src)) {
+      console.warn(`  ! data.js 找不到 id: '${r.key}' 的 coverIdx，封面未套用`);
+      continue;
+    }
+    src = src.replace(re, `$1${r.coverIdx}`);
+  }
+
   // HERO_SLIDES：已轉檔系列的副檔名跟著換（檔案存在才換）
   src = src.replace(/'photos\/([a-z]{2,3})_(\d+)\.(?:jpe?g|png|webp)'/g, (m, p, i) => {
     const r = results.find((x) => x.prefix === p);
@@ -190,7 +333,7 @@ function patchDataJs(results) {
   });
 
   if (src === before) return false;
-  fs.writeFileSync(DATA_JS, src, 'utf8');
+  fs.writeFileSync(dataJsPath, src, 'utf8');
   return true;
 }
 
@@ -235,7 +378,8 @@ async function main() {
   for (const cat of CATS) {
     const dir = path.join(ORIGINALS, cat.key);
     if (!fs.existsSync(dir)) continue;
-    const files = fs.readdirSync(dir).filter((f) => IN_EXT.test(f)).sort();
+    const ord = await resolveOrder(dir);              // ①order.json ②EXIF 時間 ③檔名
+    const files = ord.files;
     if (!files.length) continue;
 
     // 先清掉本系列舊的輸出（重跑冪等；絕不碰其他系列）
@@ -247,7 +391,8 @@ async function main() {
       if (new RegExp(`^${cat.prefix}_\\d+$`).test(k)) delete manifest.photos[k];
     }
 
-    console.log(`\n【${cat.key}】(${cat.prefix}) ${files.length} 張`);
+    console.log(`\n【${cat.key}】(${cat.prefix}) ${files.length} 張｜排序：${ORDER_LABEL[ord.source]}`);
+    for (const w of ord.warns) console.log(`  ! ${w}`);
     let catOut = 0, catFiles = 0, catIcc = 0;
     for (let i = 0; i < files.length; i++) {
       const inFile = path.join(dir, files[i]);
@@ -271,7 +416,11 @@ async function main() {
     for (const f of legacy) fs.unlinkSync(path.join(PHOTOS, f));
     if (legacy.length) console.log(`  已刪除 ${legacy.length} 個舊的 ${cat.prefix}_*.jpg/png`);
 
-    results.push({ ...cat, count: files.length });
+    // 封面：order.json 的 cover 檔名 → 換算成它在最終序的 index（給 data.js 的 coverIdx）
+    const coverIdx = ord.cover ? files.indexOf(ord.cover) : -1;
+    if (coverIdx >= 0) console.log(`  封面：${ord.cover} → coverIdx ${coverIdx}`);
+
+    results.push({ ...cat, count: files.length, coverIdx, orderSource: ord.source });
   }
 
   if (!results.length) {
@@ -293,7 +442,10 @@ async function main() {
   console.log('tier 分佈：' + Object.entries(tierHist).map(([k, v]) => `[${k}]×${v}`).join('  '));
   console.log(`photos-manifest.json：${Object.keys(manifest.photos).length} 條目 ${kb(fs.statSync(MANIFEST).size)}`);
   console.log(patched ? 'data.js 已更新：' : 'data.js 未變動：');
-  for (const r of results) console.log(`  ${r.dataKey} = range('${r.prefix}', ${r.count}, 'webp')`);
+  for (const r of results) {
+    console.log(`  ${r.dataKey} = range('${r.prefix}', ${r.count}, 'webp')`
+      + `｜排序 ${ORDER_LABEL[r.orderSource]}` + (r.coverIdx >= 0 ? `｜coverIdx ${r.coverIdx}` : ''));
+  }
 
   for (const w of checkIndexRefs(results)) console.log(`  ! ${w}`);
   console.log('\n下一步：執行 `node build-site.js` 重建 dist\\。');
@@ -304,4 +456,7 @@ if (require.main === module) {
   main().catch((e) => { console.error(e); process.exit(1); });
 }
 
-module.exports = { encode, makeLqip, probeSource, toSrgb, SIZES, Q, Q_BOOST_LARGE, HI_CHROMA_TIER };
+module.exports = {
+  encode, makeLqip, probeSource, toSrgb, SIZES, Q, Q_BOOST_LARGE, HI_CHROMA_TIER,
+  resolveOrder, parseExifDate, exifDate, patchDataJs, ORDER_FILE, ORDER_LABEL,
+};

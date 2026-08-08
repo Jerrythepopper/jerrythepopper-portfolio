@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sort Studio — 照片排序工作台</title>
+<!-- =============================================================================
+     sort-studio.html — 照片排序工作台（本機單檔工具，零依賴、零伺服器）
+     直接用瀏覽器打開這個檔案（file:// 也可）就能用；不連網、不上傳、不安裝任何東西。
+
+     做什麼：把一個系列資料夾（originals\<系列>\）裡的照片列成縮圖格，用拖曳排出想要
+             的順序、點星星指定封面，存成該資料夾裡的 order.json。
+             之後 `node ingest-photos.js` 會照 order.json 的順序轉檔編號。
+
+     兩種載入模式：
+       · File System Access（Chrome / Edge，https 或 file:// 皆可）：可直接把 order.json
+         寫回原資料夾，不必手動搬檔。
+       · 相容模式（<input webkitdirectory>，所有瀏覽器）：只能讀，存檔會走「下載」，
+         下載完把 order.json 搬進該資料夾即可。
+
+     零依賴：無 CDN、無外部字型、無框架；拖曳是手寫的 pointer events（滑鼠／觸控通用）。
+     ============================================================================= -->
+<style>
+  /* 取自站上的視覺 token（深墨／米白／襯線標題／細線）；字型走系統堆疊，離線可用 */
+  :root {
+    --bg: #f7f7f7;
+    --bg-alt: #f1f1ef;
+    --ink: #111112;
+    --ink-soft: #95979c;
+    --ink-faint: #c8c8cb;
+    --dark: #15161a;
+    --line: rgba(17, 17, 18, 0.12);
+    --line-strong: #1d1d1f;
+    --accent: #b8863b;              /* 封面星星：低調金 */
+    --serif: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", "Songti TC", serif;
+    --sans: "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Microsoft JhengHei", system-ui, sans-serif;
+    --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.7;
+    letter-spacing: 0.04em;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: clamp(28px, 5vw, 64px) clamp(18px, 4vw, 56px) 96px; }
+
+  /* ---- 頁首 ---- */
+  header { border-bottom: 1px solid var(--line); padding-bottom: 22px; }
+  .eyebrow {
+    font-family: var(--sans); font-size: 11px; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft); margin: 0 0 10px;
+  }
+  h1 { font-family: var(--serif); font-size: clamp(30px, 5vw, 42px); font-weight: 500; letter-spacing: 0.06em; margin: 0 0 12px; }
+  .lede { margin: 0; max-width: 62ch; color: #3a3b3f; }
+  .lede b { font-weight: 600; }
+  code {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: .92em; letter-spacing: 0; white-space: nowrap;
+    background: var(--bg-alt); padding: 1px 5px; border-radius: 2px;
+  }
+
+  /* ---- 工具列 ---- */
+  .bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+    padding: 20px 0; border-bottom: 1px solid var(--line);
+  }
+  button, .filebtn {
+    font-family: var(--sans); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 10px 20px; border: 1px solid var(--line-strong); background: transparent; color: var(--ink);
+    cursor: pointer; transition: background var(--ease) .25s, color var(--ease) .25s, opacity var(--ease) .25s;
+  }
+  button:hover:not(:disabled), .filebtn:hover { background: var(--dark); color: #fff; }
+  button:disabled { opacity: .32; cursor: default; border-color: var(--ink-faint); }
+  button.primary { background: var(--dark); color: #fff; border-color: var(--dark); }
+  button.primary:hover { background: #000; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .filebtn { display: inline-block; }
+  .filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .spacer { flex: 1 1 auto; }
+
+  /* ---- 狀態列 ---- */
+  .status { font-family: var(--sans); font-size: 12px; letter-spacing: 0.08em; color: var(--ink-soft); }
+  .status .n { color: var(--ink); font-weight: 600; }
+  .status .cover { color: var(--accent); }
+  .status .dir { color: var(--ink); }
+
+  /* ---- 提示 / 訊息 ---- */
+  .note {
+    margin: 18px 0 0; padding: 14px 18px; border-left: 2px solid var(--line-strong);
+    background: var(--bg-alt); font-size: 13.5px; white-space: pre-line;
+  }
+  .note.ok { border-color: #3f7d4e; }
+  .note.warn { border-color: #b8863b; }
+  .note.err { border-color: #a33; }
+  .note[hidden] { display: none; }
+  .help { margin-top: 16px; font-size: 13px; color: var(--ink-soft); }
+  .help kbd {
+    font-family: var(--sans); font-size: 11px; border: 1px solid var(--line);
+    padding: 1px 5px; border-radius: 2px; background: #fff;
+  }
+
+  /* ---- 縮圖格 ---- */
+  .grid {
+    position: relative; display: grid; gap: 14px; margin-top: 26px;
+    grid-template-columns: repeat(auto-fill, minmax(clamp(110px, 15vw, 168px), 1fr));
+  }
+  .grid.empty { min-height: 180px; }
+  .placeholder {
+    grid-column: 1 / -1; padding: 54px 0; text-align: center;
+    color: var(--ink-soft); border: 1px dashed var(--line); font-size: 14px;
+  }
+
+  .tile {
+    position: relative; background: #fff; border: 1px solid var(--line);
+    touch-action: pan-y;                 /* 觸控：在縮圖上直向滑動＝捲頁；拖曳走左下角把手 */
+    user-select: none; -webkit-user-select: none;
+    cursor: grab;
+    transition: box-shadow var(--ease) .2s, opacity var(--ease) .2s;
+  }
+  .tile:hover { box-shadow: 0 2px 14px rgba(0,0,0,.09); }
+  .tile.dragging { opacity: .28; cursor: grabbing; }
+  .tile .thumb {
+    position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: var(--bg-alt);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+  .tile .noimg {
+    font-family: var(--sans); font-size: 10.5px; letter-spacing: .1em; color: var(--ink-soft);
+    text-align: center; padding: 8px; word-break: break-all;
+  }
+  .tile .idx {
+    position: absolute; left: 0; top: 0; min-width: 26px; height: 22px; padding: 0 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--sans); font-size: 11px; letter-spacing: .06em;
+    background: var(--dark); color: #fff;
+  }
+  .tile .name {
+    font-family: var(--sans); font-size: 10.5px; letter-spacing: .02em; color: var(--ink-soft);
+    padding: 6px 8px 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tile .star {
+    position: absolute; right: 4px; top: 4px; width: 30px; height: 30px; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: rgba(255,255,255,.82); color: var(--ink-faint);
+    font-size: 16px; line-height: 1; cursor: pointer; text-transform: none; letter-spacing: 0;
+  }
+  .tile .star:hover { background: #fff; color: var(--accent); }
+  .tile.is-cover { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .tile.is-cover .star { color: var(--accent); background: #fff; }
+  .tile .handle {
+    position: absolute; left: 4px; bottom: 30px; width: 30px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.82); color: var(--ink-soft);
+    font-family: var(--sans); font-size: 13px; line-height: 1;
+    cursor: grab; touch-action: none;    /* 把手是觸控拖曳的唯一入口 */
+  }
+  .tile .handle:hover { background: #fff; color: var(--ink); }
+
+  /* 插入位置指示線 */
+  .marker {
+    position: fixed; width: 2px; background: var(--accent); pointer-events: none; z-index: 40;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.7);
+  }
+  .marker[hidden] { display: none; }
+  /* 拖曳中跟著游標的殘影 */
+  .ghost {
+    position: fixed; z-index: 50; pointer-events: none; opacity: .92;
+    border: 1px solid var(--line-strong); background: #fff;
+    box-shadow: 0 8px 30px rgba(0,0,0,.22); overflow: hidden;
+  }
+  .ghost img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  body.dragging, body.dragging * { cursor: grabbing !important; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Jerrythepopper · 產線工具</p>
+    <h1>Sort Studio</h1>
+    <p class="lede">照片排序工作台：<b>選一個系列資料夾</b> → <b>拖曳縮圖排順序</b> → <b>點右上角的星星指定封面</b> → <b>存成 order.json</b>。之後跑 <code>node ingest-photos.js</code>，轉檔就會照這個順序編號。</p>
+  </header>
+
+  <div class="bar">
+    <button id="btn-pick" class="primary" hidden>選擇資料夾</button>
+    <label class="filebtn" id="lbl-fallback">
+      選擇資料夾（相容模式）
+      <input id="in-dir" type="file" webkitdirectory directory multiple>
+    </label>
+    <span class="spacer"></span>
+    <span class="status" id="status">尚未載入資料夾</span>
+    <button id="btn-save" disabled>存成 order.json</button>
+  </div>
+
+  <p class="note" id="msg" hidden></p>
+
+  <p class="help">
+    拖曳：滑鼠可直接抓整張縮圖；觸控（手機／平板）請按住縮圖左下角的把手 <span aria-hidden="true">⠿</span> 再拖。
+    鍵盤：用 <kbd>Tab</kbd> 選到縮圖後，<kbd>←</kbd> <kbd>→</kbd> 可把它往前／往後移一格。
+    資料夾裡若已經有 order.json，載入時會自動套用，可接續調整。
+  </p>
+
+  <div class="grid empty" id="grid">
+    <div class="placeholder" id="ph">還沒有照片 — 先選一個系列資料夾（例如 originals\hasselblad\）</div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- 常數 ----------
+  var IMG_RE = /\.(jpe?g|png|tiff?|webp|avif)$/i;      // 只收這些副檔名（order.json 自然被排除）
+  var ORDER_FILE = 'order.json';
+  var BROWSER_RENDERABLE = /\.(jpe?g|png|webp|avif)$/i; // tif/tiff 瀏覽器畫不出來，改顯示檔名卡
+
+  // ---------- 狀態 ----------
+  var items = [];        // [{ name, file, url, el }] — 陣列順序＝目前排序
+  var coverName = null;  // 封面檔名，或 null
+  var dirHandle = null;  // File System Access 的資料夾 handle（相容模式為 null）
+  var dirLabel = '';     // 顯示用的資料夾名
+  var canFSA = typeof window.showDirectoryPicker === 'function';
+
+  // ---------- DOM ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var grid = $('grid'), ph = $('ph'), statusEl = $('status'), msgEl = $('msg');
+  var btnPick = $('btn-pick'), btnSave = $('btn-save'), inDir = $('in-dir'), lblFallback = $('lbl-fallback');
+
+  if (canFSA) { btnPick.hidden = false; }
+  else { lblFallback.firstChild.nodeValue = '選擇資料夾'; }
+
+  function say(text, kind) {
+    if (!text) { msgEl.hidden = true; msgEl.textContent = ''; return; }
+    msgEl.hidden = false; msgEl.className = 'note' + (kind ? ' ' + kind : '');
+    msgEl.textContent = text;
+  }
+
+  function cmpName(a, b) {
+    return a.localeCompare(b, 'en', { numeric: true, sensitivity: 'base' });
+  }
+
+  // ---------- 載入 ----------
+  function clearItems() {
+    items.forEach(function (it) { if (it.url) URL.revokeObjectURL(it.url); });
+    items = []; coverName = null;
+    Array.prototype.slice.call(grid.querySelectorAll('.tile')).forEach(function (el) { el.remove(); });
+  }
+
+  // files: [{ name, file }]；orderData: 已讀好的 order.json 物件或 null
+  function load(files, orderData, label, handle) {
+    clearItems();
+    dirHandle = handle || null;
+    dirLabel = label || '';
+
+    var imgs = files.filter(function (f) { return IMG_RE.test(f.name); });
+    imgs.sort(function (a, b) { return cmpName(a.name, b.name); });
+
+    items = imgs.map(function (f) {
+      return {
+        name: f.name,
+        file: f.file,
+        url: BROWSER_RENDERABLE.test(f.name) ? URL.createObjectURL(f.file) : null,
+        el: null
+      };
+    });
+
+    var applied = '';
+    if (orderData && Array.isArray(orderData.order)) {
+      var pos = {}, i;
+      for (i = 0; i < orderData.order.length; i++) {
+        if (!(orderData.order[i] in pos)) pos[orderData.order[i]] = i;
+      }
+      items.sort(function (a, b) {
+        var pa = (a.name in pos) ? pos[a.name] : Infinity;
+        var pb = (b.name in pos) ? pos[b.name] : Infinity;
+        if (pa !== pb) return pa - pb;
+        return cmpName(a.name, b.name);
+      });
+      if (orderData.cover && items.some(function (x) { return x.name === orderData.cover; })) {
+        coverName = orderData.cover;
+      }
+      applied = '\n已套用資料夾裡既有的 order.json（可接續調整）。';
+    }
+
+    render();
+    if (!items.length) {
+      say('這個資料夾裡沒有可用的圖片（支援 jpg / jpeg / png / tif / tiff / webp / avif）。', 'warn');
+    } else {
+      say('已載入 ' + items.length + ' 張照片。' + applied +
+          (canFSA && dirHandle ? '\n存檔會直接寫進這個資料夾。' : '\n相容模式：存檔會下載 order.json，請自行放進該資料夾。'),
+          'ok');
+    }
+  }
+
+  function readOrderJson(file) {
+    return file.text().then(function (t) {
+      try { return JSON.parse(t); } catch (e) { return null; }
+    }).catch(function () { return null; });
+  }
+
+  // 相容模式：<input webkitdirectory>
+  inDir.addEventListener('change', function () {
+    var list = Array.prototype.slice.call(inDir.files || []);
+    if (!list.length) return;
+    var label = '';
+    if (list[0].webkitRelativePath) label = list[0].webkitRelativePath.split('/')[0];
+    var files = list.map(function (f) { return { name: f.name, file: f }; });
+    var oj = files.filter(function (f) { return f.name.toLowerCase() === ORDER_FILE; })[0];
+    (oj ? readOrderJson(oj.file) : Promise.resolve(null)).then(function (data) {
+      load(files, data, label, null);
+    });
+  });
+
+  // File System Access：可直寫資料夾
+  btnPick.addEventListener('click', function () {
+    window.showDirectoryPicker({ id: 'sort-studio', mode: 'readwrite' }).then(function (handle) {
+      var files = [], oj = null;
+      var walk = (async function () {
+        for await (var entry of handle.values()) {
+          if (entry.kind !== 'file') continue;
+          if (entry.name.toLowerCase() === ORDER_FILE) { oj = await entry.getFile(); continue; }
+          if (!IMG_RE.test(entry.name)) continue;
+          files.push({ name: entry.name, file: await entry.getFile() });
+        }
+      })();
+      return walk.then(function () {
+        return (oj ? readOrderJson(oj) : Promise.resolve(null)).then(function (data) {
+          load(files, data, handle.name, handle);
+        });
+      });
+    }).catch(function (e) {
+      if (e && e.name === 'AbortError') return;               // 使用者取消，不算錯
+      // 直寫模式不是每個環境都開放（瀏覽器版本／開啟方式都可能擋）——一律有相容模式可退
+      say('這個瀏覽器不讓本頁直接開資料夾（' + (e && e.name ? e.name : e) + '）。\n'
+        + '請改按旁邊的「選擇資料夾（相容模式）」，一樣能排序，只是存檔會走下載。', 'err');
+    });
+  });
+
+  // ---------- 畫面 ----------
+  function buildTile(it) {
+    var el = document.createElement('div');
+    el.className = 'tile';
+    el.tabIndex = 0;
+    el.dataset.name = it.name;
+
+    var thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    if (it.url) {
+      var img = document.createElement('img');
+      img.src = it.url; img.alt = it.name; img.draggable = false;
+      img.addEventListener('error', function () {
+        thumb.innerHTML = '';
+        var d = document.createElement('div'); d.className = 'noimg'; d.textContent = it.name;
+        thumb.appendChild(d);
+      });
+      thumb.appendChild(img);
+    } else {
+      var d2 = document.createElement('div'); d2.className = 'noimg'; d2.textContent = it.name + '\n（無法預覽）';
+      thumb.appendChild(d2);
+    }
+
+    var idx = document.createElement('span'); idx.className = 'idx'; idx.textContent = '1';
+
+    var star = document.createElement('button');
+    star.className = 'star'; star.type = 'button';
+    star.title = '設為封面'; star.setAttribute('aria-label', '把 ' + it.name + ' 設為封面');
+    star.textContent = '☆';
+    star.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      coverName = (coverName === it.name) ? null : it.name;
+      render();
+    });
+
+    var handle = document.createElement('span');
+    handle.className = 'handle'; handle.textContent = '⠿';
+    handle.setAttribute('aria-hidden', 'true'); handle.title = '按住拖曳排序';
+
+    var name = document.createElement('div'); name.className = 'name'; name.textContent = it.name; name.title = it.name;
+
+    thumb.appendChild(idx); thumb.appendChild(star); thumb.appendChild(handle);
+    el.appendChild(thumb); el.appendChild(name);
+
+    el.addEventListener('pointerdown', onPointerDown);
+    el.addEventListener('keydown', onKeyDown);
+    return el;
+  }
+
+  function render() {
+    ph.hidden = items.length > 0;
+    grid.classList.toggle('empty', items.length === 0);
+    items.forEach(function (it, i) {
+      if (!it.el) it.el = buildTile(it);
+      it.el.querySelector('.idx').textContent = String(i + 1);
+      var isCover = (coverName === it.name);
+      it.el.classList.toggle('is-cover', isCover);
+      var s = it.el.querySelector('.star');
+      s.textContent = isCover ? '★' : '☆';
+      s.title = isCover ? '取消封面' : '設為封面';
+      s.setAttribute('aria-pressed', isCover ? 'true' : 'false');
+      grid.appendChild(it.el);          // appendChild 對既有節點＝搬位置，不會重載圖片
+    });
+    updateStatus();
+  }
+
+  function updateStatus() {
+    if (!items.length) { statusEl.textContent = '尚未載入資料夾'; btnSave.disabled = true; return; }
+    var parts = [];
+    if (dirLabel) parts.push('<span class="dir">' + esc(dirLabel) + '</span>');
+    parts.push('共 <span class="n">' + items.length + '</span> 張');
+    parts.push(coverName ? '封面：<span class="cover">★ ' + esc(coverName) + '</span>' : '封面：未指定');
+    statusEl.innerHTML = parts.join(' · ');
+    btnSave.disabled = false;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
+    });
+  }
+
+  // ---------- 拖曳排序（手寫 pointer events；滑鼠／觸控共用） ----------
+  var drag = null;     // { id, from, tile, ghost, ox, oy, w, h, target, started }
+  var marker = null;
+  var THRESH = 6;      // 超過這個位移才算拖曳（避免點星星被誤判）
+
+  function onPointerDown(ev) {
+    if (ev.button !== undefined && ev.button !== 0) return;
+    if (ev.target.closest('.star')) return;
+    // 觸控／手寫筆只從把手起拖，縮圖本體留給捲頁
+    if (ev.pointerType !== 'mouse' && !ev.target.closest('.handle')) return;
+
+    var tile = ev.currentTarget;
+    var from = items.findIndex(function (x) { return x.el === tile; });
+    if (from < 0) return;
+    var r = tile.getBoundingClientRect();
+    drag = {
+      id: ev.pointerId, from: from, tile: tile, ghost: null, started: false,
+      x0: ev.clientX, y0: ev.clientY, ox: ev.clientX - r.left, oy: ev.clientY - r.top,
+      w: r.width, h: r.height, target: from
+    };
+    tile.setPointerCapture(ev.pointerId);
+    tile.addEventListener('pointermove', onPointerMove);
+    tile.addEventListener('pointerup', onPointerUp);
+    tile.addEventListener('pointercancel', onPointerUp);
+  }
+
+  function beginDrag() {
+    drag.started = true;
+    document.body.classList.add('dragging');
+    drag.tile.classList.add('dragging');
+
+    var g = document.createElement('div');
+    g.className = 'ghost';
+    g.style.width = drag.w + 'px';
+    g.style.height = (drag.w) + 'px';
+    var src = drag.tile.querySelector('img');
+    if (src) { var gi = document.createElement('img'); gi.src = src.src; g.appendChild(gi); }
+    document.body.appendChild(g);
+    drag.ghost = g;
+
+    marker = document.createElement('div');
+    marker.className = 'marker';
+    document.body.appendChild(marker);
+  }
+
+  function onPointerMove(ev) {
+    if (!drag || ev.pointerId !== drag.id) return;
+    if (!drag.started) {
+      if (Math.abs(ev.clientX - drag.x0) < THRESH && Math.abs(ev.clientY - drag.y0) < THRESH) return;
+      beginDrag();
+    }
+    ev.preventDefault();
+    drag.ghost.style.left = (ev.clientX - drag.ox) + 'px';
+    drag.ghost.style.top = (ev.clientY - drag.oy) + 'px';
+    drag.target = computeTarget(ev.clientX, ev.clientY);
+    paintMarker(drag.target);
+    autoScroll(ev.clientY);
+  }
+
+  // 找出插入位置：離游標最近的縮圖中心，再看游標在它左半還右半
+  function computeTarget(x, y) {
+    var best = -1, bestD = Infinity, bestAfter = false;
+    for (var i = 0; i < items.length; i++) {
+      if (i === drag.from) continue;
+      var r = items[i].el.getBoundingClientRect();
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      var d = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+      if (d < bestD) { bestD = d; best = i; bestAfter = x > cx; }
+    }
+    if (best < 0) return drag.from;
+    var idx = best + (bestAfter ? 1 : 0);
+    if (idx > drag.from) idx -= 1;                // 拿掉自己之後的位移補償
+    return Math.max(0, Math.min(items.length - 1, idx));
+  }
+
+  // 指示線畫在「插入後會落在哪個縫」——以現有縮圖的邊界為準
+  function paintMarker(target) {
+    if (!marker) return;
+    var order = items.filter(function (_, i) { return i !== drag.from; });
+    var ref, atRight = false;
+    if (target < order.length) { ref = order[target].el; }
+    else { ref = order[order.length - 1] ? order[order.length - 1].el : drag.tile; atRight = true; }
+    if (!ref) { marker.hidden = true; return; }
+    var r = ref.getBoundingClientRect();
+    marker.hidden = false;
+    marker.style.left = ((atRight ? r.right : r.left) - 4) + 'px';
+    marker.style.top = r.top + 'px';
+    marker.style.height = r.height + 'px';
+  }
+
+  function autoScroll(y) {
+    var pad = 70;
+    if (y < pad) window.scrollBy(0, -Math.max(6, (pad - y) / 3));
+    else if (y > window.innerHeight - pad) window.scrollBy(0, Math.max(6, (y - (window.innerHeight - pad)) / 3));
+  }
+
+  function onPointerUp(ev) {
+    if (!drag || ev.pointerId !== drag.id) return;
+    var tile = drag.tile;
+    tile.removeEventListener('pointermove', onPointerMove);
+    tile.removeEventListener('pointerup', onPointerUp);
+    tile.removeEventListener('pointercancel', onPointerUp);
+    try { tile.releasePointerCapture(drag.id); } catch (e) { /* 已釋放 */ }
+
+    if (drag.started) {
+      if (drag.ghost) drag.ghost.remove();
+      if (marker) { marker.remove(); marker = null; }
+      document.body.classList.remove('dragging');
+      tile.classList.remove('dragging');
+      if (ev.type !== 'pointercancel' && drag.target !== drag.from) {
+        move(drag.from, drag.target);
+      }
+    }
+    drag = null;
+  }
+
+  function move(from, to) {
+    if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return;
+    var it = items.splice(from, 1)[0];
+    items.splice(to, 0, it);
+    render();
+    say('已把「' + it.name + '」移到第 ' + (to + 1) + ' 位。記得按「存成 order.json」。', 'ok');
+  }
+
+  // 鍵盤：← → 把聚焦的縮圖前後移一格
+  function onKeyDown(ev) {
+    if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+    var tile = ev.currentTarget;
+    var i = items.findIndex(function (x) { return x.el === tile; });
+    if (i < 0) return;
+    var to = i + (ev.key === 'ArrowLeft' ? -1 : 1);
+    if (to < 0 || to >= items.length) return;
+    ev.preventDefault();
+    move(i, to);
+    tile.focus();
+  }
+
+  // ---------- 存檔 ----------
+  function orderJson() {
+    var out = { order: items.map(function (x) { return x.name; }) };
+    if (coverName) out.cover = coverName;
+    return JSON.stringify(out, null, 2) + '\n';
+  }
+
+  function save() {
+    if (!items.length) return Promise.resolve(false);
+    var text = orderJson();
+    if (dirHandle) {
+      return dirHandle.getFileHandle(ORDER_FILE, { create: true })
+        .then(function (fh) { return fh.createWritable(); })
+        .then(function (w) { return w.write(text).then(function () { return w.close(); }); })
+        .then(function () {
+          say('已寫入 ' + (dirLabel ? dirLabel + '\\' : '') + ORDER_FILE + '（' + items.length + ' 張'
+              + (coverName ? '，封面 ' + coverName : '') + '）。\n接著回終端機跑：node ingest-photos.js', 'ok');
+          return true;
+        })
+        .catch(function (e) {
+          say('直接寫入失敗（' + (e && e.message ? e.message : e) + '），改用下載。', 'warn');
+          return download(text);
+        });
+    }
+    return Promise.resolve(download(text));
+  }
+
+  function download(text) {
+    var blob = new Blob([text], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = ORDER_FILE; a.id = 'dl-order';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 4000);
+    say('已下載 ' + ORDER_FILE + '（' + items.length + ' 張'
+        + (coverName ? '，封面 ' + coverName : '') + '）。\n'
+        + '請把它從「下載」資料夾搬進剛剛選的資料夾：originals\\'
+        + (dirLabel || '<系列>') + '\\' + ORDER_FILE + '\n'
+        + '放好之後回終端機跑：node ingest-photos.js', 'warn');
+    return true;
+  }
+
+  btnSave.addEventListener('click', function () { save(); });
+
+  // ---------- 給自動化測試用的把手（不影響一般使用） ----------
+  window.__sortStudio = {
+    names: function () { return items.map(function (x) { return x.name; }); },
+    domNames: function () {
+      return Array.prototype.slice.call(grid.querySelectorAll('.tile')).map(function (el) { return el.dataset.name; });
+    },
+    cover: function () { return coverName; },
+    json: orderJson,
+    save: save,
+    move: move
+  };
+})();
+</script>
+</body>
+</html>
