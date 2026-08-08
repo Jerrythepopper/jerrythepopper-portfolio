@@ -1,0 +1,96 @@
+{
+  "hasselblad-desktop": {
+    "scrollW": 1440,
+    "innerW": 1440,
+    "docH": 37251,
+    "h1": [
+      "Hasselblad哈蘇"
+    ],
+    "h2n": 0,
+    "imgs": 25,
+    "lazy": 25,
+    "noAlt": 0,
+    "altSample": [
+      "Hasselblad 1",
+      "Hasselblad 2",
+      "Hasselblad 3"
+    ],
+    "noDims": 25,
+    "nav": {
+      "scrollW": 596,
+      "clientW": 596,
+      "overflow": 0,
+      "count": 8,
+      "itemH": 25,
+      "barH": 56
+    },
+    "galClass": "gallery single _wide",
+    "gcols": "auto",
+    "gframe": {
+      "w": 1325,
+      "h": 1766
+    },
+    "gframes": 25,
+    "para": {
+      "w": 640,
+      "fs": "15px",
+      "lh": "30px",
+      "ff": "\"Noto Serif JP\"",
+      "approxCJKPerLine": 41,
+      "approxLatinPerLine": 85
+    },
+    "fontsLoaded": [
+      "Jost",
+      "Lustria",
+      "Noto Serif JP"
+    ],
+    "titleFont": "\"Noto Serif JP\""
+  },
+  "hasselblad-mobile": {
+    "scrollW": 390,
+    "innerW": 390,
+    "docH": 11116,
+    "h1": [
+      "Hasselblad哈蘇"
+    ],
+    "h2n": 0,
+    "imgs": 25,
+    "lazy": 25,
+    "noAlt": 0,
+    "altSample": [
+      "Hasselblad 1",
+      "Hasselblad 2",
+      "Hasselblad 3"
+    ],
+    "noDims": 25,
+    "nav": {
+      "scrollW": 451,
+      "clientW": 217,
+      "overflow": 234,
+      "count": 8,
+      "itemH": 68,
+      "barH": 89
+    },
+    "galClass": "gallery single _wide",
+    "gcols": "auto",
+    "gframe": {
+      "w": 350,
+      "h": 467
+    },
+    "gframes": 25,
+    "para": {
+      "w": 350,
+      "fs": "15px",
+      "lh": "30px",
+      "ff": "\"Noto Serif JP\"",
+      "approxCJKPerLine": 22,
+      "approxLatinPerLine": 47
+    },
+    "fontsLoaded": [
+      "Jost",
+      "Lustria",
+      "Noto Serif JP"
+    ],
+    "titleFont": "\"Noto Serif JP\""
+  }
+}

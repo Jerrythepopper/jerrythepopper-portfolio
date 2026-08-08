@@ -1,0 +1,80 @@
+{
+  "portraits-desktop": {
+    "scrollW": 1440,
+    "innerW": 1440,
+    "docH": 9543,
+    "h1": [
+      "Portraits人像"
+    ],
+    "h2n": 0,
+    "imgs": 25,
+    "lazy": 25,
+    "noAlt": 0,
+    "altSample": [
+      "Portraits 1",
+      "Portraits 2",
+      "Portraits 3"
+    ],
+    "noDims": 25,
+    "nav": {
+      "scrollW": 596,
+      "clientW": 596,
+      "overflow": 0,
+      "count": 8,
+      "itemH": 25,
+      "barH": 56
+    },
+    "galClass": "gallery masonry-2",
+    "gcols": "2",
+    "gframe": {
+      "w": 562,
+      "h": 750
+    },
+    "gframes": 25,
+    "fontsLoaded": [
+      "Jost",
+      "Lustria",
+      "Noto Serif JP"
+    ],
+    "titleFont": "\"Noto Serif JP\""
+  },
+  "portraits-mobile": {
+    "scrollW": 390,
+    "innerW": 390,
+    "docH": 10716,
+    "h1": [
+      "Portraits人像"
+    ],
+    "h2n": 0,
+    "imgs": 25,
+    "lazy": 25,
+    "noAlt": 0,
+    "altSample": [
+      "Portraits 1",
+      "Portraits 2",
+      "Portraits 3"
+    ],
+    "noDims": 25,
+    "nav": {
+      "scrollW": 451,
+      "clientW": 217,
+      "overflow": 234,
+      "count": 8,
+      "itemH": 68,
+      "barH": 89
+    },
+    "galClass": "gallery masonry-2",
+    "gcols": "1",
+    "gframe": {
+      "w": 350,
+      "h": 467
+    },
+    "gframes": 25,
+    "fontsLoaded": [
+      "Jost",
+      "Lustria",
+      "Noto Serif JP"
+    ],
+    "titleFont": "\"Noto Serif JP\""
+  }
+}

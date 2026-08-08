@@ -1,0 +1,92 @@
+{
+  "home-desktop": {
+    "scrollW": 1440,
+    "innerW": 1440,
+    "docH": 11030,
+    "h1": [
+      "Jerrythepopper",
+      "以影像捕捉人文、街頭與空間的情緒。在孤寂感與時間流動中，找到畫面的重量。"
+    ],
+    "h2n": 8,
+    "imgs": 8,
+    "lazy": 0,
+    "noAlt": 0,
+    "altSample": [
+      "Hasselblad",
+      "Portraits",
+      "Street"
+    ],
+    "noDims": 8,
+    "nav": {
+      "scrollW": 596,
+      "clientW": 596,
+      "overflow": 0,
+      "count": 8,
+      "itemH": 25,
+      "barH": 56
+    },
+    "dot": {
+      "w": 32,
+      "h": 12
+    },
+    "para": {
+      "w": 540,
+      "fs": "14px",
+      "lh": "28px",
+      "ff": "\"Noto Serif JP\"",
+      "approxCJKPerLine": 37,
+      "approxLatinPerLine": 77
+    },
+    "fontsLoaded": [
+      "Jost",
+      "Lustria",
+      "Noto Serif JP"
+    ],
+    "titleFont": "\"Noto Serif JP\""
+  },
+  "home-mobile": {
+    "scrollW": 390,
+    "innerW": 390,
+    "docH": 9942,
+    "h1": [
+      "Jerrythepopper",
+      "以影像捕捉人文、街頭與空間的情緒。在孤寂感與時間流動中，找到畫面的重量。"
+    ],
+    "h2n": 8,
+    "imgs": 8,
+    "lazy": 0,
+    "noAlt": 0,
+    "altSample": [
+      "Hasselblad",
+      "Portraits",
+      "Street"
+    ],
+    "noDims": 8,
+    "nav": {
+      "scrollW": 451,
+      "clientW": 217,
+      "overflow": 234,
+      "count": 8,
+      "itemH": 68,
+      "barH": 89
+    },
+    "dot": {
+      "w": 32,
+      "h": 12
+    },
+    "para": {
+      "w": 350,
+      "fs": "14px",
+      "lh": "28px",
+      "ff": "\"Noto Serif JP\"",
+      "approxCJKPerLine": 24,
+      "approxLatinPerLine": 50
+    },
+    "fontsLoaded": [
+      "Jost",
+      "Lustria",
+      "Noto Serif JP"
+    ],
+    "titleFont": "\"Noto Serif JP\""
+  }
+}
