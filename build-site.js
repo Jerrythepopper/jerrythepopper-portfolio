@@ -8,8 +8,8 @@
 const fs = require('fs');
 const path = require('path');
 
-// TODO 網域確定後改這一行（canonical / sitemap / robots 都吃它）
-const SITE_ORIGIN = 'https://PLACEHOLDER.example';
+// 正式網域（canonical / sitemap / robots / llms.txt 都吃它）；apex 由 DNS 301 導 www
+const SITE_ORIGIN = 'https://www.jerrythepopper.com';
 
 const ROOT = __dirname;
 const DIST = path.join(ROOT, 'dist');
@@ -32,6 +32,22 @@ const photosFor = (id) => PHOTOS[id === '3d' ? 'three_d' : id];
 const slugOf = (id) => id;                       // data.js 的 id 直接當網址片段
 const oneLine = (s) => String(s).replace(/\s+/g, ' ').trim();
 const clip = (s, n) => (s.length <= n ? s : s.slice(0, n - 1).trimEnd() + '…');
+
+// ---------- 響應式圖片（產線 ingest-photos.js 會生 @800 低頻寬版） ----------
+// 偵測同名 @800 檔存在才輸出 srcset；demo 期的 jpg 沒有 @800 → 維持單 src，零回歸
+const SIZES_DEFAULT = '(max-width: 768px) 100vw, 50vw';
+function alt800(src) {
+  const m = /^photos\/(.+)\.(webp|jpg|jpeg|png)$/i.exec(src);
+  if (!m) return null;
+  const cand = `photos/${m[1]}@800.${m[2]}`;
+  return fs.existsSync(path.join(ROOT, cand)) ? cand : null;
+}
+function imgSrcAttrs(src, rel, sizes) {
+  const main = rel + src;
+  const small = alt800(src);
+  if (!small) return `src="${esc(main)}"`;
+  return `src="${esc(main)}" srcset="${esc(rel + small)} 800w, ${esc(main)} 1600w" sizes="${esc(sizes || SIZES_DEFAULT)}"`;
+}
 
 // 導覽列（frosted 與 footer 共用）
 const NAV = [
@@ -80,6 +96,7 @@ function head(o) {
 <meta name="twitter:title" content="${esc(o.title)}">
 <meta name="twitter:description" content="${esc(o.desc)}">
 <meta name="twitter:image" content="${esc(o.rel + o.ogImage)}">
+<link rel="icon" type="image/svg+xml" href="${o.rel}favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${o.rel}styles.css">
@@ -208,7 +225,7 @@ function categorySection(s, index) {
   <div class="fade-up section-inner${alt ? ' _reverse' : ''}" style="transition-delay:0ms">
     <a href="${slugOf(s.id)}/" class="sec-media" aria-label="${esc(s.en)}">
       <span class="sec-num">No. ${esc(s.number)}</span>
-      <img src="${esc(cover)}" alt="${esc(s.en)}" loading="lazy">
+      <img ${imgSrcAttrs(cover, '')} alt="${esc(s.en)}" loading="lazy">
     </a>
     <div class="sec-body">
       <div class="eyebrow">
@@ -231,7 +248,7 @@ function teaser(o) {
   <div class="fade-up section-inner${o.reverse ? ' _reverse' : ''}" style="transition-delay:0ms">
     <a href="${o.href}" class="sec-media">
       <span class="sec-num">No. ${o.num}</span>
-      <img src="${esc(o.cover)}" alt="${esc(o.alt)}" loading="lazy">
+      <img ${imgSrcAttrs(o.cover, '')} alt="${esc(o.alt)}" loading="lazy">
     </a>
     <div class="sec-body">
       <div class="eyebrow">
@@ -288,6 +305,22 @@ ${teaser({
 }
 
 // ---------- 系列頁 ----------
+// 頁尾「下一個系列」導流：循環照 SECTIONS 排序（最後一個回第一個）
+function nextSeriesBlock(s) {
+  const i = SECTIONS.findIndex((x) => x.id === s.id);
+  const nx = SECTIONS[(i + 1) % SECTIONS.length];
+  return `<section class="fade-up next-series" style="transition-delay:0ms">
+  <a href="../${slugOf(nx.id)}/" class="next-link">
+    <span class="next-eyebrow">
+      <span class="flow-line in" style="width:40px"></span>
+      <span>Next Series</span>
+      <span class="n">${esc(nx.number)}</span>
+    </span>
+    <span class="next-title">${esc(nx.en)}<span class="jp">${esc(nx.zh)}</span><span class="arr" aria-hidden="true">→</span></span>
+  </a>
+</section>`;
+}
+
 function categoryPage(s, screenLabel) {
   const photos = photosFor(s.id);
   const metas = s.meta.map((m) => `<span>${esc(m)}</span>`).join('');
@@ -296,7 +329,7 @@ function categoryPage(s, screenLabel) {
     : '';
   const frames = photos.map((src, i) =>
     `  <button type="button" class="gframe">
-    <img src="../${esc(src)}" alt="${esc(s.en + ' ' + (i + 1))}" loading="lazy">
+    <img ${imgSrcAttrs(src, '../')} alt="${esc(s.en + ' ' + (i + 1))}" loading="lazy">
     <div class="caption">
       <span>No. ${pad(i + 1, 3)}</span>
       <span>${esc(s.en)}</span>
@@ -318,6 +351,8 @@ ${subtitle}    <div class="meta">${metas}</div>
 <section class="gallery ${s.layout === 'single' ? 'single _wide' : 'masonry-2'}">
 ${frames}
 </section>
+
+${nextSeriesBlock(s)}
 </main>`;
 
   const desc = clip(oneLine(s.subtitle || s.lede), 155);
@@ -474,7 +509,7 @@ function aboutPage() {
 
     <div class="stats">
       <div class="stat"><div class="num">12</div><div class="lab">Years shooting</div></div>
-      <div class="stat"><div class="num">50+</div><div class="lab">Brands</div></div>
+      <div class="stat"><div class="num">30+</div><div class="lab">Brands</div></div>
       <div class="stat"><div class="num">3</div><div class="lab">Solo shows</div></div>
     </div>
 
@@ -569,6 +604,9 @@ function build() {
   // site.js
   written.push(write('site.js', fs.readFileSync(path.join(SRC, 'site.js'), 'utf8')));
 
+  // favicon（各頁以相對路徑引用：首頁 favicon.svg、子頁 ../favicon.svg）
+  written.push(write('favicon.svg', fs.readFileSync(path.join(SRC, 'favicon.svg'), 'utf8')));
+
   // 附屬檔
   written.push(write('robots.txt', robotsTxt()));
   written.push(write('sitemap.xml', sitemapXml()));
@@ -592,7 +630,7 @@ function build() {
   }
   console.log(`  ${String((photoBytes / 1024).toFixed(1)).padStart(8)} KB  photos/ (${nPhotos} 檔)`);
   console.log(`合計（不含照片）${total.toFixed(1)} KB；含照片 ${((total * 1024 + photoBytes) / 1048576).toFixed(1)} MB`);
-  console.log(`SITE_ORIGIN = ${SITE_ORIGIN}  ← TODO 網域確定後改 build-site.js 頂部`);
+  console.log(`SITE_ORIGIN = ${SITE_ORIGIN}`);
 }
 
 build();

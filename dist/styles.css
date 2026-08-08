@@ -975,6 +975,55 @@ button { font: inherit; letter-spacing: inherit; }
    patch.css — 靜態站專用補丁（build-site.js 附加在 styles.css 之後，不改既有規則）
    ============================================================================= */
 
+/* ---- 系列頁尾「下一個系列」導流（低調，沿用 eyebrow / jp / arr 的字級與字距） ---- */
+.next-series {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: clamp(64px, 9vw, 112px) var(--container-pad) clamp(88px, 12vw, 140px);
+}
+.next-link {
+  display: flex; flex-direction: column; gap: 18px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-line-faint);
+}
+.next-eyebrow {
+  display: flex; align-items: center; gap: 16px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.next-eyebrow .n {
+  font-family: var(--font-numeric);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--color-text-faint);
+}
+.next-title {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.4em;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(26px, 4vw, 44px);
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+.next-title .jp {
+  font-size: 0.42em;
+  letter-spacing: 0.18em;
+  color: var(--color-text-muted);
+}
+.next-title .arr {
+  font-family: var(--font-sans);
+  font-size: 0.5em;
+  line-height: 1;
+  color: var(--color-text-muted);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.next-link:hover .arr { transform: translateX(8px); }
+
 /* 無障礙：使用者要求減少動態時，直接顯示、不做位移與逐字動畫 */
 @media (prefers-reduced-motion: reduce) {
   .fade-up { opacity: 1; transform: none; transition: none; }
@@ -982,4 +1031,6 @@ button { font: inherit; letter-spacing: inherit; }
   .hero-title .ch { opacity: 1; transform: none; animation: none; }
   .hero-slide { transition: none; }
   .flow-line::after { transition: none; }
+  .next-title .arr { transition: none; }
+  .next-link:hover .arr { transform: none; }
 }

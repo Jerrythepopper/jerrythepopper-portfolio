@@ -1,0 +1,11 @@
+# 依賴（package.json 進版控、鎖檔與 node_modules 不進）
+node_modules/
+package-lock.json
+
+# 圖片產線輸入：相機原檔體積大且非發布資產（輸出的 photos/ 才進版控）
+originals/*
+!originals/.gitkeep
+!originals/README.md
+
+# 工作備份
+backups/

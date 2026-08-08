@@ -1,0 +1,17 @@
+{
+  "name": "jerrythepopper-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jerrythepopper 洪立楷 攝影作品集靜態站（build-site.js 生成 dist/；ingest-photos.js 為圖片產線）",
+  "main": "build-site.js",
+  "scripts": {
+    "build": "node build-site.js",
+    "ingest": "node ingest-photos.js"
+  },
+  "author": "Jerrythepopper 洪立楷",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "dependencies": {
+    "sharp": "^0.35.3"
+  }
+}

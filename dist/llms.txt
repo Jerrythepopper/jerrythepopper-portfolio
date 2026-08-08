@@ -4,15 +4,15 @@
 
 ## Pages
 
-- [首頁 Home](https://PLACEHOLDER.example/)：作品集總覽，六個系列與工作、關於。
-- [Hasselblad 哈蘇](https://PLACEHOLDER.example/hasselblad/)：這兩次與哈蘇合作，我想挑戰更多可能。
-- [Portraits 人像](https://PLACEHOLDER.example/portraits/)：A study of presence — natural light, slow rapport.
-- [Street 街拍](https://PLACEHOLDER.example/street/)：Found light, the inhale before things happen.
-- [3D 立體](https://PLACEHOLDER.example/3d/)：CGI hybrid pieces — captured photograph meets rendered scene.
-- [Film 底片](https://PLACEHOLDER.example/film/)：The slower medium — scanned from negatives, 2022–2026.
-- [Taipei Wholesale Market 果菜市場](https://PLACEHOLDER.example/market/)：輪轉（liàn-tńg）— 台北第一果菜批發市場紀實計畫。
-- [Work 工作](https://PLACEHOLDER.example/work/)：品牌合作與商業專案。
-- [About 關於我](https://PLACEHOLDER.example/about/)：簡介、合作品牌、展覽出版與聯絡方式。
+- [首頁 Home](https://www.jerrythepopper.com/)：作品集總覽，六個系列與工作、關於。
+- [Hasselblad 哈蘇](https://www.jerrythepopper.com/hasselblad/)：這兩次與哈蘇合作，我想挑戰更多可能。
+- [Portraits 人像](https://www.jerrythepopper.com/portraits/)：A study of presence — natural light, slow rapport.
+- [Street 街拍](https://www.jerrythepopper.com/street/)：Found light, the inhale before things happen.
+- [3D 立體](https://www.jerrythepopper.com/3d/)：CGI hybrid pieces — captured photograph meets rendered scene.
+- [Film 底片](https://www.jerrythepopper.com/film/)：The slower medium — scanned from negatives, 2022–2026.
+- [Taipei Wholesale Market 果菜市場](https://www.jerrythepopper.com/market/)：輪轉（liàn-tńg）— 台北第一果菜批發市場紀實計畫。
+- [Work 工作](https://www.jerrythepopper.com/work/)：品牌合作與商業專案。
+- [About 關於我](https://www.jerrythepopper.com/about/)：簡介、合作品牌、展覽出版與聯絡方式。
 
 ## Contact
 

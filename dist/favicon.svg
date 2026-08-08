@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Jerrythepopper">
+  <title>Jerrythepopper</title>
+  <!-- 手寫襯線 J：上方厚襯線橫畫 + 直幹 + 左勾，呼應站內 Noto Serif 氣質；透明底 -->
+  <path fill="#111112" d="M25 13 H51 V18.2 H41 V37
+    C41 46 36 51.5 29 51.5
+    C21 51.5 15.8 46.2 14.8 39.4
+    L20.2 38.2
+    C21 43 24 45.9 28.6 45.9
+    C32.9 45.9 35.8 43.2 35.8 37.2
+    V18.2 H25 Z"/>
+</svg>

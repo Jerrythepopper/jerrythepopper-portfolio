@@ -13,4 +13,4 @@ Disallow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://PLACEHOLDER.example/sitemap.xml
+Sitemap: https://www.jerrythepopper.com/sitemap.xml
