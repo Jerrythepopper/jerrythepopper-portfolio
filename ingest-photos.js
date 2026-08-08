@@ -10,7 +10,13 @@
      {prefix}_{i}@{size}.avif / .webp   ← 其餘 tier（800 / 2560）
      長邊 800 / 1600 / 2560 三檔；**絕不放大**（原圖長邊小於某 tier 就跳過該 tier，
      全部跳過時保底輸出一檔＝原生長邊）。
-     品質：AVIF 60、WebP 82；2560 tier 各 +3 保細節。
+     品質：AVIF 60、WebP 82；2560 tier 各 +3 保細節，色度另加高（AVIF 4:4:4／
+     WebP smartSubsample）——2560 是燈箱/大圖檔，色度不再抽樣。
+
+   色彩管理：輸入若內嵌 ICC profile（Adobe RGB／Display P3／相機空間…），一律先依該
+     profile 轉換到 sRGB 再輸出；輸出不附 profile（見下方隱私），瀏覽器以 sRGB 判讀＝
+     色準一致。無 profile 的輸入視為 sRGB 原樣通過，不做二次轉換。
+     驗證工具： node verify-color.js （CIEDE2000 ΔE 比色儀，門檻 mean<1.0 / max<2.0）
 
    另出： photos-manifest.json — 每張的可用尺寸/格式/寬高 ＋ 24px 微型 WebP 的
           base64 data URI（LQIP，供 build-site.js 做 blur-up 佔位）。
@@ -54,27 +60,48 @@ const SIZES = [800, 1600, 2560];       // 長邊 tier
 const MAIN_TIER = 1600;                // 主檔（無 @ 後綴）優先綁這一 tier
 const Q = { avif: 60, webp: 82 };      // 基礎品質
 const Q_BOOST_LARGE = 3;               // 2560 tier 加成（大檔要留細節）
+const HI_CHROMA_TIER = 2560;           // 這一 tier 起改用最高色度規格（同上，見檔頭）
 const LQIP_W = 24;                     // blur-up 微型圖寬度
 
 const IN_EXT = /\.(jpe?g|png)$/i;
 const OUT_RE = /^(.+?)_(\d+)(@\d+)?\.(avif|webp)$/;
 const kb = (b) => (b / 1024).toFixed(1) + ' KB';
 
+// ---------- 色彩管理 ----------
+/* 依輸入的內嵌 ICC profile 轉換到 sRGB；`attach:false` ＝轉換但不寫回 profile（輸出仍
+   是無 metadata 的裸檔，瀏覽器預設 sRGB 判讀）。
+
+   為什麼要顯式做、而且必須以「有沒有內嵌 profile」為開關（皆為本機 sharp 0.35.3 實測，
+   數字＝與正確 sRGB 值的 maxdiff/255，重現方式見 verify-color.js）：
+     · 8-bit＋profile ：libvips 內部本來就會用內嵌 profile 轉 sRGB（實測 1＝量化誤差）；
+                        這裡顯式再宣告一次不改變結果（實測仍是 1），但把色彩終點寫進我方
+                        程式碼，不再依賴 libvips 的內部預設。
+     · 16-bit＋profile：libvips 的自動轉換目標是 **P3** 而非 sRGB（原始碼 pipeline.cc：
+                        interpretation 為 RGB16 時 processingProfile = "p3"），剝掉 profile
+                        後被當 sRGB 判讀＝可見色偏（實測 117）。加上本行才回到 1。
+     · 16-bit＋無profile：若無條件套用此轉換，會被當成 P3 來源硬轉一次＝憑空造出色偏
+                        （實測 24）。所以無 profile 者一律原樣通過，不做二次轉換。 */
+function toSrgb(pipe, hasIcc) {
+  if (hasIcc) pipe.withIccProfile('srgb', { attach: false });
+  return pipe;
+}
+
 // ---------- 單檔轉出 ----------
-async function encode(inFile, outFile, longEdge, fmt, quality) {
-  const p = sharp(inFile)
-    .rotate()                                   // 先套用 EXIF 方向，之後 metadata 全丟
+async function encode(inFile, outFile, longEdge, fmt, quality, src = {}) {
+  const p = toSrgb(sharp(inFile).rotate(), src.hasIcc)   // 先套 EXIF 方向＋轉 sRGB，之後 metadata 全丟
     .resize(longEdge, longEdge, { fit: 'inside', withoutEnlargement: true });
-  if (fmt === 'avif') p.avif({ quality, effort: 4, chromaSubsampling: '4:2:0' });
-  else p.webp({ quality, effort: 5 });
+  // 大圖 tier 用最高色度規格：AVIF 不抽樣；有損 WebP 恆為 YUV420，smartSubsample
+  // ＝此格式下可取得的最高色度品質（色度細節實測見 verify-color.js 的「色度拷問圖」）
+  const hiChroma = longEdge >= HI_CHROMA_TIER;
+  if (fmt === 'avif') p.avif({ quality, effort: 4, chromaSubsampling: hiChroma ? '4:4:4' : '4:2:0' });
+  else p.webp({ quality, effort: 5, smartSubsample: hiChroma });
   const info = await p.toFile(outFile);         // 未呼叫 withMetadata() ＝ 不寫入任何 metadata
   return { bytes: info.size, w: info.width, h: info.height };
 }
 
 // 24px 寬微型 WebP → base64 data URI（HTML 屬性安全：base64 字元集不含引號）
-async function makeLqip(inFile) {
-  const buf = await sharp(inFile)
-    .rotate()
+async function makeLqip(inFile, src = {}) {
+  const buf = await toSrgb(sharp(inFile).rotate(), src.hasIcc)
     .resize(LQIP_W, LQIP_W, { fit: 'inside', withoutEnlargement: true })
     .webp({ quality: 46, effort: 6, alphaQuality: 60 })
     .toBuffer();
@@ -82,11 +109,12 @@ async function makeLqip(inFile) {
 }
 
 // 原圖「轉正後」的尺寸（sharp metadata 回報的是轉正前，orientation 5-8 要對調）
-async function orientedSize(inFile) {
+// ＋是否內嵌 ICC profile（色彩管理開關，見 toSrgb）
+async function probeSource(inFile) {
   const m = await sharp(inFile).metadata();
   let w = m.width, h = m.height;
   if (m.orientation && m.orientation >= 5) { const t = w; w = h; h = t; }
-  return { w, h };
+  return { w, h, hasIcc: !!m.icc, depth: m.depth, space: m.space };
 }
 
 // 依原圖長邊決定 tier 清單（不放大；全落空時保底原生一檔）
@@ -97,7 +125,8 @@ function tiersFor(srcLong) {
 
 // ---------- 單張處理 ----------
 async function processOne(inFile, prefix, i) {
-  const { w: sw, h: sh } = await orientedSize(inFile);
+  const src = await probeSource(inFile);
+  const { w: sw, h: sh } = src;
   const srcLong = Math.max(sw, sh);
   const tiers = tiersFor(srcLong);
   const mainTier = tiers.indexOf(MAIN_TIER) >= 0 ? MAIN_TIER : tiers[tiers.length - 1];
@@ -110,7 +139,7 @@ async function processOne(inFile, prefix, i) {
     const boost = tier >= 2560 ? Q_BOOST_LARGE : 0;
     for (const fmt of ['avif', 'webp']) {
       const name = `${prefix}_${i}${suffix}.${fmt}`;
-      const r = await encode(inFile, path.join(PHOTOS, name), tier, fmt, Q[fmt] + boost);
+      const r = await encode(inFile, path.join(PHOTOS, name), tier, fmt, Q[fmt] + boost, src);
       entry.formats[fmt].push({ f: name, w: r.w, h: r.h, tier });
       bytes += r.bytes; nFiles++;
       if (fmt === 'webp' && tier === mainTier) {
@@ -125,8 +154,8 @@ async function processOne(inFile, prefix, i) {
   const mw = pick('webp');
   entry.max = { tier: maxTier, avif: pick('avif').f, webp: mw.f, w: mw.w, h: mw.h };
 
-  entry.lqip = await makeLqip(inFile);
-  return { entry, bytes, nFiles, srcLong, tiers };
+  entry.lqip = await makeLqip(inFile, src);
+  return { entry, bytes, nFiles, srcLong, tiers, src };
 }
 
 // ---------- data.js 改寫 ----------
@@ -200,7 +229,7 @@ async function main() {
   }
 
   const results = [];
-  let totalIn = 0, totalOut = 0, nPhotos = 0, nOutFiles = 0;
+  let totalIn = 0, totalOut = 0, nPhotos = 0, nOutFiles = 0, nIcc = 0;
   const tierHist = {};
 
   for (const cat of CATS) {
@@ -219,7 +248,7 @@ async function main() {
     }
 
     console.log(`\n【${cat.key}】(${cat.prefix}) ${files.length} 張`);
-    let catOut = 0, catFiles = 0;
+    let catOut = 0, catFiles = 0, catIcc = 0;
     for (let i = 0; i < files.length; i++) {
       const inFile = path.join(dir, files[i]);
       const inSize = fs.statSync(inFile).size;
@@ -227,13 +256,15 @@ async function main() {
       manifest.photos[`${cat.prefix}_${i}`] = r.entry;
       totalIn += inSize; totalOut += r.bytes; catOut += r.bytes;
       nPhotos++; nOutFiles += r.nFiles; catFiles += r.nFiles;
+      if (r.src.hasIcc) { catIcc++; nIcc++; }
       const key = r.tiers.join('/');
       tierHist[key] = (tierHist[key] || 0) + 1;
       if (i === 0 || i === files.length - 1) {
-        console.log(`  ${files[i]} ${kb(inSize)} → ${r.entry.main} ${r.entry.w}×${r.entry.h}｜tier ${key}｜${r.nFiles} 檔 ${kb(r.bytes)}｜LQIP ${r.entry.lqip.length}B`);
+        console.log(`  ${files[i]} ${kb(inSize)} → ${r.entry.main} ${r.entry.w}×${r.entry.h}｜tier ${key}｜${r.nFiles} 檔 ${kb(r.bytes)}｜LQIP ${r.entry.lqip.length}B`
+          + `｜${r.src.hasIcc ? 'ICC→sRGB' : '無 ICC（視為 sRGB）'} ${r.src.depth}`);
       }
     }
-    console.log(`  小計：${files.length} 張 → ${catFiles} 檔 ${kb(catOut)}`);
+    console.log(`  小計：${files.length} 張 → ${catFiles} 檔 ${kb(catOut)}｜內嵌 ICC ${catIcc}/${files.length} 張已轉 sRGB`);
 
     // 同前綴的舊 jpg/png 清除（產線輸出才是發布資產，留著只讓 dist 變胖）
     const legacy = fs.readdirSync(PHOTOS).filter((f) => new RegExp(`^${cat.prefix}_\\d+(@\\d+)?\\.(jpe?g|png)$`, 'i').test(f));
@@ -258,6 +289,7 @@ async function main() {
 
   const patched = patchDataJs(results);
   console.log(`\n轉檔 ${nPhotos} 張／輸出 ${nOutFiles} 檔：${kb(totalIn)} → ${kb(totalOut)}（${(totalOut / totalIn * 100).toFixed(1)}%）`);
+  console.log(`色彩：${nIcc} 張帶內嵌 ICC profile → 已轉 sRGB；${nPhotos - nIcc} 張無 profile → 視為 sRGB 原樣通過（驗證：node verify-color.js）`);
   console.log('tier 分佈：' + Object.entries(tierHist).map(([k, v]) => `[${k}]×${v}`).join('  '));
   console.log(`photos-manifest.json：${Object.keys(manifest.photos).length} 條目 ${kb(fs.statSync(MANIFEST).size)}`);
   console.log(patched ? 'data.js 已更新：' : 'data.js 未變動：');
@@ -267,4 +299,9 @@ async function main() {
   console.log('\n下一步：執行 `node build-site.js` 重建 dist\\。');
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+// 直接執行才跑產線；被 require（verify-color.js 比色儀）時只取用函式，不動任何檔案
+if (require.main === module) {
+  main().catch((e) => { console.error(e); process.exit(1); });
+}
+
+module.exports = { encode, makeLqip, probeSource, toSrgb, SIZES, Q, Q_BOOST_LARGE, HI_CHROMA_TIER };
