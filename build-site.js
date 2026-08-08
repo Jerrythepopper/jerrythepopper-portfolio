@@ -192,6 +192,7 @@ function head(o) {
 <script>document.documentElement.className+=' js'</script>
 <title>${esc(o.title)}</title>
 <meta name="description" content="${esc(o.desc)}">
+${o.robots ? `<meta name="robots" content="noindex">\n` : ''}
 <link rel="canonical" href="${esc(canonical)}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Jerrythepopper Photography">
@@ -267,6 +268,7 @@ ${series}
       </ul>
     </div>
   </div>
+  <div class="foot-hire">Available for commissions · <a href="mailto:jerrythepopper@gmail.com">jerrythepopper@gmail.com</a></div>
   <small>© 2026 Jerrythepopper · Photography Portfolio</small>
 </footer>`;
 }
@@ -465,10 +467,6 @@ function categoryPage(s, screenLabel) {
     const badge = dz ? `\n    <span class="dz-badge"><span class="dot" aria-hidden="true"></span>Deep Zoom</span>` : '';
     return `  <button type="button" class="gframe${dz ? ' has-dz' : ''}" style="${lqipBg(src)}"${fullAttrs(src, '../')}${dzAttr}>
     ${pictureTag(src, '../', { alt: s.en + ' ' + (i + 1), sizes: wide ? SIZES.single : SIZES.masonry })}${badge}
-    <div class="caption">
-      <span>No. ${pad(i + 1, 3)}</span>
-      <span>${esc(s.en)}</span>
-    </div>
   </button>`;
   }).join('\n');
 
@@ -489,7 +487,10 @@ ${frames}
 ${nextSeriesBlock(s)}
 </main>`;
 
-  const desc = clip(oneLine(s.subtitle || s.lede), 155);
+  // nature 頁改用專屬 SEO description（英文開場句 + 定稿中文前 60 字），非套用預設 subtitle/lede 生成規則
+  const desc = s.id === 'nature'
+    ? 'Tall clouds, open sea, old trees, mountains. I try to keep a record of how they look. ' + s.subtitle.slice(0, 60)
+    : clip(oneLine(s.subtitle || s.lede), 155);
   return shell({
     rel: '../', current: s.id, main,
     title: `${s.en} ${s.zh}｜Jerrythepopper Photography`,
@@ -520,7 +521,7 @@ const WORK_TILES = [
   { url: 'https://www.instagram.com/reel/DJ6w-6ah0QN/?igsh=ZGs3MjFnM3o5NTdz', t: 'Reto 相機', c: '產品動畫製作', src: 'td_0' },
   { url: 'https://www.instagram.com/p/Cl3lNf9h8cm/?igsh=MTlqcXhudWUyZHBvag==', t: 'TEDxChungChengU', c: '品牌演講活動', src: 'pt_2' },
   { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?story_media_id=3542991936099659472&igsh=MXhhZnRoamoxc2QxZw==', t: 'Sony YouTube', c: '品牌影片內容', src: 'st_7' },
-  { url: 'https://www.instagram.com/reel/ChZUvNkpnS8/?igsh=c2l3cWZnc2VraXBq', t: 'Yotta 底片課程', c: '線上攝影課程', src: 'fm_2' },
+  { url: 'https://www.yottau.com.tw/course/intro/1421#intro', t: 'Yotta 底片課程', c: '線上攝影課程', src: 'fm_2' },
   { url: 'https://www.instagram.com/p/C1GslZYBrSX/?img_index=1&igsh=MXdoNmE0eGNmNWo1cA==', t: '晶悅建設', c: '品牌形象拍攝', src: 'hb_7' },
   { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?story_media_id=3239957459305757128&igsh=MXhhZnRoamoxc2QxZw==', t: '仁發建設', c: '品牌形象拍攝', src: 'hb_10' },
 ];
@@ -666,6 +667,42 @@ function aboutPage() {
   });
 }
 
+// ---------- 404 ----------
+// 迷路小雲：站內線描風（stroke 1.5px、深墨線條），呼應 hero 雲影片；兩個小點眼睛，勿花俏
+function cloudIcon() {
+  return `<svg viewBox="0 0 120 78" width="120" height="78" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M31 55c-9.4 0-17-7-17-15.6 0-7.8 6-14.2 13.7-15.3C29.6 14.6 38 8 48 8c11.6 0 21.3 7.9 23.4 18.3C82.6 27.5 91 36.3 91 47c0 8.3-6.9 14.6-15.4 14.6H31z"/>
+  <circle cx="46" cy="40" r="2.3" fill="currentColor" stroke="none"/>
+  <circle cx="61" cy="40" r="2.3" fill="currentColor" stroke="none"/>
+</svg>`;
+}
+
+function notFoundPage() {
+  const desc = '沒有這個頁面。回首頁看看更多攝影作品。';
+  const main = `<main class="page notfound-page" data-screen-label="404 Not Found">
+  <div class="fade-up notfound-wrap" style="transition-delay:0ms">
+    <div class="notfound-eyebrow">
+      <span class="flow-line in" style="width:40px"></span>
+      <span>404</span>
+    </div>
+    <div class="notfound-icon">${cloudIcon()}</div>
+    <h1>哇你怎麼跑到這裡？！</h1>
+    <p>沒有這頁面餒。</p>
+    <a href="./" class="cta">回首頁 <span class="arr">→</span></a>
+  </div>
+</main>`;
+
+  return shell({
+    rel: '', current: '404', main,
+    title: '404 找不到頁面｜Jerrythepopper Photography',
+    desc,
+    canonicalPath: '/404.html',
+    ogImage: HERO_SLIDES[0],
+    robots: true,
+    jsonld: PERSON_LD,
+  });
+}
+
 // ---------- 附屬檔 ----------
 const PAGE_URLS = ['/', ...SECTIONS.map((s) => `/${slugOf(s.id)}/`), '/work/', '/about/'];
 
@@ -729,6 +766,7 @@ function build() {
   }
   written.push(write('work/index.html', workPage()));
   written.push(write('about/index.html', aboutPage()));
+  written.push(write('404.html', notFoundPage()));
 
   // styles.css = 既有檔原樣 + build 補丁段（不改既有規則）
   const css = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8') +
