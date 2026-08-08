@@ -1,0 +1,32 @@
+# 上線日 DNS 操作卡（Cloudflare）— 2026-08-08 預備
+
+> **時機**：等 Fable 說「可以動 DNS 了」再做。提前做＝網域指向空地 404＋舊 Squarespace 頁提前下線。
+
+進入：dash.cloudflare.com → 登入 → jerrythepopper.com → DNS → Records
+
+## 第 1 步：改 4 筆 A 記錄（Name = @ / jerrythepopper.com）
+現值 198.185.159.x／198.49.23.x（Squarespace）→ 逐筆 Edit 換成：
+- 185.199.108.153
+- 185.199.109.153
+- 185.199.110.153
+- 185.199.111.153
+
+## 第 2 步：改 www 的 CNAME
+Target：jerrythepopper.com → **jerrythepopper.github.io**
+
+## 第 3 步：加 1 筆 TXT（防搶掛驗證）
+Type=TXT；Name 與內容由 GitHub 當天生成，Fable 現場提供。
+（格式會像 Name=`_github-pages-challenge-Jerrythepopper`、內容=一串亂碼）
+
+## 第 4 步：雲朵轉灰（DNS only）
+上述所有記錄的橙色雲朵（Proxied）→ 點成灰色。
+HTTPS 憑證簽發必要條件；憑證下來後要開 Cloudflare AI 爬蟲防護再切回橙。
+
+## 完成後
+回對話說「改好了」→ Fable 接手：驗證網域 → 等憑證 → Enforce HTTPS → Search Console。
+DNS 生效幾分鐘～幾小時；Enforce HTTPS 選項最慢 24 小時出現。
+
+## 備註
+- jerrythepopper.com 與 www.jerrythepopper.com 都會通,一個自動跳轉到另一個（主網址目前=www 版,想換裸網域跟 Fable 說）
+- 每一步可逆（值改回去即還原）
+- Squarespace 那邊什麼都不用動（只管網域續費）
