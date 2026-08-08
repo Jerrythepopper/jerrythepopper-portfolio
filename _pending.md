@@ -30,7 +30,8 @@
 | S4 | fresh verifier 對帳 | S1、S2 各一輪 | **已完成**：S1 棒 PASS（互動類 INCONCLUSIVE,實作者 25 斷言補位）＋S9/S2 棒 11/11 全 PASS（含產線實跑抽驗） |
 | S10 | UI/UX 鑒定（使用者點名） | S9 收工 | **已完成**（過程曲折：opus 鑒定員超時兩次遭斬,量測數據+home/street 截圖為其遺產;14 張補拍=sonnet 快手;品味判讀=主對話執筆。報告 `_review-uiux-2026-08-08\report.md`：P0×2/P1×5/P2×3） |
 | S11a | UI 修正包＋燈箱縮放（P0×2/P1×5/D14 標配） | 報告出爐 | **已完成**（commit d2a6609,verifier 對帳中）。亮點：nav 斷點實測放寬到 880px（721-880 帶原本也是壞的）;鑒定報告 P1-2 lazy:0 證實**誤測**（模板本就有 lazy）;燈箱鍵盤=Enter 縮放/`+−0`/Shift+方向鍵平移;demo 照片小,放大走 2× 保底,正式檔才走原生解析度 |
-| S11b | 高畫質產線＋Deep Zoom（D13+D14 進階）：AVIF/WebP×800/1600/2560＋blur-up＋燈箱接 2560＋哈蘇 DZ 切片（合成大圖驗管線） | S11a verifier 過 | 排隊 |
+| S11b | 高畫質產線＋Deep Zoom（D13+D14 進階） | S11a 過 | **已完成**（commit a84e087,verifier 對帳中含 OpenSeadragon 完整性獨立驗證——安全監控旗標:OSD 內嵌屬 D14 已裁事項,零依賴鐵律是 HUD 的規矩非本站）。全站切 `<picture>` AVIF/WebP＋LQIP blur-up;photos 零 jpg;DZ 測試板 14 層;系列頁首屏 130-335KB。**遺留：work-featured 磚僅 WebP 無 image-set 退路** |
+| D16 | Google Fonts 自 host 提前？ | S11b 實測:**字型是目前首屏最大剩餘成本**（Noto Serif JP 每頁 48-91 個子集請求）。三字型皆 OFL 授權可自 host（子集化 WOFF2）;原排 v2,實測數據支持提前。**成本考量留使用者裁**（今日用量已大） | 待答（08-08 數據到位） |
 | S5 | portfolio repo 設 local git user.email＝jerrythepopper@gmail.com | D1 | **已完成**（user.name/user.email 皆設） |
 | S6 | 上線流程：repo 轉 public → 啟 Pages（Actions 或 branch 發布 dist）→ DNS（D2 值我備妥）→ Enforce HTTPS → Search Console 登記 | 使用者說上線那天 | 排隊（萬事俱備） |
 | S7 | humanizer skill 安裝（blader/humanizer v2.9.1, MIT） | — | **已完成**（C:\Users\User\.claude\skills\humanizer\） |
