@@ -1,0 +1,249 @@
+[
+ {
+  "page": "/",
+  "requests": 12,
+  "kb": 529.8,
+  "inlineLqip": 13,
+  "thirdParty": 48,
+  "thirdKb": 0,
+  "fmt": {
+   "css": {
+    "n": 1,
+    "b": 41394
+   },
+   "avif": {
+    "n": 9,
+    "b": 452120
+   },
+   "html": {
+    "n": 1,
+    "b": 23106
+   },
+   "js": {
+    "n": 1,
+    "b": 25933
+   }
+  },
+  "bad": []
+ },
+ {
+  "page": "/hasselblad/",
+  "requests": 4,
+  "kb": 163.7,
+  "inlineLqip": 25,
+  "thirdParty": 64,
+  "thirdKb": 0,
+  "fmt": {
+   "css": {
+    "n": 1,
+    "b": 41394
+   },
+   "html": {
+    "n": 1,
+    "b": 29065
+   },
+   "js": {
+    "n": 1,
+    "b": 25933
+   },
+   "avif": {
+    "n": 1,
+    "b": 71259
+   }
+  },
+  "bad": []
+ },
+ {
+  "page": "/portraits/",
+  "requests": 9,
+  "kb": 326.8,
+  "inlineLqip": 25,
+  "thirdParty": 64,
+  "thirdKb": 0,
+  "fmt": {
+   "css": {
+    "n": 1,
+    "b": 41394
+   },
+   "html": {
+    "n": 1,
+    "b": 26779
+   },
+   "js": {
+    "n": 1,
+    "b": 25933
+   },
+   "avif": {
+    "n": 6,
+    "b": 240516
+   }
+  },
+  "bad": []
+ },
+ {
+  "page": "/street/",
+  "requests": 9,
+  "kb": 301.3,
+  "inlineLqip": 25,
+  "thirdParty": 64,
+  "thirdKb": 0,
+  "fmt": {
+   "css": {
+    "n": 1,
+    "b": 41394
+   },
+   "html": {
+    "n": 1,
+    "b": 27172
+   },
+   "js": {
+    "n": 1,
+    "b": 25933
+   },
+   "avif": {
+    "n": 6,
+    "b": 214046
+   }
+  },
+  "bad": []
+ },
+ {
+  "page": "/3d/",
+  "requests": 4,
+  "kb": 129.9,
+  "inlineLqip": 25,
+  "thirdParty": 65,
+  "thirdKb": 0,
+  "fmt": {
+   "css": {
+    "n": 1,
+    "b": 41394
+   },
+   "html": {
+    "n": 1,
+    "b": 27039
+   },
+   "js": {
+    "n": 1,
+    "b": 25933
+   },
+   "avif": {
+    "n": 1,
+    "b": 38666
+   }
+  },
+  "bad": []
+ },
+ {
+  "page": "/film/",
+  "requests": 9,
+  "kb": 224.7,
+  "inlineLqip": 25,
+  "thirdParty": 65,
+  "thirdKb": 0,
+  "fmt": {
+   "css": {
+    "n": 1,
+    "b": 41394
+   },
+   "html": {
+    "n": 1,
+    "b": 26724
+   },
+   "js": {
+    "n": 1,
+    "b": 25933
+   },
+   "avif": {
+    "n": 6,
+    "b": 136048
+   }
+  },
+  "bad": []
+ },
+ {
+  "page": "/market/",
+  "requests": 9,
+  "kb": 335.1,
+  "inlineLqip": 25,
+  "thirdParty": 86,
+  "thirdKb": 0,
+  "fmt": {
+   "css": {
+    "n": 1,
+    "b": 41394
+   },
+   "html": {
+    "n": 1,
+    "b": 30494
+   },
+   "js": {
+    "n": 1,
+    "b": 25933
+   },
+   "avif": {
+    "n": 6,
+    "b": 245346
+   }
+  },
+  "bad": []
+ },
+ {
+  "page": "/work/",
+  "requests": 18,
+  "kb": 831.9,
+  "inlineLqip": 0,
+  "thirdParty": 89,
+  "thirdKb": 0,
+  "fmt": {
+   "css": {
+    "n": 1,
+    "b": 41394
+   },
+   "html": {
+    "n": 1,
+    "b": 13005
+   },
+   "js": {
+    "n": 1,
+    "b": 25933
+   },
+   "webp": {
+    "n": 2,
+    "b": 152523
+   },
+   "avif": {
+    "n": 13,
+    "b": 619005
+   }
+  },
+  "bad": []
+ },
+ {
+  "page": "/about/",
+  "requests": 4,
+  "kb": 111.5,
+  "inlineLqip": 0,
+  "thirdParty": 91,
+  "thirdKb": 0,
+  "fmt": {
+   "css": {
+    "n": 1,
+    "b": 41394
+   },
+   "html": {
+    "n": 1,
+    "b": 7221
+   },
+   "js": {
+    "n": 1,
+    "b": 25933
+   },
+   "avif": {
+    "n": 1,
+    "b": 39662
+   }
+  },
+  "bad": []
+ }
+]

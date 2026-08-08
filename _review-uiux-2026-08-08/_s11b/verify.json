@@ -1,0 +1,77 @@
+[
+ {
+  "ok": true,
+  "name": "hero 8 張延後載入全數補齊",
+  "detail": "{\"slides\":8,\"stillDeferred\":0,\"loaded\":8,\"sample\":[\"hb_0.avif\",\"pt_0.avif\",\"mk_0.avif\"]}"
+ },
+ {
+  "ok": true,
+  "name": "gallery 全數 <picture> 含 avif+webp source",
+  "detail": "{\"pics\":25,\"avif\":25,\"webp\":25}"
+ },
+ {
+  "ok": true,
+  "name": "width/height 齊（防 CLS）",
+  "detail": "缺 0 / 25"
+ },
+ {
+  "ok": true,
+  "name": "LQIP data URI 齊",
+  "detail": "缺 0 / 25"
+ },
+ {
+  "ok": true,
+  "name": "data-full（最大 tier）齊",
+  "detail": "25 / 25"
+ },
+ {
+  "ok": true,
+  "name": "picture=display:contents（版面零變動）",
+  "detail": "contents"
+ },
+ {
+  "ok": true,
+  "name": "reduced-motion 分支存在（不淡入直接換）",
+  "detail": "e-out), transform 1.6s var(--ease-inout); } html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); } /* 減少動態：不淡入"
+ },
+ {
+  "ok": false,
+  "name": "LQIP blur-up：載入前 opacity 0 + LQIP 底圖，載入後淡入至 1，截圖 hash 互異",
+  "detail": "before={\"op\":\"1\",\"loaded\":false,\"bg\":\"url(\\\"data:image/webp;base6\"} after={\"op\":\"1\",\"loaded\":true} hash ec27147736821ebc → 5776c6a39a82bff1"
+ },
+ {
+  "ok": true,
+  "name": "燈箱載入最大可用 tier 的 AVIF（network 佐證）",
+  "detail": "currentSrc=st_2.avif 期望=st_2.avif tier=700 原生=700x700｜本次新請求 []"
+ },
+ {
+  "ok": true,
+  "name": "DEEP ZOOM 角標唯一且可見",
+  "detail": "{\"n\":1,\"frames\":1,\"text\":\"Deep Zoom\",\"w\":111,\"h\":28,\"visible\":true,\"font\":\"10px/2.4px\"}"
+ },
+ {
+  "ok": true,
+  "name": "DZ viewer 開啟、OSD 就緒、切片載入完成",
+  "detail": "{\"open\":true,\"zoom\":\"15%\",\"loadingGone\":true,\"osd\":\"function\"}"
+ },
+ {
+  "ok": true,
+  "name": "DZ 縮放三級（比例指示逐級遞增）",
+  "detail": "15% → 22% → 34% → 51%"
+ },
+ {
+  "ok": true,
+  "name": "DZ 方向鍵平移（畫面 hash 互異）",
+  "detail": "81ca8dc57d36400e → 38dfb37b850556fa"
+ },
+ {
+  "ok": true,
+  "name": "DZ Esc 關閉並解除捲動鎖",
+  "detail": "{\"box\":false,\"overflow\":\"\"}"
+ },
+ {
+  "ok": true,
+  "name": "DZ 切片目錄層級數 ≥4",
+  "detail": "14 層（0–13）｜本次請求樣本 [\"/vendor/openseadragon.min.js 200\",\"/photos/dz/hb0-deep.dzi 200\"]｜tile 請求 75"
+ }
+]

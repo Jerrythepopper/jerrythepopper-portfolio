@@ -21,6 +21,17 @@ new Function('window', fs.readFileSync(path.join(ROOT, 'data.js'), 'utf8'))(win)
 const PHOTOS = win.PHOTOS;
 const HERO_SLIDES = win.HERO_SLIDES;
 const SECTIONS = win.SECTIONS;
+const DEEPZOOM = win.DEEPZOOM || {};
+
+// ---------- photos-manifest.json（ingest-photos.js 產出的高畫質總表） ----------
+// 有條目 → 走 <picture>（AVIF/WebP × 多尺寸 ＋ LQIP blur-up）
+// 無條目 → 退回單 src 舊路徑（結構上保留零回歸分支，手放進 photos\ 的圖照樣能用）
+const MANIFEST = (() => {
+  const p = path.join(ROOT, 'photos-manifest.json');
+  if (!fs.existsSync(p)) { console.warn('! 找不到 photos-manifest.json，全站退回單 src 舊路徑'); return {}; }
+  try { return (JSON.parse(fs.readFileSync(p, 'utf8')).photos) || {}; }
+  catch (e) { console.warn('! photos-manifest.json 解析失敗：' + e.message); return {}; }
+})();
 
 // ---------- helpers ----------
 const esc = (s) => String(s)
@@ -63,22 +74,85 @@ function jpegSize(absPath) {
   return out;
 }
 
-// ---------- 響應式圖片（產線 ingest-photos.js 會生 @800 低頻寬版） ----------
-// 偵測同名 @800 檔存在才輸出 srcset；demo 期的 jpg 沒有 @800 → 維持單 src，零回歸
-const SIZES_DEFAULT = '(max-width: 768px) 100vw, 50vw';
-function alt800(src) {
-  const m = /^photos\/(.+)\.(webp|jpg|jpeg|png)$/i.exec(src);
-  if (!m) return null;
-  const cand = `photos/${m[1]}@800.${m[2]}`;
-  return fs.existsSync(path.join(ROOT, cand)) ? cand : null;
+// ---------- 響應式圖片 <picture>（AVIF → WebP → img fallback） ----------
+// sizes：各版位的實際佈局寬度（欄數／容器上限見 styles.css），瀏覽器據此挑 tier
+const SIZES = {
+  hero: '100vw',
+  section: '(max-width: 800px) 92vw, (max-width: 1408px) 44vw, 570px',   // 首頁 2 欄 → 800px 以下單欄
+  masonry: '(max-width: 720px) 92vw, (max-width: 1408px) 45vw, 600px',   // gallery.masonry-2 → 720px 以下單欄
+  single: '(max-width: 1608px) 92vw, 1480px',                            // gallery.single._wide 上限 1480
+};
+
+const mKey = (src) => {
+  const m = /^photos\/([^/]+?)\.(avif|webp|jpe?g|png)$/i.exec(String(src));
+  return m ? m[1] : null;
+};
+const mEntry = (src) => { const k = mKey(src); return (k && MANIFEST[k]) || null; };
+const srcsetOf = (e, fmt, rel) =>
+  e.formats[fmt].map((x) => `${rel}photos/${x.f} ${x.w}w`).join(', ');
+
+/* pictureTag(src, rel, o)
+   o: { alt, sizes, loading, cls, priority, deferred, extra }
+   deferred=true → source/img 改掛 data-srcset / data-src，交由 site.js 於首屏之後補載
+                   （hero 第 2 張起：它們全在視窗內，loading=lazy 擋不住） */
+function pictureTag(src, rel, o) {
+  o = o || {};
+  if (!src) throw new Error(
+    '圖片來源是 undefined —— 多半是 data.js 的某系列張數少於 WORK_TILES / HERO_SLIDES / coverIdx 寫死的索引。' +
+    '（ingest-photos.js 跑完會列出「引用 xx_N 但本系列只剩 M 張」的警告，照著修 data.js 或 build-site.js 的 WORK_TILES。）');
+  const e = mEntry(src);
+  const alt = ` alt="${esc(o.alt || '')}"`;
+  const load = o.priority ? ' fetchpriority="high"' : (o.loading === false ? '' : ` loading="${o.loading || 'lazy'}"`);
+  const cls = o.cls ? ` class="${o.cls}"` : '';
+
+  // ---- 零回歸分支：manifest 查無條目 → 單 src ----
+  if (!e) {
+    const d = jpegSize(path.join(ROOT, src));
+    const dim = d ? ` width="${d.w}" height="${d.h}"` : '';
+    return `<img src="${esc(rel + src)}"${dim}${alt}${load} decoding="async"${cls}${o.extra || ''}>`;
+  }
+
+  const sizes = o.sizes && e.formats.webp.length > 1 ? ` sizes="${esc(o.sizes)}"` : '';
+  const A = o.deferred ? 'data-srcset' : 'srcset';
+  const S = o.deferred ? 'data-src' : 'src';
+  const sources = ['avif', 'webp']
+    .filter((f) => e.formats[f] && e.formats[f].length)
+    .map((f) => `<source type="image/${f}" ${A}="${esc(srcsetOf(e, f, rel))}"${sizes}>`)
+    .join('');
+  // <picture> 吃 display:contents（patch.css），版面等同直接放 <img> ＝ 零版面變動
+  return `<picture class="bu">${sources}` +
+    `<img ${S}="${esc(rel + 'photos/' + e.main)}" width="${e.w}" height="${e.h}"${alt}${load}` +
+    ` decoding="async" class="bu-img${o.cls ? ' ' + o.cls : ''}"` +
+    ` onload="this.classList.add('is-loaded')"${o.extra || ''}></picture>`;
 }
-function imgSrcAttrs(src, rel, sizes) {
-  const main = rel + src;
-  const small = alt800(src);
-  const d = jpegSize(path.join(ROOT, src));
-  const dim = d ? ` width="${d.w}" height="${d.h}"` : '';
-  if (!small) return `src="${esc(main)}"${dim}`;
-  return `src="${esc(main)}" srcset="${esc(rel + small)} 800w, ${esc(main)} 1600w" sizes="${esc(sizes || SIZES_DEFAULT)}"${dim}`;
+
+// LQIP blur-up：微型圖當底色鋪在「既有的」容器盒上（.gframe / .sec-media / .hero-slide），
+// 不新增節點也不改盒模型；主圖 onload 後淡入蓋掉它
+function lqipBg(src) {
+  const e = mEntry(src);
+  return e && e.lqip ? `background-image:url('${e.lqip}')` : '';
+}
+
+// 最大可用 tier（燈箱吃它）；沒有 manifest 條目就回原 src
+function fullAttrs(src, rel) {
+  const e = mEntry(src);
+  if (!e || !e.max) return ` data-full="${esc(rel + src)}"`;
+  return ` data-full="${esc(rel + 'photos/' + e.max.webp)}"` +
+    ` data-full-avif="${esc(rel + 'photos/' + e.max.avif)}"` +
+    ` data-full-w="${e.max.w}" data-full-h="${e.max.h}" data-full-tier="${e.max.tier}"`;
+}
+
+// CSS 背景版位（work 磚／about 直幅／featured）：不動 DOM，用 image-set 補 AVIF
+// 前一行純 url() 是不支援 image-set 的瀏覽器的退路（後宣告覆蓋先宣告）
+function bgImage(src, rel) {
+  const e = mEntry(src);
+  const webp = `url('${rel}${src}')`;
+  if (!e || !e.formats.avif || !e.formats.avif.length) return `background-image:${webp}`;
+  const avif = e.formats.avif[e.formats.avif.length - 1].f;
+  const wf = e.formats.webp[e.formats.webp.length - 1].f;
+  return `background-image:${webp};background-image:image-set(` +
+    `url('${rel}photos/${avif}') type('image/avif'),` +
+    `url('${rel}photos/${wf}') type('image/webp'))`;
 }
 
 // 導覽列（frosted 與 footer 共用）
@@ -114,6 +188,7 @@ function head(o) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.className+=' js'</script>
 <title>${esc(o.title)}</title>
 <meta name="description" content="${esc(o.desc)}">
 <link rel="canonical" href="${esc(canonical)}">
@@ -209,8 +284,14 @@ function shell(o) {
 
 // ---------- 首頁 ----------
 function heroBlock() {
+  // 第 1 張＝首屏 LCP，eager＋high priority；第 2 張起延後到首屏之後才載
+  // （8 張全在視窗內，loading="lazy" 對它們無效，只能由 site.js 主動補載）
   const slides = HERO_SLIDES.map((s, i) =>
-    `    <div class="hero-slide${i === 0 ? ' is-active' : ''}" style="background-image:url('${esc(s)}')"></div>`
+    `    <div class="hero-slide${i === 0 ? ' is-active' : ''}" style="${lqipBg(s)}">` +
+    pictureTag(s, '', {
+      alt: '', sizes: SIZES.hero, cls: 'hero-img',
+      priority: i === 0, loading: i === 0 ? false : 'eager', deferred: i > 0,
+    }) + '</div>'
   ).join('\n');
   const chars = [...'Jerrythepopper'].map((ch, i) =>
     `<span class="ch" style="animation-delay:${600 + i * 50}ms">${ch === ' ' ? '&nbsp;' : esc(ch)}</span>`
@@ -259,9 +340,9 @@ function categorySection(s, index) {
   const metas = s.meta.map((m) => `<span>${esc(m)}</span>`).join('');
   return `<section class="section${alt ? ' _alt' : ''}" data-screen-label="${esc(s.number + ' ' + s.en)}">
   <div class="fade-up section-inner${alt ? ' _reverse' : ''}" style="transition-delay:0ms">
-    <a href="${slugOf(s.id)}/" class="sec-media" aria-label="${esc(s.en)}">
+    <a href="${slugOf(s.id)}/" class="sec-media" aria-label="${esc(s.en)}" style="${lqipBg(cover)}">
       <span class="sec-num">No. ${esc(s.number)}</span>
-      <img ${imgSrcAttrs(cover, '')} alt="${esc(s.en)}" loading="lazy">
+      ${pictureTag(cover, '', { alt: s.en, sizes: SIZES.section })}
     </a>
     <div class="sec-body">
       <div class="eyebrow">
@@ -282,9 +363,9 @@ function teaser(o) {
   // o: {label, cls, reverse, href, num, cover, alt, eyebrow, h2en, h2zh, lede, metas, cta}
   return `<section class="section${o.cls}" data-screen-label="${esc(o.label)}">
   <div class="fade-up section-inner${o.reverse ? ' _reverse' : ''}" style="transition-delay:0ms">
-    <a href="${o.href}" class="sec-media">
+    <a href="${o.href}" class="sec-media" style="${lqipBg(o.cover)}">
       <span class="sec-num">No. ${o.num}</span>
-      <img ${imgSrcAttrs(o.cover, '')} alt="${esc(o.alt)}" loading="lazy">
+      ${pictureTag(o.cover, '', { alt: o.alt, sizes: SIZES.section })}
     </a>
     <div class="sec-body">
       <div class="eyebrow">
@@ -363,15 +444,27 @@ function categoryPage(s, screenLabel) {
   const subtitle = s.subtitle
     ? `    <p class="subtitle">${esc(s.subtitle)}</p>\n`
     : '';
-  const frames = photos.map((src, i) =>
-    `  <button type="button" class="gframe">
-    <img ${imgSrcAttrs(src, '../')} alt="${esc(s.en + ' ' + (i + 1))}" loading="lazy">
+  // Deep Zoom：本系列有登記切片的張數，磚上掛角標＋data-dzi（site.js 開專用 viewer）
+  const dzList = DEEPZOOM[s.id] || [];
+  const dzFor = (i) => dzList.find((d) => d.idx === i);
+
+  const wide = s.layout === 'single';
+  const frames = photos.map((src, i) => {
+    const dz = dzFor(i);
+    const dzAttr = dz
+      ? ` data-dzi="../${esc(dz.dzi)}" data-dz-label="${esc(dz.label || '')}"` +
+        ` data-osd="../vendor/openseadragon.min.js"` +
+        ` aria-label="${esc(s.en + ' ' + (i + 1) + '，開啟 Deep Zoom 檢視器')}"`
+      : '';
+    const badge = dz ? `\n    <span class="dz-badge"><span class="dot" aria-hidden="true"></span>Deep Zoom</span>` : '';
+    return `  <button type="button" class="gframe${dz ? ' has-dz' : ''}" style="${lqipBg(src)}"${fullAttrs(src, '../')}${dzAttr}>
+    ${pictureTag(src, '../', { alt: s.en + ' ' + (i + 1), sizes: wide ? SIZES.single : SIZES.masonry })}${badge}
     <div class="caption">
       <span>No. ${pad(i + 1, 3)}</span>
       <span>${esc(s.en)}</span>
     </div>
-  </button>`
-  ).join('\n');
+  </button>`;
+  }).join('\n');
 
   const main = `<main class="page" data-screen-label="${esc(screenLabel)}">
   <div class="fade-up page-head" style="transition-delay:0ms">
@@ -434,7 +527,7 @@ function workPage() {
     const [p, n] = w.src.split('_');
     const photoSrc = PHOTOS[PREFIX2CAT[p] || 'market'][parseInt(n, 10)];
     return `  <a href="${esc(w.url)}" target="_blank" rel="noopener noreferrer" class="work-tile">
-    <div class="ph" style="background-image:url('../${esc(photoSrc)}')"></div>
+    <div class="ph" style="${bgImage(photoSrc, '../')}"></div>
     <div class="ig">Instagram ↗</div>
     <div class="meta">
       <div class="t">${esc(w.t)}</div>
@@ -511,7 +604,7 @@ function aboutPage() {
   </div>
 
 <section class="fade-up about-wrap" style="transition-delay:0ms">
-  <div class="about-portrait" style="background-image:url('../${esc(PHOTOS.portraits[3])}')"></div>
+  <div class="about-portrait" style="${bgImage(PHOTOS.portraits[3], '../')}"></div>
   <div class="about-body">
     <h2>Jerrythepopper 洪立楷</h2>
     <div class="role">Photographer · 3D Creator · Based in Taipei</div>
@@ -648,9 +741,29 @@ function build() {
   written.push(write('sitemap.xml', sitemapXml()));
   written.push(write('llms.txt', llmsTxt()));
 
-  // photos 整資料夾複製
+  // vendor（OpenSeadragon，Deep Zoom 檢視器；只在點開角標時才動態載入）
+  const vendorDir = path.join(SRC, 'vendor');
+  let vendorBytes = 0, vendorFiles = 0;
+  if (fs.existsSync(vendorDir)) {
+    fs.cpSync(vendorDir, path.join(DIST, 'vendor'), { recursive: true });
+    for (const f of fs.readdirSync(path.join(DIST, 'vendor'))) {
+      vendorBytes += fs.statSync(path.join(DIST, 'vendor', f)).size; vendorFiles++;
+    }
+  }
+
+  // photos 整資料夾複製（含 dz\ 切片子目錄）
   fs.cpSync(path.join(ROOT, 'photos'), path.join(DIST, 'photos'), { recursive: true });
-  const nPhotos = fs.readdirSync(path.join(DIST, 'photos')).length;
+  const walk = (dir) => {
+    let n = 0, b = 0;
+    for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, f.name);
+      if (f.isDirectory()) { const r = walk(p); n += r.n; b += r.b; }
+      else { n++; b += fs.statSync(p).size; }
+    }
+    return { n, b };
+  };
+  const ph = walk(path.join(DIST, 'photos'));
+  const nPhotos = ph.n;
 
   // 報告
   console.log('dist 產出：');
@@ -660,11 +773,9 @@ function build() {
     total += kb;
     console.log(`  ${String(kb.toFixed(1)).padStart(8)} KB  ${path.relative(DIST, f).replace(/\\/g, '/')}`);
   }
-  let photoBytes = 0;
-  for (const f of fs.readdirSync(path.join(DIST, 'photos'))) {
-    photoBytes += fs.statSync(path.join(DIST, 'photos', f)).size;
-  }
-  console.log(`  ${String((photoBytes / 1024).toFixed(1)).padStart(8)} KB  photos/ (${nPhotos} 檔)`);
+  const photoBytes = ph.b;
+  console.log(`  ${String((photoBytes / 1024).toFixed(1)).padStart(8)} KB  photos/ (${nPhotos} 檔，含 dz 切片)`);
+  if (vendorFiles) console.log(`  ${String((vendorBytes / 1024).toFixed(1)).padStart(8)} KB  vendor/ (${vendorFiles} 檔，按需載入不計首屏)`);
   console.log(`合計（不含照片）${total.toFixed(1)} KB；含照片 ${((total * 1024 + photoBytes) / 1048576).toFixed(1)} MB`);
   console.log(`SITE_ORIGIN = ${SITE_ORIGIN}`);
 }

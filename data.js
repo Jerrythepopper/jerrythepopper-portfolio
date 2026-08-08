@@ -3,26 +3,35 @@
   const range = (prefix, n, ext = 'jpg') => Array.from({ length: n }, (_, i) => `photos/${prefix}_${i}.${ext}`);
 
   window.PHOTOS = {
-    hasselblad: range('hb', 25),
-    portraits:  range('pt', 25),
-    street:     range('st', 25),
-    three_d:    range('td', 25),
-    film:       range('fm', 25),
-    market:     range('mk', 25),
-    rotation:   range('rot', 8),
+    hasselblad: range('hb', 25, 'webp'),
+    portraits:  range('pt', 25, 'webp'),
+    street:     range('st', 25, 'webp'),
+    three_d:    range('td', 25, 'webp'),
+    film:       range('fm', 25, 'webp'),
+    market:     range('mk', 25, 'webp'),
+    rotation:   range('rot', 8, 'webp'),
   };
 
   // Hero carousel — curated mix
   window.HERO_SLIDES = [
-    'photos/hb_0.jpg',
-    'photos/pt_0.jpg',
-    'photos/mk_0.jpg',
-    'photos/st_4.jpg',
-    'photos/fm_2.jpg',
-    'photos/hb_7.jpg',
-    'photos/pt_5.jpg',
-    'photos/td_0.jpg',
+    'photos/hb_0.webp',
+    'photos/pt_0.webp',
+    'photos/mk_0.webp',
+    'photos/st_4.webp',
+    'photos/fm_2.webp',
+    'photos/hb_7.webp',
+    'photos/pt_5.webp',
+    'photos/td_0.webp',
   ];
+
+  // Deep Zoom — 系列 → 哪幾張掛得起「鑽細節」的切片（node make-deepzoom.js 產出）
+  // idx = 該系列 PHOTOS 陣列的索引；dzi = photos\dz\ 下的 .dzi 路徑（相對站根）
+  // demo 期：哈蘇第 0 張掛 8000×6000 合成測試大圖；正式照片來了換成真原檔重跑產線即可。
+  window.DEEPZOOM = {
+    hasselblad: [
+      { idx: 0, dzi: 'photos/dz/hb0-deep.dzi', label: 'Deep Zoom · 8000 × 6000' },
+    ],
+  };
 
   // Section meta — drives the homepage scroll-stack AND the subpages
   window.SECTIONS = [

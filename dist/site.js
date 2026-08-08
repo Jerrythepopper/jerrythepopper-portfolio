@@ -10,6 +10,36 @@
   var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
+  /* ---------- ⓪ blur-up 收尾 ------------------------------------------------
+     主圖的淡入靠 <img onload> 內聯掛 is-loaded（時序上最保險）。這裡只補兩件事：
+     ① script 執行前就載完的圖（onload 已經過去了）補上 class；
+     ② hero 第 2 張起的延後載入：它們全在視窗內，loading="lazy" 攔不住，
+        改由 build 寫成 data-srcset / data-src，首屏之後才升格為真屬性。
+  ------------------------------------------------------------------------ */
+  (function () {
+    var imgs = document.querySelectorAll('img.bu-img');
+    for (var i = 0; i < imgs.length; i++) {
+      if (imgs[i].complete && imgs[i].naturalWidth) imgs[i].classList.add('is-loaded');
+    }
+
+    function promote() {
+      var pend = document.querySelectorAll('picture.bu source[data-srcset], picture.bu img[data-src]');
+      for (var j = 0; j < pend.length; j++) {
+        var el = pend[j];
+        if (el.tagName === 'SOURCE') {
+          el.srcset = el.getAttribute('data-srcset');
+          el.removeAttribute('data-srcset');
+        } else {
+          el.src = el.getAttribute('data-src');
+          el.removeAttribute('data-src');
+        }
+      }
+    }
+    // 等首屏資源跑完再補；載入事件已過就下一輪 macrotask 執行
+    if (document.readyState === 'complete') setTimeout(promote, 120);
+    else window.addEventListener('load', function () { setTimeout(promote, 120); });
+  })();
+
   /* ---------- ① fade-up（IntersectionObserver threshold 0.18） ---------- */
   (function () {
     var els = document.querySelectorAll('.fade-up');
@@ -106,7 +136,145 @@
     start();
   })();
 
-  /* ---------- ④ lightbox --------------------------------------------------
+  /* ---------- ④ Deep Zoom 檢視器（哈蘇限定，OpenSeadragon 按需載入） --------
+     一般燈箱給的是「一張大圖」；Deep Zoom 給的是切片金字塔——放到 1:1 也不糊，
+     而且只下載視野內那幾塊 tile。344 KB 的 OSD 只在使用者真的點角標時才進場。
+     操作：滾輪／雙指／雙擊縮放、拖曳平移、Esc 關閉、+ − 0 與方向鍵。
+  ------------------------------------------------------------------------ */
+  var deepZoom = (function () {
+    var libState = 0;                 // 0 未載 / 1 載入中 / 2 就緒 / 3 失敗
+    var waiting = [];
+    var box = null, viewer = null, zoomEl = null, lastFocus = null;
+
+    function ensureLib(url, cb) {
+      if (libState === 2) { cb(true); return; }
+      if (libState === 3) { cb(false); return; }
+      waiting.push(cb);
+      if (libState === 1) return;
+      libState = 1;
+      var s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      s.onload = function () {
+        libState = window.OpenSeadragon ? 2 : 3;
+        var w = waiting; waiting = [];
+        for (var i = 0; i < w.length; i++) w[i](libState === 2);
+      };
+      s.onerror = function () {
+        libState = 3;
+        var w = waiting; waiting = [];
+        for (var i = 0; i < w.length; i++) w[i](false);
+      };
+      document.head.appendChild(s);
+    }
+
+    function fmtZoom() {
+      if (!viewer || !viewer.viewport || !viewer.world.getItemCount()) return;
+      var z = viewer.viewport.viewportToImageZoom(viewer.viewport.getZoom(true));
+      var pct = z * 100;
+      zoomEl.textContent = (pct < 10 ? pct.toFixed(1) : Math.round(pct)) + '%';
+    }
+
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (!viewer || !viewer.viewport) return;
+      var vp = viewer.viewport, d = 0.12;
+      if (e.key === '+' || e.key === '=') { e.preventDefault(); vp.zoomBy(1.5); vp.applyConstraints(); return; }
+      if (e.key === '-' || e.key === '_') { e.preventDefault(); vp.zoomBy(1 / 1.5); vp.applyConstraints(); return; }
+      if (e.key === '0') { e.preventDefault(); viewer.viewport.goHome(); return; }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        var b = vp.getBounds();
+        vp.panBy(new window.OpenSeadragon.Point(
+          (e.key === 'ArrowRight' ? d : e.key === 'ArrowLeft' ? -d : 0) * b.width,
+          (e.key === 'ArrowDown' ? d : e.key === 'ArrowUp' ? -d : 0) * b.height
+        ));
+        vp.applyConstraints();
+      }
+    }
+
+    function close() {
+      if (!box) return;
+      window.removeEventListener('keydown', onKey);
+      if (viewer) { try { viewer.destroy(); } catch (err) {} viewer = null; }
+      if (box.parentNode) box.parentNode.removeChild(box);
+      box = null; zoomEl = null;
+      document.body.style.overflow = '';
+      if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    function mount(dzi, label, fallback) {
+      box = document.createElement('div');
+      box.className = 'dzv';
+      box.setAttribute('role', 'dialog');
+      box.setAttribute('aria-modal', 'true');
+      box.setAttribute('aria-label', 'Deep Zoom 檢視器');
+      box.innerHTML =
+        '<div class="dzv-loading">Loading tiles…</div>' +
+        '<div class="dzv-canvas"></div>' +
+        '<button class="lb-btn dzv-close" type="button" aria-label="關閉">✕</button>' +
+        '<div class="dzv-bar"><span class="dzv-label"></span><span class="dzv-hint"></span></div>' +
+        '<div class="dzv-zoom">—</div>';
+      box.querySelector('.dzv-label').textContent = label || 'Deep Zoom';
+      box.querySelector('.dzv-hint').textContent = coarse
+        ? '雙指縮放 · 拖曳平移 · 雙擊放大'
+        : '滾輪／雙擊縮放 · 拖曳平移 · ＋ − 0 · ESC 關閉';
+      zoomEl = box.querySelector('.dzv-zoom');
+      box.querySelector('.dzv-close').addEventListener('click', close);
+      document.getElementById('root').appendChild(box);
+      document.body.style.overflow = 'hidden';
+
+      viewer = window.OpenSeadragon({
+        element: box.querySelector('.dzv-canvas'),
+        tileSources: dzi,
+        prefixUrl: '',                    // 不用內建按鈕圖 ＝ 零額外請求（零依賴精神）
+        showNavigationControl: false,
+        showNavigator: false,
+        showSequenceControl: false,
+        immediateRender: false,
+        animationTime: reduce ? 0 : 0.9,
+        springStiffness: 7,
+        blendTime: reduce ? 0 : 0.25,
+        maxZoomPixelRatio: 2,
+        minZoomImageRatio: 0.85,
+        visibilityRatio: 1,
+        constrainDuringPan: true,
+        gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true, scrollToZoom: true },
+        gestureSettingsTouch: { pinchToZoom: true, dblClickToZoom: true, flickEnabled: true },
+      });
+      // 鍵盤統一由我們處理，避免與 OSD 內建快捷鍵重複作用
+      viewer.addHandler('canvas-key', function (e) { e.preventDefaultAction = true; });
+      viewer.addHandler('open', function () {
+        var l = box && box.querySelector('.dzv-loading');
+        if (l && l.parentNode) l.parentNode.removeChild(l);
+        fmtZoom();
+      });
+      viewer.addHandler('zoom', fmtZoom);
+      viewer.addHandler('animation', fmtZoom);
+      // 切片抓不到就別把使用者卡在空畫布：收掉檢視器，退回一般燈箱
+      viewer.addHandler('open-failed', function () {
+        close();
+        if (fallback) fallback();
+      });
+      window.addEventListener('keydown', onKey);
+      box.querySelector('.dzv-close').focus();
+    }
+
+    function open(btn, fallback) {
+      var dzi = btn.getAttribute('data-dzi');
+      var lib = btn.getAttribute('data-osd');
+      if (!dzi || !lib) { if (fallback) fallback(); return; }
+      lastFocus = document.activeElement;
+      ensureLib(lib, function (ok) {
+        if (!ok) { if (fallback) fallback(); return; }   // 載不到就退回一般燈箱
+        mount(dzi, btn.getAttribute('data-dz-label'), fallback);
+      });
+    }
+
+    return { open: open };
+  })();
+
+  /* ---------- ⑤ lightbox --------------------------------------------------
      既有：點圖開；Esc 關 / ← → 換圖；計數器；鎖捲動 —— 全數保留
      新增：縮放到圖片原生解析度、拖曳平移、雙指縮放、雙擊縮放、滾輪縮放
      鍵盤：Enter/Space 切換縮放（stage 可 Tab 聚焦）、+ / - 級進、0 復位、
@@ -118,14 +286,18 @@
     var frames = gallery.querySelectorAll('.gframe');
     if (!frames.length) return;
 
-    var srcs = [], alts = [];
+    // 燈箱一律吃「最大可用 tier」（build 把它寫在磚上的 data-full*；產線沒收錄的
+    // 圖沒有這些屬性，退回磚上縮圖的 src ＝ 舊行為）
+    var srcs = [], avifs = [], alts = [];
     for (var i = 0; i < frames.length; i++) {
       var im = frames[i].querySelector('img');
-      srcs.push(im ? im.getAttribute('src') : '');
+      var full = frames[i].getAttribute('data-full');
+      srcs.push(full || (im ? (im.getAttribute('src') || im.currentSrc || '') : ''));
+      avifs.push(frames[i].getAttribute('data-full-avif') || '');
       alts.push(im ? (im.getAttribute('alt') || '') : '');
     }
 
-    var lb = null, stage = null, stageImg = null, counter = null, hint = null;
+    var lb = null, stage = null, pic = null, stageImg = null, counter = null, hint = null;
     var index = 0, lastFocus = null;
 
     // 縮放狀態
@@ -195,10 +367,11 @@
         '<button class="lb-btn lb-close" type="button" aria-label="關閉">✕</button>' +
         '<button class="lb-btn lb-prev" type="button" aria-label="上一張">‹</button>' +
         '<button class="lb-btn lb-next" type="button" aria-label="下一張">›</button>' +
-        '<div class="lb-stage" tabindex="0" role="button" aria-pressed="false" aria-label="放大圖片至原生解析度"><img alt=""></div>' +
+        '<div class="lb-stage" tabindex="0" role="button" aria-pressed="false" aria-label="放大圖片至原生解析度"><picture class="lb-pic"><img alt=""></picture></div>' +
         '<div class="lb-bar"><div class="lb-counter"></div><div class="lb-hint"></div></div>';
       stage = lb.querySelector('.lb-stage');
-      stageImg = lb.querySelector('.lb-stage img');
+      pic = lb.querySelector('.lb-pic');
+      stageImg = pic.querySelector('img');
       counter = lb.querySelector('.lb-counter');
       hint = lb.querySelector('.lb-hint');
 
@@ -208,7 +381,6 @@
       lb.querySelector('.lb-prev').addEventListener('click', function (e) { e.stopPropagation(); step(-1); });
       lb.querySelector('.lb-next').addEventListener('click', function (e) { e.stopPropagation(); step(1); });
 
-      stageImg.addEventListener('load', function () { measure(); clampPan(); applyTransform(); });
       window.addEventListener('resize', function () {
         if (!lb || lb.style.display === 'none') return;
         measure(); clampPan(); applyTransform(); syncZoomState();
@@ -307,10 +479,26 @@
     }
 
     /* ----- 換圖 / 開關 ----- */
+    // 每次換圖重建 <picture>：改既有 <source> 的 srcset 在各家瀏覽器的重選時機
+    // 不一致，整段重建才保證 AVIF/WebP 協商每張都重新跑一次
+    function attr(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
     function paint() {
       resetZoom();
-      stageImg.src = srcs[index];
-      stageImg.alt = alts[index];
+      // 整顆 <picture> 換新（含 img 的 src 一起寫成字串）：格式協商只跑一次、只抓一個檔。
+      // 兩個實測到的多抓陷阱都靠這招避開：① 先塞 <source> 再用 JS 指派 img.src 會多抓一份
+      // WebP；② 用 innerHTML 就地覆蓋時，舊 <img> 會先失去 <source> 兄弟而回頭去抓自己的
+      // src（＝上一張的 WebP）。整顆替換就沒有「舊 img 短暫沒有 source」的空窗。
+      var np = document.createElement('picture');
+      np.className = 'lb-pic';
+      np.innerHTML =
+        (avifs[index] ? '<source type="image/avif" srcset="' + attr(avifs[index]) + '">' : '') +
+        '<img alt="' + attr(alts[index]) + '" src="' + attr(srcs[index]) + '">';
+      stage.replaceChild(np, pic);
+      pic = np;
+      stageImg = pic.querySelector('img');
+      stageImg.addEventListener('load', function () { measure(); clampPan(); applyTransform(); });
       counter.textContent = pad2(index + 1) + ' ／ ' + pad2(srcs.length);
       measure(); syncZoomState();
     }
@@ -368,7 +556,14 @@
 
     for (var k = 0; k < frames.length; k++) {
       (function (idx) {
-        frames[idx].addEventListener('click', function () { open(idx); });
+        frames[idx].addEventListener('click', function () {
+          // 掛了切片的磚走 Deep Zoom 檢視器；OSD 載不到才退回一般燈箱
+          if (frames[idx].getAttribute('data-dzi')) {
+            deepZoom.open(frames[idx], function () { open(idx); });
+            return;
+          }
+          open(idx);
+        });
       })(k);
     }
   })();
