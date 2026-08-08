@@ -51,6 +51,150 @@
 }
 .next-link:hover .arr { transform: translateX(8px); }
 
+/* =============================================================================
+   UI 修正包（2026-08-08，鑒定報告 P0×2 / P1×5）
+   ============================================================================= */
+
+/* ---- P1-3：build 已寫入 <img width height>，補全域 height:auto 保持響應式 ----
+   （0,0,1 特異度，壓不過 .sec-media img / .gframe img 等既有規則） */
+img { height: auto; }
+
+/* ---- P0-1：手機 hero 大標單行 ----------------------------------------------
+   基礎規則是 clamp(48px, 8.5vw, 132px)：8.5vw 在 565px 處恰好等於下限 48px，
+   所以斷點取 565px、用 min(10.2vw, 48px) 從那一點無縫接續往下降，
+   桌機（≥566px）完全走原曲線＝零回歸。390px → 39.8px，14 字元單行放得下。 */
+@media (max-width: 565px) {
+  .hero-title { font-size: min(10.2vw, 48px); letter-spacing: 0.02em; }
+  .hero-title-wrap { padding: 0 20px; }
+}
+
+/* ---- P0-2：手機 frosted 導覽改單行水平滑動 ---------------------------------- */
+.frosted nav {
+  --nav-fade-l: linear-gradient(90deg, transparent 0, #000 26px);
+  --nav-fade-r: linear-gradient(90deg, #000 calc(100% - 26px), transparent 100%);
+  --nav-fade-lr: linear-gradient(90deg, transparent 0, #000 26px, #000 calc(100% - 26px), transparent 100%);
+}
+/* 斷點取 880px 而非 720px：桌機樣式下 nav 的 max-content 是 596px，
+   加上 brand 157＋gap 32＋左右 padding 後，約 853px 以下就塞不進去、
+   項目內部文字會自己折行（實測 721px 時項目高 74px、整條 103px）。
+   ≥881px 完全走原桌機規則＝零變動。 */
+@media (max-width: 880px) {
+  .frosted nav {
+    gap: 20px;
+    min-width: 0;                 /* 讓 flex 子項真的縮得下去，才會觸發自身捲動 */
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-padding-inline: 8px;
+  }
+  .frosted nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .frosted nav a {
+    flex: 0 0 auto;
+    white-space: nowrap;          /* 這行才是不折行的關鍵：原本項目內部文字會自己斷行 */
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;             /* 觸控目標（hit-areas.md 建議值） */
+    padding: 0 2px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .frosted nav a.is-active::after { bottom: 11px; left: 2px; right: 2px; }
+  /* 兩側漸層 fade 暗示可滑；由 site.js 依捲動位置掛 can-l / can-r */
+  .frosted nav.can-l  { -webkit-mask-image: var(--nav-fade-l);  mask-image: var(--nav-fade-l); }
+  .frosted nav.can-r  { -webkit-mask-image: var(--nav-fade-r);  mask-image: var(--nav-fade-r); }
+  .frosted nav.can-l.can-r { -webkit-mask-image: var(--nav-fade-lr); mask-image: var(--nav-fade-lr); }
+}
+/* 手機再把整條壓扁一點（沿用既有 720px 斷點的緊湊版面） */
+@media (max-width: 720px) {
+  .frosted { padding: 6px 16px; gap: 14px; }
+}
+
+/* ---- P1-1：子頁 frosted nav 初始即顯示（class 寫死，無 JS 也成立） ---------- */
+.frosted.is-static {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---- P1-4：hero 圓點視覺不變，熱區擴到 44×44（相鄰中心距 46px，不互撞） ---- */
+.hero-dots button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.hero-dots button::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px; height: 44px;
+}
+.hero-dots button:focus-visible { outline: 2px solid var(--color-white); outline-offset: 6px; }
+/* 捲動提示是純裝飾（aria-hidden），別讓它擋在圓點擴大後的熱區上方 */
+.hero-hint { pointer-events: none; }
+
+/* ---- P1-5：首頁單一 h1；intro 句降級為 <p class="intro-lede">，視覺照抄原 .intro h1 ---- */
+.intro .intro-lede {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(28px, 3.6vw, 44px);
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+  margin: 0;
+  max-width: 720px;
+  color: var(--color-text);
+  text-wrap: balance;
+}
+
+/* =============================================================================
+   燈箱縮放（點圖放大到原生解析度 / 拖曳平移 / 雙指縮放 / 雙擊）
+   ============================================================================= */
+.lb { overflow: hidden; }                 /* 放大後溢出的圖裁在視窗內，不生捲軸 */
+.lb-btn { z-index: 3; }
+.lb-stage {
+  position: relative;
+  z-index: 2;
+  cursor: zoom-in;
+  touch-action: none;                     /* 自行處理 pinch / pan，避免瀏覽器接手 */
+  -webkit-tap-highlight-color: transparent;
+}
+.lb-stage img {
+  transform-origin: center center;
+  user-select: none; -webkit-user-select: none; -webkit-user-drag: none;
+  cursor: inherit;
+}
+.lb.is-zoomed .lb-stage { cursor: grab; }
+.lb.is-zoomed .lb-stage.is-dragging { cursor: grabbing; }
+.lb-stage:focus-visible { outline: 2px solid var(--color-white); outline-offset: 8px; }
+
+/* 底部資訊列：計數器（既有）＋操作提示；放大時圖會蓋過原位置，故獨立浮在底部 */
+.lb-bar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  z-index: 3;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 40px 16px clamp(16px, 3vh, 30px);
+  pointer-events: none;                   /* 點這區＝點背景＝關閉，維持既有動線 */
+  text-shadow: 0 1px 6px rgba(0,0,0,0.55);
+  /* 放大後圖會蓋到底部，給一層極淡的漸層讓計數器與退出提示保持可讀（不硬切） */
+  background: linear-gradient(180deg, rgba(20,22,28,0) 0%, rgba(20,22,28,0.52) 72%);
+}
+.lb-hint {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: rgba(255,255,255,0.62);
+}
+
+/* 縮放是功能不是裝飾：減少動態時保留縮放本身，只拿掉過場 */
+@media (prefers-reduced-motion: no-preference) {
+  .lb-stage img { transition: transform 260ms var(--ease-out); }
+}
+.lb-stage.is-dragging img { transition: none; }
+
 /* 無障礙：使用者要求減少動態時，直接顯示、不做位移與逐字動畫 */
 @media (prefers-reduced-motion: reduce) {
   .fade-up { opacity: 1; transform: none; transition: none; }
@@ -60,4 +204,5 @@
   .flow-line::after { transition: none; }
   .next-title .arr { transition: none; }
   .next-link:hover .arr { transform: none; }
+  .lb, .lb-stage { animation: none; }
 }

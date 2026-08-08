@@ -1,0 +1,126 @@
+{
+  "mobileHome": {
+    "heroTitle": {
+      "fontSize": "39.78px",
+      "letterSpacing": "0.7956px",
+      "scrollW": 315,
+      "clientW": 315,
+      "rectW": 315,
+      "chLines": 1,
+      "chCount": 14,
+      "rectH": 42,
+      "lineHeight": "41.769px"
+    },
+    "nav": {
+      "scrollW": 548,
+      "clientW": 217,
+      "overflowX": "auto",
+      "flexWrap": "nowrap",
+      "count": 8,
+      "itemRectCounts": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "itemH": [
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44,
+        44
+      ],
+      "allSameTop": 1,
+      "barH": 57
+    },
+    "h1": [
+      "Jerrythepopper"
+    ],
+    "imgs": 8,
+    "lazy": 8,
+    "noDims": 0,
+    "dot": {
+      "w": 32,
+      "h": 12,
+      "hitBefore": "44px x 44px",
+      "hitUp": true,
+      "hitDown": true,
+      "hitLeft": true,
+      "hitRight": true,
+      "hitFarUp": false
+    },
+    "docScrollW": 390,
+    "innerW": 390
+  },
+  "shots": [
+    {
+      "file": "m-home-hero.png",
+      "bytes": 509659,
+      "sha": "871a6497501918c2"
+    },
+    {
+      "file": "m-street-head.png",
+      "bytes": 315291,
+      "sha": "660b0f026e4c6996"
+    }
+  ],
+  "mobileSub": {
+    "scrollY": 0,
+    "barTop": 0,
+    "barH": 57,
+    "opacity": "1",
+    "transform": "none",
+    "ariaHidden": "false",
+    "visibleViaPoint": true,
+    "navScrollW": 548,
+    "navClientW": 217,
+    "navScrollLeft": 117,
+    "activeLabel": "Street",
+    "activeInView": true,
+    "fadeClasses": "can-l can-r",
+    "maskImage": "linear-gradient(90deg, rgba(0, 0, 0, 0) ",
+    "itemRectCounts": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "itemH": 44,
+    "imgs": 25,
+    "noDims": 0,
+    "h1": 1
+  },
+  "desktopHome": {
+    "heroFontSize": "122.4px",
+    "heroLetter": "4.896px",
+    "heroRectW": 1004,
+    "navOverflowX": "visible",
+    "navScrollW": 596,
+    "navClientW": 596,
+    "barH": 56,
+    "introLede": {
+      "fontSize": "44px",
+      "lineHeight": "63.8px",
+      "color": "rgb(17, 17, 18)",
+      "maxWidth": "720px",
+      "letterSpacing": "1.76px",
+      "fontWeight": "500",
+      "rectW": 720,
+      "rectH": 255
+    },
+    "h1count": 1,
+    "lazy": 8,
+    "imgs": 8
+  }
+}

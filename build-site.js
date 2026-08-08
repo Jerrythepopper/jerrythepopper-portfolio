@@ -33,6 +33,36 @@ const slugOf = (id) => id;                       // data.js 的 id 直接當網�
 const oneLine = (s) => String(s).replace(/\s+/g, ' ').trim();
 const clip = (s, n) => (s.length <= n ? s : s.slice(0, n - 1).trimEnd() + '…');
 
+// ---------- JPEG 尺寸（純 JS 解析 SOF 標記，零相依；供 <img width height> 防 CLS） ----------
+const dimCache = new Map();
+function jpegSize(absPath) {
+  if (dimCache.has(absPath)) return dimCache.get(absPath);
+  let out = null;
+  try {
+    const b = fs.readFileSync(absPath);
+    if (b.length > 4 && b[0] === 0xFF && b[1] === 0xD8) {
+      let i = 2;
+      while (i < b.length - 9) {
+        if (b[i] !== 0xFF) { i++; continue; }            // 對齊到下一個標記
+        const m = b[i + 1];
+        if (m === 0xFF) { i++; continue; }               // 填充位元組
+        if (m === 0xD8 || m === 0x01 || (m >= 0xD0 && m <= 0xD7)) { i += 2; continue; } // 無酬載
+        if (m === 0xD9 || m === 0xDA) break;             // EOI / SOS 之後是熵編碼資料
+        const len = b.readUInt16BE(i + 2);
+        // SOFn = C0..CF，扣掉 C4(DHT) / C8(JPG) / CC(DAC)
+        if (m >= 0xC0 && m <= 0xCF && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) {
+          out = { h: b.readUInt16BE(i + 5), w: b.readUInt16BE(i + 7) };
+          break;
+        }
+        if (len < 2) break;
+        i += 2 + len;
+      }
+    }
+  } catch (e) { out = null; }
+  dimCache.set(absPath, out);
+  return out;
+}
+
 // ---------- 響應式圖片（產線 ingest-photos.js 會生 @800 低頻寬版） ----------
 // 偵測同名 @800 檔存在才輸出 srcset；demo 期的 jpg 沒有 @800 → 維持單 src，零回歸
 const SIZES_DEFAULT = '(max-width: 768px) 100vw, 50vw';
@@ -45,8 +75,10 @@ function alt800(src) {
 function imgSrcAttrs(src, rel, sizes) {
   const main = rel + src;
   const small = alt800(src);
-  if (!small) return `src="${esc(main)}"`;
-  return `src="${esc(main)}" srcset="${esc(rel + small)} 800w, ${esc(main)} 1600w" sizes="${esc(sizes || SIZES_DEFAULT)}"`;
+  const d = jpegSize(path.join(ROOT, src));
+  const dim = d ? ` width="${d.w}" height="${d.h}"` : '';
+  if (!small) return `src="${esc(main)}"${dim}`;
+  return `src="${esc(main)}" srcset="${esc(rel + small)} 800w, ${esc(main)} 1600w" sizes="${esc(sizes || SIZES_DEFAULT)}"${dim}`;
 }
 
 // 導覽列（frosted 與 footer 共用）
@@ -110,11 +142,15 @@ ${ld}
 }
 
 function frosted(rel, current) {
+  // 子頁（非首頁）常駐顯示：分享連結直達時第一屏就有站名與返回路徑（P1-1）
+  // is-static 寫在 class 裡而非靠 JS，無 JS 環境一樣看得到
+  const always = current !== 'home';
   const items = NAV.map((i) => {
     const cls = i.key === current ? ' class="is-active"' : '';
-    return `    <a href="${rel}${slugOf(i.key)}/"${cls}>${esc(i.label)}</a>`;
+    const cur = i.key === current ? ' aria-current="page"' : '';
+    return `    <a href="${rel}${slugOf(i.key)}/"${cls}${cur}>${esc(i.label)}</a>`;
   }).join('\n');
-  return `<div class="frosted" aria-hidden="true">
+  return `<div class="frosted${always ? ' is-static' : ''}" aria-hidden="${always ? 'false' : 'true'}"${always ? ' data-always="1"' : ''}>
   <a href="${rel || './'}" class="brand">Jerrythepopper</a>
   <nav aria-label="Sticky">
 ${items}
@@ -269,7 +305,7 @@ function homePage() {
   const intro = `<section class="intro">
   <div class="fade-up intro-inner" style="transition-delay:0ms">
     <div class="eyebrow">Selected · 2018 — 2026</div>
-    <h1>以影像捕捉人文、街頭與空間的情緒。<br>在孤寂感與時間流動中，找到畫面的重量。</h1>
+    <p class="intro-lede">以影像捕捉人文、街頭與空間的情緒。<br>在孤寂感與時間流動中，找到畫面的重量。</p>
     <p>Photographer · 3D Creator · Based in Taipei. Brand collaborations with Hasselblad, Leica, Sony, Oppo, Giant, and more.</p>
   </div>
 </section>`;
