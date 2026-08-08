@@ -160,6 +160,7 @@ const NAV = [
   { key: 'hasselblad', label: 'Hasselblad' },
   { key: 'portraits', label: 'Portraits' },
   { key: 'street', label: 'Street' },
+  { key: 'nature', label: 'Nature' },
   { key: '3d', label: '3D' },
   { key: 'film', label: 'Film' },
   { key: 'market', label: '果菜市場' },
@@ -337,7 +338,10 @@ ${dots}
 function categorySection(s, index) {
   const alt = index % 2 === 1;
   const cover = photosFor(s.id)[s.coverIdx];
-  const metas = s.meta.map((m) => `<span>${esc(m)}</span>`).join('');
+  // meta 可為空陣列（文案未定的系列）：空的就整塊不渲染，不留 <div class="meta"></div> 空殼
+  const metaBlock = s.meta.length
+    ? `      <div class="meta">${s.meta.map((m) => `<span>${esc(m)}</span>`).join('')}</div>\n`
+    : '';
   return `<section class="section${alt ? ' _alt' : ''}" data-screen-label="${esc(s.number + ' ' + s.en)}">
   <div class="fade-up section-inner${alt ? ' _reverse' : ''}" style="transition-delay:0ms">
     <a href="${slugOf(s.id)}/" class="sec-media" aria-label="${esc(s.en)}" style="${lqipBg(cover)}">
@@ -352,8 +356,7 @@ function categorySection(s, index) {
       </div>
       <h2>${esc(s.en)}<span class="jp">${esc(s.zh)}</span></h2>
       <p class="lede">${esc(s.lede)}</p>
-      <div class="meta">${metas}</div>
-      <a href="${slugOf(s.id)}/" class="cta">View series <span class="arr">→</span></a>
+${metaBlock}      <a href="${slugOf(s.id)}/" class="cta">View series <span class="arr">→</span></a>
     </div>
   </div>
 </section>`;
@@ -396,14 +399,14 @@ ${heroBlock()}
 ${intro}
 ${SECTIONS.map(categorySection).join('\n')}
 ${teaser({
-    label: '07 Work', cls: ' _alt', reverse: false, href: 'work/', num: '07',
+    label: '08 Work', cls: ' _alt', reverse: false, href: 'work/', num: '08',
     cover: PHOTOS.hasselblad[7], alt: 'Work', eyebrow: 'Selected · 2023 — 2026',
     h2en: 'Work', h2zh: '工作',
     lede: 'Brand collaborations and editorial projects. Click any tile to view the project on Instagram.',
     metas: ['Hasselblad', 'Leica', 'Sony', 'Oppo', 'Goopi', 'Reto'], cta: 'View work',
   })}
 ${teaser({
-    label: '08 About', cls: '', reverse: true, href: 'about/', num: '08',
+    label: '09 About', cls: '', reverse: true, href: 'about/', num: '09',
     cover: PHOTOS.portraits[5], alt: 'About', eyebrow: 'Photographer · 3D Creator',
     h2en: 'About', h2zh: '關於我',
     lede: 'Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者，Stairs Space 共同經營者。',
@@ -440,9 +443,12 @@ function nextSeriesBlock(s) {
 
 function categoryPage(s, screenLabel) {
   const photos = photosFor(s.id);
-  const metas = s.meta.map((m) => `<span>${esc(m)}</span>`).join('');
+  // subtitle / meta 皆可留空（文案未定的系列）：空的就不渲染該塊，不留空殼 DOM
   const subtitle = s.subtitle
     ? `    <p class="subtitle">${esc(s.subtitle)}</p>\n`
+    : '';
+  const metaBlock = s.meta.length
+    ? `    <div class="meta">${s.meta.map((m) => `<span>${esc(m)}</span>`).join('')}</div>\n`
     : '';
   // Deep Zoom：本系列有登記切片的張數，磚上掛角標＋data-dzi（site.js 開專用 viewer）
   const dzList = DEEPZOOM[s.id] || [];
@@ -474,8 +480,7 @@ function categoryPage(s, screenLabel) {
       <span>${esc(s.eyebrow)}</span>
     </div>
     <h1>${esc(s.en)}<span class="jp">${esc(s.zh)}</span></h1>
-${subtitle}    <div class="meta">${metas}</div>
-  </div>
+${subtitle}${metaBlock}  </div>
 
 <section class="gallery ${s.layout === 'single' ? 'single _wide' : 'masonry-2'}">
 ${frames}
@@ -520,7 +525,7 @@ const WORK_TILES = [
   { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?story_media_id=3239957459305757128&igsh=MXhhZnRoamoxc2QxZw==', t: '仁發建設', c: '品牌形象拍攝', src: 'hb_10' },
 ];
 
-const PREFIX2CAT = { pt: 'portraits', hb: 'hasselblad', st: 'street', td: 'three_d', fm: 'film', mk: 'market' };
+const PREFIX2CAT = { pt: 'portraits', hb: 'hasselblad', st: 'street', na: 'nature', td: 'three_d', fm: 'film', mk: 'market' };
 
 function workPage() {
   const tiles = WORK_TILES.map((w) => {
@@ -538,10 +543,10 @@ function workPage() {
 
   const desc = clip(oneLine('Brand collaborations and editorial projects — 品牌合作與商業工作。Hasselblad、Leica、Sony、Oppo、Goopi、Reto，2020 — 2026。'), 155);
 
-  const main = `<main class="page" data-screen-label="07 Work">
+  const main = `<main class="page" data-screen-label="09 Work">
   <div class="fade-up page-head" style="transition-delay:0ms">
     <div class="eyebrow">
-      <span class="n">07</span>
+      <span class="n">08</span>
       <span class="flow-line in" style="width:56px"></span>
       <span>Selected · 2023 — 2026</span>
     </div>
@@ -593,10 +598,10 @@ ${tiles}
 // ---------- About ----------
 function aboutPage() {
   const desc = clip(oneLine('Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者，Stairs Space 共同經營者。以影像捕捉人文、街頭與空間的情緒。'), 155);
-  const main = `<main class="page" data-screen-label="08 About">
+  const main = `<main class="page" data-screen-label="10 About">
   <div class="fade-up page-head" style="transition-delay:0ms">
     <div class="eyebrow">
-      <span class="n">08</span>
+      <span class="n">09</span>
       <span class="flow-line in" style="width:56px"></span>
       <span>Photographer · 3D Creator</span>
     </div>
@@ -688,7 +693,7 @@ function llmsTxt() {
 
 ## Pages
 
-- [首頁 Home](${SITE_ORIGIN}/)：作品集總覽，六個系列與工作、關於。
+- [首頁 Home](${SITE_ORIGIN}/)：作品集總覽，七個系列與工作、關於。
 ${lines.join('\n')}
 - [Work 工作](${SITE_ORIGIN}/work/)：品牌合作與商業專案。
 - [About 關於我](${SITE_ORIGIN}/about/)：簡介、合作品牌、展覽出版與聯絡方式。
@@ -717,7 +722,7 @@ function build() {
 
   const labels = {
     hasselblad: '02 Hasselblad', portraits: '03 Portraits', street: '04 Street',
-    '3d': '05 3D', film: '06 Film', market: '07 Market',
+    nature: '05 Nature', '3d': '06 3D', film: '07 Film', market: '08 Market',
   };
   for (const s of SECTIONS) {
     written.push(write(`${slugOf(s.id)}/index.html`, categoryPage(s, labels[s.id])));

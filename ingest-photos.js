@@ -3,7 +3,7 @@
    用法： node ingest-photos.js  （或 npm run ingest）
 
    輸入： originals\<系列key>\  任意檔名的 jpg / jpeg / png
-          系列key = hasselblad | portraits | street | 3d | film | market | rotation
+          系列key = hasselblad | portraits | street | nature | 3d | film | market | rotation
 
    輸出（photos\）：
      {prefix}_{i}.avif / .webp          ← 主檔＝1600 tier（若原圖較小＝最大可用 tier）
@@ -42,6 +42,7 @@ const CATS = [
   { key: 'hasselblad', prefix: 'hb', dataKey: 'hasselblad' },
   { key: 'portraits', prefix: 'pt', dataKey: 'portraits' },
   { key: 'street', prefix: 'st', dataKey: 'street' },
+  { key: 'nature', prefix: 'na', dataKey: 'nature' },
   { key: '3d', prefix: 'td', dataKey: 'three_d' },
   { key: 'film', prefix: 'fm', dataKey: 'film' },
   { key: 'market', prefix: 'mk', dataKey: 'market' },
