@@ -26,6 +26,12 @@ HTTPS 憑證簽發必要條件；憑證下來後要開 Cloudflare AI 爬蟲防�
 回對話說「改好了」→ Fable 接手：驗證網域 → 等憑證 → Enforce HTTPS → Search Console。
 DNS 生效幾分鐘～幾小時；Enforce HTTPS 選項最慢 24 小時出現。
 
+## 第 5 步（HTTPS 生效後,擇日 5 分鐘）：橙雲三件套
+1. DNS 記錄雲朵切回**橙色**（Proxied）
+2. Cloudflare 左選單 Analytics → 開 **Web Analytics**（免費無 cookie,D18 已裁=要）
+3. Security → Bots → AI 流量開關:**Training 封鎖、Search 放行**（護圖+SEO 兩全,08-08 已裁）
+（前置確認 08-08 已完成：使用者可登入 Cloudflare;舊 Squarespace 站不留念,切換即棄）
+
 ## 備註
 - jerrythepopper.com 與 www.jerrythepopper.com 都會通,一個自動跳轉到另一個（主網址目前=www 版,想換裸網域跟 Fable 說）
 - 每一步可逆（值改回去即還原）
