@@ -1,0 +1,12 @@
+/* =============================================================================
+   patch.css — 靜態站專用補丁（build-site.js 附加在 styles.css 之後，不改既有規則）
+   ============================================================================= */
+
+/* 無障礙：使用者要求減少動態時，直接顯示、不做位移與逐字動畫 */
+@media (prefers-reduced-motion: reduce) {
+  .fade-up { opacity: 1; transform: none; transition: none; }
+  .hero-title { animation: none; }
+  .hero-title .ch { opacity: 1; transform: none; animation: none; }
+  .hero-slide { transition: none; }
+  .flow-line::after { transition: none; }
+}
