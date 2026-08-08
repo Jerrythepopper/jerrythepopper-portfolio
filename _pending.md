@@ -24,7 +24,8 @@
 | S1 | 靜態化改造＋SEO 包（規格 `_spec-static-v1.md`） | — | **已完成**（commit ebb679f） |
 | S2 | 圖片產線腳本（資料夾→WebP 多尺寸→data 更新,demo 照片跑通） | S1 收工（對齊資料格式） | **已完成**：`ingest-photos.js`（sharp,EXIF 全剝,1600/800 雙尺寸）＋build 模板 srcset 偵測分支；demo 6 張實跑後已 revert |
 | S3 | favicon＋OG 分享縮圖 | 併入 S1 | favicon **已完成**（手寫 `src-site\favicon.svg`,九頁相對路徑引用）；OG 專用分享圖仍用該頁 cover,待正式照片再議 |
-| S4 | fresh verifier 對帳 | S1、S2 各一輪 | 排隊 |
+| S4 | fresh verifier 對帳 | S1、S2 各一輪 | **已完成**：S1 棒 PASS（互動類 INCONCLUSIVE,實作者 25 斷言補位）＋S9/S2 棒 11/11 全 PASS（含產線實跑抽驗） |
+| S10 | UI/UX 鑒定（使用者點名） | S9 收工 | **進行中**（opus,桌機+手機雙視角逐頁截圖,報告落 _review-uiux-2026-08-08\） |
 | S5 | portfolio repo 設 local git user.email＝jerrythepopper@gmail.com（全域 email 是另一個,commit 歸屬對齊 GitHub 帳號） | D1 | 排隊 |
 | S6 | 上線流程：repo 轉 public → 啟 Pages → DNS（D2）→ Enforce HTTPS → Google Search Console 登記 | D1+D2＋S1 | 排隊 |
 | S7 | humanizer skill 安裝（blader/humanizer v2.9.1, MIT） | — | **已完成**（C:\Users\User\.claude\skills\humanizer\） |
