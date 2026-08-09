@@ -83,8 +83,9 @@ const SIZES = {
   single: '(max-width: 1608px) 92vw, 1480px',                            // gallery.single._wide 上限 1480
 };
 
+// manifest 鍵＝photos\ 底下去掉副檔名的相對路徑，允許子目錄（work/giant ← photos\work\giant.webp）
 const mKey = (src) => {
-  const m = /^photos\/([^/]+?)\.(avif|webp|jpe?g|png)$/i.exec(String(src));
+  const m = /^photos\/(.+?)\.(avif|webp|jpe?g|png)$/i.exec(String(src));
   return m ? m[1] : null;
 };
 const mEntry = (src) => { const k = mKey(src); return (k && MANIFEST[k]) || null; };
@@ -151,6 +152,23 @@ function bgImage(src, rel) {
   const avif = e.formats.avif[e.formats.avif.length - 1].f;
   const wf = e.formats.webp[e.formats.webp.length - 1].f;
   return `background-image:${webp};background-image:image-set(` +
+    `url('${rel}photos/${avif}') type('image/avif'),` +
+    `url('${rel}photos/${wf}') type('image/webp'))`;
+}
+
+/* work-featured 的兩塊精選磚：背景掛在 ::before 偽元素上（styles.css:626），偽元素拿不到
+   inline style，只能靠繼承下去的自訂屬性。而自訂屬性不做語法驗證 ——「先 url() 再 image-set()
+   後者覆蓋前者」那套退路在這裡失效（不支援 image-set 的瀏覽器會照收字串，等到 var() 代入
+   background-image 才判定無效 → 整條宣告作廢 → 什麼都不顯示）。
+   所以拆成兩個變數：--bg-N 恆為純 url()（普世退路），--bg-Ns 為 image-set；由 patch.css 的
+   @supports 決定要不要換上後者。styles.css 原檔零觸及。 */
+function bgVars(n, src, rel) {
+  const e = mEntry(src);
+  const webp = `url('${rel}${src}')`;
+  if (!e || !e.formats.avif || !e.formats.avif.length) return `--bg-${n}:${webp}`;
+  const avif = e.formats.avif[e.formats.avif.length - 1].f;
+  const wf = e.formats.webp[e.formats.webp.length - 1].f;
+  return `--bg-${n}:${webp};--bg-${n}s:image-set(` +
     `url('${rel}photos/${avif}') type('image/avif'),` +
     `url('${rel}photos/${wf}') type('image/webp'))`;
 }
@@ -409,7 +427,7 @@ ${teaser({
   })}
 ${teaser({
     label: '09 About', cls: '', reverse: true, href: 'about/', num: '09',
-    cover: PHOTOS.portraits[5], alt: 'About', eyebrow: 'Photographer · 3D Creator',
+    cover: ABOUT_PORTRAIT, alt: 'About', eyebrow: 'Photographer · 3D Creator',
     h2en: 'About', h2zh: '關於我',
     lede: 'Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者，Stairs Space 共同經營者。',
     metas: ['Based in Taipei', 'SEVEN / Asia-Pacific'], cta: 'Read more',
@@ -510,29 +528,40 @@ ${nextSeriesBlock(s)}
 }
 
 // ---------- Work ----------
+/* src 的兩種寫法：
+     'work/<slug>'  ← 該案子的專屬磚圖（originals\work\ 進產線，photos\work\<slug>.avif|webp）
+     '<prefix>_<n>' ← 向某系列借第 N 張（目前只剩 Yotta 底片課程沒有專屬圖，借底片第一張）
+   借圖那條保留是有原因的：ingest-photos.js 的 checkIndexRefs 會掃這個字面樣式，
+   確保借的索引沒有超出該系列現有張數。 */
 const WORK_TILES = [
-  { url: 'https://www.instagram.com/p/DYRy7e2meZS/?igsh=MWIzdTU0NjZuN2FzdA==', t: 'OPPO Find X9 Ultra', c: '品牌形象拍攝', src: 'pt_1' },
-  { url: 'https://www.instagram.com/p/DUDZPGbE53K/?igsh=MTAxYnQ3Mzd2Z2czag==', t: 'Hasselblad × Jerry', c: '品牌合作計畫', src: 'hb_0' },
-  { url: 'https://www.instagram.com/reel/DCB6M24IH6T/?igsh=MW11YTU4eGk5b2p2dA==', t: 'Goopi 2024', c: '品牌形象動畫', src: 'pt_6' },
-  { url: 'https://www.instagram.com/p/DTurh4DkX3V/?igsh=MXY2MDFqNGY3YW1nbQ==', t: 'GIANT', c: '品牌形象動畫', src: 'hb_3' },
-  { url: 'https://www.instagram.com/p/CygDcVGSBuS/?igsh=bThtcnozbnFmeTMw', t: 'Goopi 2023', c: '品牌形象合作', src: 'pt_8' },
-  { url: 'https://www.instagram.com/p/DVhoPFdmned/', t: 'Giant Liv', c: '品牌形象動畫', src: 'st_1' },
-  { url: 'https://www.instagram.com/p/DWoPExxmdXd/?img_index=2', t: '新光攝影展講座', c: '攝影展覽講座', src: 'st_4' },
-  { url: 'https://www.instagram.com/p/CjK7UdTJl36/?img_index=1', t: 'Rolls-Royce', c: '品牌形象拍攝', src: 'st_10' },
-  { url: 'https://www.instagram.com/reel/DJ6w-6ah0QN/?igsh=ZGs3MjFnM3o5NTdz', t: 'Reto 相機', c: '產品動畫製作', src: 'td_0' },
-  { url: 'https://www.instagram.com/p/Cl3lNf9h8cm/?igsh=MTlqcXhudWUyZHBvag==', t: 'TEDxChungChengU', c: '品牌演講活動', src: 'pt_2' },
-  { url: 'https://www.youtube.com/watch?v=S7ng0s7i1FE', t: 'Sony YouTube', c: '品牌影片內容', src: 'st_7' },
-  { url: 'https://www.yottau.com.tw/course/intro/1421#intro', t: 'Yotta 底片課程', c: '線上攝影課程', src: 'fm_2' },
-  { url: 'https://www.instagram.com/p/C1GslZYBrSX/?img_index=1&igsh=MXdoNmE0eGNmNWo1cA==', t: '晶悅建設', c: '品牌形象拍攝', src: 'hb_7' },
-  { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?story_media_id=3239957459305757128&igsh=MXhhZnRoamoxc2QxZw==', t: '仁發建設', c: '品牌形象拍攝', src: 'hb_10' },
+  { url: 'https://www.instagram.com/p/DYRy7e2meZS/?igsh=MWIzdTU0NjZuN2FzdA==', t: 'OPPO Find X9 Ultra', c: '品牌形象拍攝', src: 'work/oppo' },
+  { url: 'https://www.instagram.com/p/DUDZPGbE53K/?igsh=MTAxYnQ3Mzd2Z2czag==', t: 'Hasselblad × Jerry', c: '品牌合作計畫', src: 'work/hasselblad-jerry' },
+  { url: 'https://www.instagram.com/reel/DCB6M24IH6T/?igsh=MW11YTU4eGk5b2p2dA==', t: 'Goopi 2024', c: '品牌形象動畫', src: 'work/goopi-2024' },
+  { url: 'https://www.instagram.com/p/DTurh4DkX3V/?igsh=MXY2MDFqNGY3YW1nbQ==', t: 'GIANT', c: '品牌形象動畫', src: 'work/giant' },
+  { url: 'https://www.instagram.com/p/CygDcVGSBuS/?igsh=bThtcnozbnFmeTMw', t: 'Goopi 2023', c: '品牌形象合作', src: 'work/goopi-2023' },
+  { url: 'https://www.instagram.com/p/DVhoPFdmned/', t: 'Giant Liv', c: '品牌形象動畫', src: 'work/giant-liv' },
+  { url: 'https://www.instagram.com/p/DWoPExxmdXd/?img_index=2', t: '新光攝影展講座', c: '攝影展覽講座', src: 'work/shinkong' },
+  { url: 'https://www.instagram.com/p/CjK7UdTJl36/?img_index=1', t: 'Rolls-Royce', c: '品牌形象拍攝', src: 'work/rolls-royce' },
+  { url: 'https://www.instagram.com/reel/DJ6w-6ah0QN/?igsh=ZGs3MjFnM3o5NTdz', t: 'Reto 相機', c: '產品動畫製作', src: 'work/reto' },
+  { url: 'https://www.instagram.com/p/Cl3lNf9h8cm/?igsh=MTlqcXhudWUyZHBvag==', t: 'TEDxChungChengU', c: '品牌演講活動', src: 'work/tedx' },
+  { url: 'https://www.youtube.com/watch?v=S7ng0s7i1FE', t: 'Sony YouTube', c: '品牌影片內容', src: 'work/sony-yt' },
+  { url: 'https://www.yottau.com.tw/course/intro/1421#intro', t: 'Yotta 底片課程', c: '線上攝影課程', src: 'fm_0' },
+  { url: 'https://www.instagram.com/p/C1GslZYBrSX/?img_index=1&igsh=MXdoNmE0eGNmNWo1cA==', t: '晶悅建設', c: '品牌形象拍攝', src: 'work/jingyue' },
+  { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?story_media_id=3239957459305757128&igsh=MXhhZnRoamoxc2QxZw==', t: '仁發建設', c: '品牌形象拍攝', src: 'work/renfa' },
 ];
 
 const PREFIX2CAT = { pt: 'portraits', hb: 'hasselblad', st: 'street', na: 'nature', td: 'three_d', fm: 'film', mk: 'market' };
 
+// WORK_TILES.src → 站根相對圖片路徑
+function tileSrc(src) {
+  if (src.includes('/')) return `photos/${src}.webp`;          // 專屬磚圖
+  const [p, n] = src.split('_');                                // 向系列借圖
+  return PHOTOS[PREFIX2CAT[p] || 'market'][parseInt(n, 10)];
+}
+
 function workPage() {
   const tiles = WORK_TILES.map((w) => {
-    const [p, n] = w.src.split('_');
-    const photoSrc = PHOTOS[PREFIX2CAT[p] || 'market'][parseInt(n, 10)];
+    const photoSrc = tileSrc(w.src);
     const linkLabel = w.url.includes('youtube.com') ? 'YouTube' : w.url.includes('yottau.com') ? 'YottaU' : 'Instagram';
     return `  <a href="${esc(w.url)}" target="_blank" rel="noopener noreferrer" class="work-tile">
     <div class="ph" style="${bgImage(photoSrc, '../')}"></div>
@@ -559,7 +588,7 @@ function workPage() {
     <div class="meta"><span>HASSELBLAD</span><span>LEICA</span><span>SONY</span><span>OPPO</span><span>GOOPI</span><span>RETO</span><span>2020 — 2026</span></div>
   </div>
 
-<section class="fade-up work-featured" style="transition-delay:0ms;--bg-1:url('../${esc(PHOTOS.hasselblad[0])}');--bg-2:url('../${esc(PHOTOS.portraits[0])}')">
+<section class="fade-up work-featured" style="transition-delay:0ms;${bgVars(1, 'photos/work/featured-1.webp', '../')};${bgVars(2, 'photos/work/featured-2.webp', '../')}">
   <a href="https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDY2OTM1Njg3MTE5MjI3?igsh=MTVqaG9kcG8waDNzMQ==" target="_blank" rel="noopener noreferrer">
     <div class="ft-title">Selected Works Vol.1</div>
     <div class="ft-sub">品牌合作與創作精選</div>
@@ -599,6 +628,9 @@ ${tiles}
 }
 
 // ---------- About ----------
+// 站主本人肖像（originals\about\ 進產線）；About 頁與首頁 about teaser 共用同一張
+const ABOUT_PORTRAIT = 'photos/about-portrait.webp';
+
 function aboutPage() {
   const desc = clip(oneLine('Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者，Stairs Space 共同經營者。以影像捕捉人文、街頭與空間的情緒。'), 155);
   const main = `<main class="page" data-screen-label="10 About">
@@ -612,7 +644,7 @@ function aboutPage() {
   </div>
 
 <section class="fade-up about-wrap" style="transition-delay:0ms">
-  <div class="about-portrait" style="${bgImage(PHOTOS.portraits[3], '../')}"></div>
+  <div class="about-portrait" style="${bgImage(ABOUT_PORTRAIT, '../')}"></div>
   <div class="about-body">
     <h2>Jerrythepopper 洪立楷</h2>
     <div class="role">Photographer · 3D Creator · Based in Taipei</div>
@@ -664,7 +696,7 @@ function aboutPage() {
     title: 'About 關於我｜Jerrythepopper Photography',
     desc,
     canonicalPath: '/about/',
-    ogImage: PHOTOS.portraits[3],
+    ogImage: ABOUT_PORTRAIT,
     jsonld: PERSON_LD,
   });
 }

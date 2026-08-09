@@ -10,4 +10,7 @@ originals/*
 # 工作備份
 backups/
 
-�����Ӥ�/
+# 使用者母帶 staging 區（原檔與影片不進版控）
+# 2026-08-09 修：commit 2c9302b 這行是用 Big5 位元組寫進來的（PowerShell 預設 ANSI
+# codepage），git 拿 UTF-8 路徑去比對永遠比不中＝母帶其實一直沒被忽略。重寫成 UTF-8。
+網站照片/

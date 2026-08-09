@@ -290,6 +290,103 @@ async function processOne(inFile, prefix, i) {
   return { entry, bytes, nFiles, srcLong, tiers, src };
 }
 
+// ---------- 專用資產（Work 磚圖／About 肖像） ----------
+/* 這兩類不進系列的序號體系（沒有 _0.._n），因為版面是「指名道姓」引用某一張，不是跑陣列：
+     originals\work\<原檔名>  → photos\work\<slug>.avif|webp    manifest key = work/<slug>
+     originals\about\<任一張> → photos\about-portrait.avif|webp  manifest key = about-portrait
+   build-site.js 的 WORK_TILES 直接寫 slug（src: 'work/giant'），不再借某系列的第 N 張。
+   單一 1600 tier：磚圖版位最寬 ~570px、肖像 ~600px，2560 純屬浪費；其餘（色彩管理、
+   剝 metadata、LQIP）與系列產線同一套函式，行為一致。 */
+const ASSET_LONG_EDGE = 1600;
+
+// 原檔名 → slug（Work 磚圖）。中文檔名沒有安全的自動轉法，一律明列；
+// 未列到的檔案退回通用 slugify 並警告（站主日後自行加圖也不會整條爆掉）。
+const WORK_SLUG = {
+  'Giant.jpg': 'giant',
+  'GiantLIV.jpg': 'giant-liv',
+  'Goopi 2023.jpg': 'goopi-2023',
+  'Goopi 2024.jpg': 'goopi-2024',
+  'Hasselblad x Jerry.jpg': 'hasselblad-jerry',
+  'Oppo.jpg': 'oppo',
+  'RETO.png': 'reto',
+  'Rolls Royce.JPG': 'rolls-royce',
+  'Selected work vol.1.jpg': 'featured-1',
+  'Selected work vol.2.jpg': 'featured-2',
+  'Sony YT.png': 'sony-yt',
+  'TEDx.jpg': 'tedx',
+  '仁發建設.png': 'renfa',
+  '新光.jpg': 'shinkong',
+  '晶悅.jpg': 'jingyue',
+};
+
+const slugify = (name) =>
+  name.replace(IN_EXT, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'asset';
+
+/* 單張專用資產 → photos\<outRel>.avif|webp（outRel 可含子目錄，如 work/giant）
+   回傳 manifest entry，形狀與系列照片完全相同，故 build-site.js 的
+   pictureTag / bgImage / fullAttrs 不必分兩種路徑處理。 */
+async function processAsset(inFile, outRel) {
+  const src = await probeSource(inFile);
+  const tier = Math.min(ASSET_LONG_EDGE, Math.max(src.w, src.h));   // 絕不放大
+  const entry = { w: 0, h: 0, main: '', formats: { avif: [], webp: [] }, lqip: '', max: null };
+  let bytes = 0, nFiles = 0;
+
+  fs.mkdirSync(path.dirname(path.join(PHOTOS, outRel + '.webp')), { recursive: true });
+  for (const fmt of ['avif', 'webp']) {
+    const name = `${outRel}.${fmt}`;
+    const r = await encode(inFile, path.join(PHOTOS, name), tier, fmt, Q[fmt], src);
+    entry.formats[fmt].push({ f: name, w: r.w, h: r.h, tier });
+    bytes += r.bytes; nFiles++;
+    if (fmt === 'webp') { entry.main = name; entry.w = r.w; entry.h = r.h; }
+  }
+  const a = entry.formats.avif[0], w = entry.formats.webp[0];
+  entry.max = { tier, avif: a.f, webp: w.f, w: w.w, h: w.h };
+  entry.lqip = await makeLqip(inFile, src);
+  return { entry, bytes, nFiles, src, tier };
+}
+
+// 全部專用資產跑一輪；回傳 [{ key, file }] 供主流程列印
+async function processAssets(manifest) {
+  const out = [];
+
+  // Work 磚圖：photos\work\ 整個重建（冪等），manifest 的 work/ 鍵先全清
+  const workDir = path.join(ORIGINALS, 'work');
+  if (fs.existsSync(workDir)) {
+    fs.rmSync(path.join(PHOTOS, 'work'), { recursive: true, force: true });
+    for (const k of Object.keys(manifest.photos)) if (k.startsWith('work/')) delete manifest.photos[k];
+
+    const files = fs.readdirSync(workDir).filter((f) => IN_EXT.test(f)).sort();
+    console.log(`\n【work】(Work 磚圖) ${files.length} 張｜單一 ${ASSET_LONG_EDGE} tier`);
+    let sum = 0, n = 0;
+    for (const f of files) {
+      let slug = WORK_SLUG[f];
+      if (!slug) { slug = slugify(f); console.log(`  ! WORK_SLUG 沒列到「${f}」，暫用自動 slug「${slug}」`); }
+      const key = 'work/' + slug;
+      const r = await processAsset(path.join(workDir, f), key);
+      manifest.photos[key] = r.entry;
+      sum += r.bytes; n += r.nFiles;
+      out.push({ key, file: f, w: r.entry.w, h: r.entry.h, icc: r.src.hasIcc });
+    }
+    console.log(`  小計：${files.length} 張 → ${n} 檔 ${kb(sum)}`);
+  }
+
+  // About 肖像：固定輸出名，版面直接指名 photos/about-portrait.webp
+  const aboutDir = path.join(ORIGINALS, 'about');
+  if (fs.existsSync(aboutDir)) {
+    const files = fs.readdirSync(aboutDir).filter((f) => IN_EXT.test(f)).sort();
+    if (files.length) {
+      if (files.length > 1) console.log(`  ! originals\\about\\ 有 ${files.length} 張，只採用第一張「${files[0]}」`);
+      const key = 'about-portrait';
+      const r = await processAsset(path.join(aboutDir, files[0]), key);
+      manifest.photos[key] = r.entry;
+      console.log(`\n【about】(About 肖像) ${files[0]} → ${r.entry.main} ${r.entry.w}×${r.entry.h}｜${r.nFiles} 檔 ${kb(r.bytes)}`
+        + `｜${r.src.hasIcc ? 'ICC→sRGB' : '無 ICC（視為 sRGB）'}`);
+      out.push({ key, file: files[0], w: r.entry.w, h: r.entry.h, icc: r.src.hasIcc });
+    }
+  }
+  return out;
+}
+
 // ---------- data.js 改寫 ----------
 function patchDataJs(results, dataJsPath = DATA_JS) {   // 第二參數只給單元測試指到 stub 用
   let src = fs.readFileSync(dataJsPath, 'utf8');
@@ -423,6 +520,9 @@ async function main() {
     results.push({ ...cat, count: files.length, coverIdx, orderSource: ord.source });
   }
 
+  // 專用資產（Work 磚圖／About 肖像）：與系列並行存在，manifest 共用一張表
+  const assets = await processAssets(manifest);
+
   if (!results.length) {
     console.log('originals\\ 下沒有可處理的檔案（支援 jpg / jpeg / png）。');
     return;
@@ -445,6 +545,11 @@ async function main() {
   for (const r of results) {
     console.log(`  ${r.dataKey} = range('${r.prefix}', ${r.count}, 'webp')`
       + `｜排序 ${ORDER_LABEL[r.orderSource]}` + (r.coverIdx >= 0 ? `｜coverIdx ${r.coverIdx}` : ''));
+  }
+
+  if (assets.length) {
+    console.log(`專用資產 ${assets.length} 件（版面直接指名，不進系列陣列）：`);
+    for (const a of assets) console.log(`  ${a.key} ← ${a.file}  ${a.w}×${a.h}${a.icc ? '  ICC→sRGB' : ''}`);
   }
 
   for (const w of checkIndexRefs(results)) console.log(`  ! ${w}`);

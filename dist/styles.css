@@ -1374,3 +1374,14 @@ html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); }
   margin: 0;
 }
 .notfound-wrap .cta { margin-top: 12px; }
+
+/* ---- work-featured：AVIF 版背景（有退路的接法） -------------------------------
+   背景掛在 .work-featured a::before，偽元素只能吃繼承來的自訂屬性，而自訂屬性不做語法
+   驗證 —— 「同名宣告兩次、後者覆蓋前者」那套退路對 var() 無效：不支援 image-set 的
+   瀏覽器會照單全收字串，直到 var() 代入 background-image 才判定無效，結果整條宣告作廢、
+   背景全空。故 build-site.js 的 bgVars() 產出兩個變數：--bg-N 恆為純 url()（普世退路），
+   --bg-Ns 為 image-set；只有真的支援 image-set + type() 的瀏覽器才在這裡換上 AVIF。   */
+@supports (background-image: image-set(url("a.avif") type("image/avif"))) {
+  .work-featured a:nth-child(1)::before { background-image: var(--bg-1s, var(--bg-1)); }
+  .work-featured a:nth-child(2)::before { background-image: var(--bg-2s, var(--bg-2)); }
+}

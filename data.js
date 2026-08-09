@@ -3,34 +3,39 @@
   const range = (prefix, n, ext = 'jpg') => Array.from({ length: n }, (_, i) => `photos/${prefix}_${i}.${ext}`);
 
   window.PHOTOS = {
-    hasselblad: range('hb', 25, 'webp'),
-    portraits:  range('pt', 25, 'webp'),
-    street:     range('st', 25, 'webp'),
-    nature:     range('na', 10, 'webp'),
-    three_d:    range('td', 25, 'webp'),
-    film:       range('fm', 25, 'webp'),
-    market:     range('mk', 25, 'webp'),
-    rotation:   range('rot', 8, 'webp'),
+    hasselblad: range('hb', 48, 'webp'),
+    portraits:  range('pt', 28, 'webp'),
+    street:     range('st', 22, 'webp'),
+    nature:     range('na', 26, 'webp'),
+    three_d:    range('td', 62, 'webp'),
+    film:       range('fm', 30, 'webp'),
+    market:     range('mk', 17, 'webp'),
   };
 
-  // Hero carousel — curated mix
+  // Hero carousel — 每個系列各出一張「站主自排的第一張」（sort-studio 的 order.json 首位
+  // ＝站主心中該系列的門面），末位補哈蘇第二張湊滿 8 格。
   window.HERO_SLIDES = [
     'photos/hb_0.webp',
     'photos/pt_0.webp',
-    'photos/mk_0.webp',
-    'photos/st_4.webp',
-    'photos/fm_2.webp',
-    'photos/hb_7.webp',
-    'photos/pt_5.webp',
+    'photos/st_0.webp',
     'photos/td_0.webp',
+    'photos/fm_0.webp',
+    'photos/mk_0.webp',
+    'photos/na_0.webp',
+    'photos/hb_1.webp',
   ];
 
   // Deep Zoom — 系列 → 哪幾張掛得起「鑽細節」的切片（node make-deepzoom.js 產出）
   // idx = 該系列 PHOTOS 陣列的索引；dzi = photos\dz\ 下的 .dzi 路徑（相對站根）
-  // demo 期：哈蘇第 0 張掛 8000×6000 合成測試大圖；正式照片來了換成真原檔重跑產線即可。
+  // 2026-08-09 起是真原檔：哈蘇 48 張裡長邊最大的三張（一億畫素機身，42 張長邊 ≥8000）。
+  // 同長邊者有一大票並列，取捨規則＝order.json 位置靠前者優先，但避免選到相鄰的兩張
+  // （磚挨著磚會出現兩個角標擠在一起），所以取 idx 4 之後跳過 5 選 6，順帶湊到一張橫幅。
+  // 切片名 hbNN 的 NN 就是 idx，日後要加片只要照這個對應加就好。
   window.DEEPZOOM = {
     hasselblad: [
-      { idx: 0, dzi: 'photos/dz/hb0-deep.dzi', label: 'Deep Zoom · 8000 × 6000' },
+      { idx: 1, dzi: 'photos/dz/hb01.dzi', label: 'Deep Zoom · 8619 × 19242' },
+      { idx: 4, dzi: 'photos/dz/hb04.dzi', label: 'Deep Zoom · 8742 × 11656' },
+      { idx: 6, dzi: 'photos/dz/hb06.dzi', label: 'Deep Zoom · 11656 × 8742' },
     ],
   };
 
@@ -44,7 +49,7 @@
       lede: '這兩次與哈蘇合作，我想挑戰更多可能。',
       subtitle: '這兩次與哈蘇合作，我想挑戰更多可能\n\n當我拿到哈蘇相機時，並不想只用它來做一件事，而是想看看它能如何回應不同的拍攝主題。這次的創作，涵蓋了人像、街景、風景，以及一些更個人、更私密的視角。\n\n每一種題材，都讓我重新理解這台相機的語言，它的細節，它的動態範圍，它如何詮釋光影，以及它如何影響我的觀看方式。',
       meta: [],
-      coverIdx: 2, layout: 'single',
+      coverIdx: 0, layout: 'single',
     },
     {
       id: 'portraits', hash: '#/portraits',
@@ -54,7 +59,7 @@
       lede: '喜歡幫朋友們，還有重要的人，記錄他們的樣子。',
       subtitle: '喜歡幫朋友們，還有重要的人，記錄他們的樣子。',
       meta: [],
-      coverIdx: 3, layout: 'masonry',
+      coverIdx: 0, layout: 'masonry',
     },
     {
       id: 'street', hash: '#/street',
@@ -67,8 +72,6 @@
       coverIdx: 0, layout: 'masonry',
     },
     {
-      // 佔位期：demo 照片＋中性 lede；正式照片丟 originals\nature\ 重跑產線即替換。
-      // 文案（lede / subtitle / meta）待站主提供，模板允許 subtitle 與 meta 留空。
       id: 'nature', hash: '#/nature',
       en: 'Nature', zh: '自然',
       eyebrow: 'Series · 004',
@@ -86,7 +89,7 @@
       lede: '喜歡探索攝影與 3D 領域的邊界。',
       subtitle: '我喜歡探索攝影與 3D 領域的邊界，也喜歡在虛擬世界裡探索各式的可能性。',
       meta: [],
-      coverIdx: 1, layout: 'single',
+      coverIdx: 0, layout: 'single',
     },
     {
       id: 'film', hash: '#/film',
@@ -96,7 +99,7 @@
       lede: '底片的驚喜，在於拍完時常會忘記當下的畫面。',
       subtitle: '底片的驚喜，在於拍完時常會忘記當下的畫面。化學與物理的顯影，解讀出與數位不同的相片樣貌，也為拍攝增添些不同的氛圍。',
       meta: [],
-      coverIdx: 4, layout: 'masonry',
+      coverIdx: 0, layout: 'masonry',
     },
     {
       id: 'market', hash: '#/market',
