@@ -8,6 +8,12 @@
 const fs = require('fs');
 const path = require('path');
 
+// sharp 為選用依賴（og:image 方形封面產線用）——找不到就整段優雅降級，build 不失敗
+// （S28 2026-08-09：OG 分享圖方形化）
+let sharp = null;
+try { sharp = require('sharp'); }
+catch (e) { console.warn('! 找不到 sharp 套件 —— og:image 方形圖不會產生，各頁退回現行封面圖（非方形）'); }
+
 // 正式網域（canonical / sitemap / robots / llms.txt 都吃它）；apex 由 DNS 301 導 www
 const SITE_ORIGIN = 'https://www.jerrythepopper.com';
 
@@ -381,9 +387,18 @@ const PERSON_LD = {
 
 // ---------- 共用片段 ----------
 function head(o) {
-  // o: {title, desc, canonicalPath, ogImage, jsonld, rel}
+  // o: {title, desc, canonicalPath, ogImage, ogPage, jsonld, rel}
   const canonical = SITE_ORIGIN + o.canonicalPath;
   const ld = JSON.stringify(o.jsonld, null, 2).replace(/</g, '\\u003c');
+  // og:image 一律絕對網址（社群爬蟲不解相對路徑）：OG_META 有該頁的方形封面（sharp 產）
+  // 就用它＋標尺寸；沒有（缺 sharp 或來源缺檔）就優雅退回現行 cover 圖，不標尺寸
+  // （S28 2026-08-09：OG 分享圖方形化，o.ogImage 本身已是站根相對路徑，不吃 o.rel）
+  const ogEntry = o.ogPage && OG_META[o.ogPage];
+  const ogPath = ogEntry ? ogEntry.rel : o.ogImage;
+  const ogAbs = `${SITE_ORIGIN}/${ogPath}`;
+  const ogDims = ogEntry
+    ? `<meta property="og:image:width" content="${ogEntry.w}">\n<meta property="og:image:height" content="${ogEntry.h}">\n`
+    : '';
   return `<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -403,11 +418,11 @@ ${o.robots ? `<meta name="robots" content="noindex">\n` : ''}
 <meta property="og:title" content="${esc(o.title)}">
 <meta property="og:description" content="${esc(o.desc)}">
 <meta property="og:url" content="${esc(canonical)}">
-<meta property="og:image" content="${esc(o.rel + o.ogImage)}">
-<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="${esc(ogAbs)}">
+${ogDims}<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(o.title)}">
 <meta name="twitter:description" content="${esc(o.desc)}">
-<meta name="twitter:image" content="${esc(o.rel + o.ogImage)}">
+<meta name="twitter:image" content="${esc(ogAbs)}">
 <link rel="icon" type="image/svg+xml" href="${o.rel}favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -681,6 +696,7 @@ ${teaser({
     desc: '台北攝影師、3D 創作者洪立楷（Jerrythepopper）的個人作品集——人像、街拍、底片、自然攝影與 3D 視覺創作，曾與 Hasselblad、Leica、Sony 等品牌合作。以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。',
     canonicalPath: '/',
     ogImage: HERO_SLIDES[0],
+    ogPage: 'home',
     jsonld: PERSON_LD,
   });
 }
@@ -769,6 +785,7 @@ ${nextSeriesBlock(s)}
     desc,
     canonicalPath: `/${slugOf(s.id)}/`,
     ogImage: photos[s.coverIdx],
+    ogPage: slugOf(s.id),
     jsonld: {
       '@context': 'https://schema.org',
       '@type': 'ImageGallery',
@@ -870,6 +887,7 @@ ${tiles}
     desc,
     canonicalPath: '/work/',
     ogImage: PHOTOS.hasselblad[0],
+    ogPage: 'work',
     jsonld: {
       '@context': 'https://schema.org',
       '@type': 'CollectionPage',
@@ -952,6 +970,7 @@ function aboutPage() {
     desc,
     canonicalPath: '/about/',
     ogImage: ABOUT_PORTRAIT,
+    ogPage: 'about',
     jsonld: PERSON_LD,
   });
 }
@@ -991,6 +1010,7 @@ function notFoundPage() {
     desc,
     canonicalPath: '/404.html',
     ogImage: HERO_SLIDES[0],
+    ogPage: 'home',   // 沿用首頁方形封面（404 不在十頁清單內，沒有專屬 og-404.jpg）
     robots: true,
     jsonld: PERSON_LD,
   });
@@ -1035,6 +1055,53 @@ ${lines.join('\n')}
 `;
 }
 
+// ---------- OG 分享圖（方形封面，S28 2026-08-09） ----------
+// 每頁一張 1200×1200 方形 JPEG，重心智慧裁切（sharp.strategy.attention）——首頁/
+// 各系列頁/work/about 共十頁，來源分別是 HERO_SLIDES[0]／該系列 coverIdx 那張／
+// 現行 work、about 封面。缺 sharp 時整段優雅降級：OG_META 留空物件，head() 退回
+// 用該頁原本的 ogImage（非方形，無 width/height meta），build 不中斷。
+const OG_DIR = path.join(ROOT, 'photos', 'og');
+const OG_SIZE = 1200;
+const OG_META = {};   // page key → { rel, w, h }，generateOgImages() 於 build() 開頭填妥
+
+function ogSpecs() {
+  return [
+    { page: 'home', src: HERO_SLIDES[0] },
+    ...SECTIONS.map((s) => ({ page: slugOf(s.id), src: photosFor(s.id)[s.coverIdx] })),
+    { page: 'work', src: PHOTOS.hasselblad[0] },
+    { page: 'about', src: ABOUT_PORTRAIT },
+  ];
+}
+
+async function generateOgImages() {
+  if (!sharp) return;   // 警告已在 require 失敗當下印過
+  fs.mkdirSync(OG_DIR, { recursive: true });
+  let made = 0, skipped = 0, missing = 0;
+  for (const { page, src } of ogSpecs()) {
+    const srcAbs = path.join(ROOT, src);
+    const outRel = `photos/og/og-${page}.jpg`;
+    const outAbs = path.join(ROOT, outRel);
+    if (!fs.existsSync(srcAbs)) {
+      console.warn(`! og 來源缺檔：${src}（${page} 頁退回現行 cover，不產方形圖）`);
+      missing++;
+      continue;
+    }
+    // 冪等：來源 mtime 沒有比既有輸出新就跳過，避免每次 build 重壓（S28 驗收要求）
+    const regen = !fs.existsSync(outAbs) || fs.statSync(srcAbs).mtimeMs > fs.statSync(outAbs).mtimeMs;
+    if (regen) {
+      await sharp(srcAbs)
+        .resize(OG_SIZE, OG_SIZE, { fit: 'cover', position: sharp.strategy.attention })
+        .jpeg({ quality: 85 })
+        .toFile(outAbs);           // 未呼叫 withMetadata() ＝ 不寫入 EXIF/ICC，比照 ingest-photos.js 慣例
+      made++;
+    } else {
+      skipped++;
+    }
+    OG_META[page] = { rel: outRel, w: OG_SIZE, h: OG_SIZE };
+  }
+  console.log(`og:image 方形封面：新產 ${made} 張／未變略過 ${skipped} 張${missing ? `／缺來源 ${missing} 張` : ''} → photos/og/`);
+}
+
 // ---------- build ----------
 function write(rel, content) {
   const file = path.join(DIST, rel);
@@ -1043,7 +1110,9 @@ function write(rel, content) {
   return file;
 }
 
-function build() {
+async function build() {
+  await generateOgImages();   // 先產好方形封面＋填 OG_META，頁面 head() 才查得到絕對網址＋尺寸
+
   fs.rmSync(DIST, { recursive: true, force: true });
   fs.mkdirSync(DIST, { recursive: true });
 
@@ -1128,4 +1197,4 @@ function build() {
   console.log(`SITE_ORIGIN = ${SITE_ORIGIN}`);
 }
 
-build();
+build().catch((e) => { console.error(e); process.exit(1); });
