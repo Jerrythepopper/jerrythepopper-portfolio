@@ -203,9 +203,15 @@
     }
     var obs = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
-        if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); }
+        // 超高元素（如手機單欄 .work-grid，高度遠超視窗）永遠達不到 18% 的
+        // intersectionRatio——18% 的高度已經超過視窗本身，門檻恆不成立、
+        // fade-up 永不觸發、整片隱形。超過視窗 60% 高的元素改「露面即現」。
+        var tall = e.boundingClientRect.height > window.innerHeight * 0.6;
+        if (e.isIntersecting && (e.intersectionRatio >= 0.18 || tall)) {
+          e.target.classList.add('in'); obs.unobserve(e.target);
+        }
       });
-    }, { threshold: 0.18 });
+    }, { threshold: [0, 0.18] });
     for (var j = 0; j < els.length; j++) obs.observe(els[j]);
   })();
 

@@ -371,6 +371,11 @@ const PERSON_LD = {
   jobTitle: 'Photographer / 3D Creator',
   email: 'mailto:jerrythepopper@gmail.com',
   address: { '@type': 'PostalAddress', addressLocality: 'Taipei', addressCountry: 'TW' },
+  areaServed: [
+    { '@type': 'Country', name: 'Taiwan' },
+    { '@type': 'Place', name: 'International' },
+  ],
+  knowsAbout: ['攝影', '人像攝影', '街頭攝影', '底片攝影', '自然攝影', '3D 視覺設計', 'CGI', '場景設計'],
   sameAs: ['https://www.instagram.com/jerrythepopper'],
 };
 
@@ -671,8 +676,8 @@ ${teaser({
   return shell({
     rel: '', current: 'home', main,
     headExtra: heroHead(''),
-    title: 'Jerrythepopper 洪立楷｜攝影 × 3D 作品集 Photography & 3D Portfolio',
-    desc: clip(oneLine('以影像捕捉人文、街頭與空間的情緒。攝影師、3D 創作者，Based in Taipei。曾與 Hasselblad、Leica、Sony、Oppo、Giant 等品牌合作。'), 155),
+    title: 'Jerrythepopper 洪立楷｜台北攝影師・3D 創作者｜攝影作品集',
+    desc: '台北攝影師、3D 創作者洪立楷（Jerrythepopper）的個人作品集——人像、街拍、底片、自然攝影與 3D 視覺創作，曾與 Hasselblad、Leica、Sony 等品牌合作。',
     canonicalPath: '/',
     ogImage: HERO_SLIDES[0],
     jsonld: PERSON_LD,
@@ -753,10 +758,13 @@ ${nextSeriesBlock(s)}
   // nature 頁改用專屬 SEO description（英文開場句 + 定稿中文前 60 字），非套用預設 subtitle/lede 生成規則
   const desc = s.id === 'nature'
     ? 'Tall clouds, open sea, old trees, mountains. I try to keep a record of how they look. ' + s.subtitle.slice(0, 60)
+    : s.id === '3d'
+    ? '攝影與 3D 的邊界實驗——台灣 3D 視覺創作、CGI 場景設計與虛實整合作品。'
     : clip(oneLine(s.subtitle || s.lede), 155);
+  const pageTitle = s.id === '3d' ? '3D 視覺創作 CGI｜Jerrythepopper' : `${enZh(s)}｜Jerrythepopper Photography`;
   return shell({
     rel: '../', current: s.id, main,
-    title: `${enZh(s)}｜Jerrythepopper Photography`,
+    title: pageTitle,
     desc,
     canonicalPath: `/${slugOf(s.id)}/`,
     ogImage: photos[s.coverIdx],
@@ -877,7 +885,7 @@ ${tiles}
 const ABOUT_PORTRAIT = 'photos/about-portrait.webp';
 
 function aboutPage() {
-  const desc = clip(oneLine('Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者。以影像捕捉人文、街頭與空間的情緒。'), 155);
+  const desc = clip(oneLine('Jerrythepopper 洪立楷，台北攝影師、3D創作者，1996年生於台北。以影像捕捉人文、街頭與空間的情緒，以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。'), 155);
   const main = `<main class="page" data-screen-label="10 About">
   <div class="fade-up page-head" style="transition-delay:0ms">
     <div class="eyebrow">
@@ -895,6 +903,7 @@ function aboutPage() {
     <div class="role">Photographer · 3D Creator · Based in Taipei</div>
 
     <p>${segmentZh('1996年生於台北。攝影師、3D創作者。')}</p>
+    <p>${segmentZh('以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。')}</p>
     <p>${segmentZh('以影像捕捉人文、街頭與空間的情緒，擅長在孤寂感與時間流動中找到自身的模樣。除了攝影，也持續探索3D視覺與虛實場景的交錯，嘗試讓靜態影像走向更立體的敘事。')}</p>
     <p>${segmentZh('曾與 Hasselblad、Leica、Sony、Oppo、Giant、新光攝影展、朱銘美術館、蝦皮等品牌合作，執行形象拍攝、教學內容與創意企劃。紀實計畫《輪轉》記錄台北第一果菜批發市場的人與故事，歷時一年多，最終透過募資出版攝影集。')}</p>
 
@@ -1009,7 +1018,7 @@ function llmsTxt() {
   );
   return `# Jerrythepopper 洪立楷 — Photography & 3D Portfolio
 
-> 攝影師、3D 創作者，1996 年生於台北。以影像捕捉人文、街頭與空間的情緒；曾與 Hasselblad、Leica、Sony、Oppo、Giant 等品牌合作。紀實計畫《輪轉》記錄台北第一果菜批發市場。
+> 台北攝影師・3D 創作者，1996 年生於台北。以影像捕捉人文、街頭與空間的情緒；曾與 Hasselblad、Leica、Sony、Oppo、Giant 等品牌合作。紀實計畫《輪轉》記錄台北第一果菜批發市場。
 
 ## Pages
 
