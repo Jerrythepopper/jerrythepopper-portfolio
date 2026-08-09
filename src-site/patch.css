@@ -412,3 +412,8 @@ html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); }
   .work-featured a:nth-child(1)::before { background-image: var(--bg-1s, var(--bg-1)); }
   .work-featured a:nth-child(2)::before { background-image: var(--bg-2s, var(--bg-2)); }
 }
+
+/* ---- About 合作品牌：標籤/內容真兩欄（內容換行不落到標籤下方；styles.css:807 的
+   inline-block min-width 版在長內容換行時會整段掉到標籤下,改 grid 兩欄治本） ---- */
+.about-body .brands p { display: grid; grid-template-columns: 8em 1fr; column-gap: 8px; }
+.about-body .brands b { display: block; min-width: 0; margin-right: 0; }
