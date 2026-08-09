@@ -1390,3 +1390,6 @@ html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); }
    inline-block min-width 版在長內容換行時會整段掉到標籤下,改 grid 兩欄治本） ---- */
 .about-body .brands p { display: grid; grid-template-columns: 8em 1fr; column-gap: 8px; }
 .about-body .brands b { display: block; min-width: 0; margin-right: 0; }
+
+/* ---- 標題中文副標不拆字：整組換行（市場頁「果/菜市場」被拆開的修正,對其他短副標無感） ---- */
+.page-head h1 .jp, .section h2 .jp { white-space: nowrap; }
