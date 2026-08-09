@@ -2,6 +2,7 @@
    site.js — 靜態站互動層（vanilla，零依賴）
    復刻原 React 雛形四件互動：hero 輪播 / frosted nav / fade-up / lightbox
    2026-08-08 UI 修正包：手機導覽單行滑動、子頁導覽常駐、燈箱縮放平移
+   2026-08-09 S21：hero 照片輪播（含 8 顆圓點）退場，改成每次來訪輪值一支雲影片
    由 build-site.js 原樣複製到 dist\site.js
    ============================================================================= */
 (function () {
@@ -108,32 +109,71 @@
     }
   })();
 
-  /* ---------- ③ hero 輪播（5s，圓點可點） ---------- */
+  /* ---------- ③ hero 雲影片（每次來訪輪值一支） ------------------------------
+     取代原本的 8 張照片輪播。分工：
+       · 哪一支 —— <head> 之後的內聯腳本已經算好（localStorage heroVidIdx 遞增），
+         連海報一起換掉了；這裡只讀 window.__HERO_IDX，不重算，免得海報與影片不同支。
+       · 何時載 —— 等 window load 之後才建 <video>，首屏那一輪網路請求裡沒有 mp4。
+       · 哪一版 —— 視窗寬 ≤820px 給 720p（斷點對齊 patch.css 的海報 960 版）。
+       · 怎麼接 —— 影片預設 opacity:0，等 playing 才淡入蓋上海報。影片首幀就是海報
+         那張圖，所以這道淡入看不出換手，只是把「解碼完成」那一刻磨掉。
+       · 支與支之間沒有轉場，循環接點也不融接，吃 loop 屬性的原生硬回切。
+     減少動態 / Save-Data：整段不建元素直接 return —— 沒有 <video> 就不會有 mp4 請求。
+  ------------------------------------------------------------------------ */
   (function () {
     var mv = document.querySelector('.hero-mv');
     if (!mv) return;
-    var slides = mv.querySelectorAll('.hero-slide');
-    var dots = document.querySelectorAll('.hero-dots button');
-    if (slides.length < 2) return;
-    var active = 0, timer = null;
+    var list = window.__HERO_VIDEOS;
+    if (!list || !list.length) return;
 
-    function show(n) {
-      active = (n + slides.length) % slides.length;
-      for (var i = 0; i < slides.length; i++) slides[i].classList.toggle('is-active', i === active);
-      for (var j = 0; j < dots.length; j++) dots[j].classList.toggle('is-active', j === active);
+    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    var saveData = !!(conn && conn.saveData);
+    if (reduce || saveData) {
+      mv.setAttribute('data-hero-video', reduce ? 'skipped-reduced-motion' : 'skipped-save-data');
+      return;
     }
-    function start() { if (!reduce) { stop(); timer = setInterval(function () { show(active + 1); }, 5000); } }
-    function stop() { if (timer) { clearInterval(timer); timer = null; } }
 
-    for (var k = 0; k < dots.length; k++) {
-      (function (idx) {
-        dots[idx].addEventListener('click', function () { show(idx); start(); });
-      })(k);
+    var idx = typeof window.__HERO_IDX === 'number' ? window.__HERO_IDX : 0;
+    var item = list[idx] || list[0];
+
+    function mount() {
+      var v = document.createElement('video');
+      v.className = 'hero-video';
+      // muted 一定要在設 src 之前就位，否則 iOS/Safari 判定為有聲自動播放直接擋掉
+      v.muted = true;
+      v.defaultMuted = true;
+      v.setAttribute('muted', '');
+      v.loop = true;
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.setAttribute('webkit-playsinline', '');
+      v.setAttribute('aria-hidden', 'true');
+      v.setAttribute('disablepictureinpicture', '');
+      v.setAttribute('disableremoteplayback', '');
+      v.preload = 'auto';
+      v.setAttribute('data-hero-idx', String(idx));
+      v.setAttribute('data-hero-id', String(item.id || ''));
+      // 不掛 poster 屬性：海報已經是底下那層的背景圖，掛了會為了同一張畫面多抓一次
+      v.src = (window.innerWidth <= 820 && item.mp4_720) ? item.mp4_720 : item.mp4;
+
+      var shown = false;
+      function reveal() { if (!shown) { shown = true; v.classList.add('is-on'); } }
+      v.addEventListener('playing', reveal);
+      // 自動播放被擋（省電模式等）：至少有畫面可以顯示了就淡入，停在第一幀也比黑底好
+      v.addEventListener('loadeddata', function () { if (v.readyState >= 2) reveal(); });
+
+      var scrim = mv.querySelector('.hero-scrim');
+      if (scrim) mv.insertBefore(v, scrim); else mv.appendChild(v);
+
+      function play() { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+      play();
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) v.pause(); else play();
+      });
     }
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden) stop(); else start();
-    });
-    start();
+
+    if (document.readyState === 'complete') setTimeout(mount, 200);
+    else window.addEventListener('load', function () { setTimeout(mount, 200); });
   })();
 
   /* ---------- ④ Deep Zoom 檢視器（哈蘇限定，OpenSeadragon 按需載入） --------

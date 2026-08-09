@@ -4,6 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.className+=' js'</script>
+<style>:root{--hp:url('photos/hero-poster-1.webp');--hps:image-set(url('photos/hero-poster-1.avif') type('image/avif'),url('photos/hero-poster-1.webp') type('image/webp'));--hpm:url('photos/hero-poster-1@960.webp');--hpms:image-set(url('photos/hero-poster-1@960.avif') type('image/avif'),url('photos/hero-poster-1@960.webp') type('image/webp'))}</style>
+<script>
+window.__HERO_VIDEOS=[{"id":"cloud-1","mp4":"video/cloud-1.mp4","mp4_720":"video/cloud-1@720.mp4","poster":"photos/hero-poster-1"},{"id":"cloud-2","mp4":"video/cloud-2.mp4","mp4_720":"video/cloud-2@720.mp4","poster":"photos/hero-poster-2"},{"id":"cloud-3","mp4":"video/cloud-3.mp4","mp4_720":"video/cloud-3@720.mp4","poster":"photos/hero-poster-3"}];
+(function(){var L=window.__HERO_VIDEOS,i=0,R='';
+try{var k='heroVidIdx',p=parseInt(localStorage.getItem(k),10);
+i=((isFinite(p)?p:-1)+1)%L.length;localStorage.setItem(k,String(i));}catch(e){i=0;}
+window.__HERO_IDX=i;
+var b=R+L[i].poster,sm=window.innerWidth<=820,
+s=function(x){return "image-set(url('"+x+".avif') type('image/avif'),url('"+x+".webp') type('image/webp'))";},
+d=document.documentElement.style;
+if(i>0){d.setProperty('--hp',"url('"+b+".webp')");d.setProperty('--hps',s(b));
+d.setProperty('--hpm',"url('"+b+"@960.webp')");d.setProperty('--hpms',s(b+'@960'));}
+var l=document.createElement('link');l.rel='preload';l.as='image';l.type='image/avif';
+l.setAttribute('fetchpriority','high');l.href=b+(sm?'@960':'')+'.avif';
+document.head.appendChild(l);})();
+</script>
 <title>Jerrythepopper 洪立楷｜攝影 × 3D 作品集 Photography &amp; 3D Portfolio</title>
 <meta name="description" content="以影像捕捉人文、街頭與空間的情緒。攝影師、3D 創作者，Based in Taipei。曾與 Hasselblad、Leica、Sony、Oppo、Giant 等品牌合作。">
 
@@ -62,14 +78,8 @@
 <main data-screen-label="01 Home">
 <section class="hero" data-screen-label="00 Hero">
   <div class="hero-mv" aria-hidden="true">
-    <div class="hero-slide is-active" style="background-image:url('data:image/webp;base64,UklGRmgAAABXRUJQVlA4IFwAAADwAwCdASoSABgAPt1cpkyopSOiMAgBEBuJZwAAW8vM6qvSKTYoaTgAAP7yn/0BKDqsz2JfLnyL64LGQBcnsv08iacSM448JWcNEiBWKJqjtNmE8oeTy7cnNJYAAA==')"><picture class="bu"><source type="image/avif" srcset="photos/hb_0@800.avif 600w, photos/hb_0.avif 1200w, photos/hb_0@2560.avif 1920w" sizes="100vw"><source type="image/webp" srcset="photos/hb_0@800.webp 600w, photos/hb_0.webp 1200w, photos/hb_0@2560.webp 1920w" sizes="100vw"><img src="photos/hb_0.webp" width="1200" height="1600" alt="" fetchpriority="high" decoding="async" class="bu-img hero-img" onload="this.classList.add('is-loaded')"></picture></div>
-    <div class="hero-slide" style="background-image:url('data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAADwAwCdASoQABgAPt1ap0yopSOiMAgBEBuJQBadBDvwtvBqsUE4h0QAAP7ynoekIld7ACIBiVKzKldIv0m2bRg/gZ63jpJCY1d4X6jaqqQTLskHZL2j5Uc/wJlvT0gB3GHn87gcMeV4U1A1wwlyAAAA')"><picture class="bu"><source type="image/avif" data-srcset="photos/pt_0@800.avif 533w, photos/pt_0.avif 1067w, photos/pt_0@2560.avif 1707w" sizes="100vw"><source type="image/webp" data-srcset="photos/pt_0@800.webp 533w, photos/pt_0.webp 1067w, photos/pt_0@2560.webp 1707w" sizes="100vw"><img data-src="photos/pt_0.webp" width="1067" height="1600" alt="" loading="eager" decoding="async" class="bu-img hero-img" onload="this.classList.add('is-loaded')"></picture></div>
-    <div class="hero-slide" style="background-image:url('data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAABwAwCdASoQABgAPt1apUyopSOiMAgBEBuJYwCdAC0fR3vFowAA/vCgRUv9DaaZAuE1QF+YEYaMDFPsEqR8q9AhpdVDQX106qBAAA==')"><picture class="bu"><source type="image/avif" data-srcset="photos/st_0@800.avif 533w, photos/st_0.avif 1067w, photos/st_0@2560.avif 1707w" sizes="100vw"><source type="image/webp" data-srcset="photos/st_0@800.webp 533w, photos/st_0.webp 1067w, photos/st_0@2560.webp 1707w" sizes="100vw"><img data-src="photos/st_0.webp" width="1067" height="1600" alt="" loading="eager" decoding="async" class="bu-img hero-img" onload="this.classList.add('is-loaded')"></picture></div>
-    <div class="hero-slide" style="background-image:url('data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAACQBACdASoSABgAPt1gq06opSQiKAqpEBuJZQCdMw6Aus1M36pTUCDYBNwOi4AA+3UPYAO2E33rnZ/jR6HQkBpGPwDXachLVlJdM6ptdvhD3BgcKyUIRInyDAhgoRi75vJMGWBOhxfM2fc8IDqMGXHl/LTFok7Hb9E9O+NIAAA=')"><picture class="bu"><source type="image/avif" data-srcset="photos/td_0@800.avif 600w, photos/td_0.avif 1200w, photos/td_0@2560.avif 1920w" sizes="100vw"><source type="image/webp" data-srcset="photos/td_0@800.webp 600w, photos/td_0.webp 1200w, photos/td_0@2560.webp 1920w" sizes="100vw"><img data-src="photos/td_0.webp" width="1200" height="1600" alt="" loading="eager" decoding="async" class="bu-img hero-img" onload="this.classList.add('is-loaded')"></picture></div>
-    <div class="hero-slide" style="background-image:url('data:image/webp;base64,UklGRpwAAABXRUJQVlA4IJAAAAAwBQCdASoYABgAPt1YqU6opKOiMBgIARAbiUAWI+OP7wgAtbW2/bn2/905Kv5lQmSsAAD+Uqn5PK3RUum59QJI1HbXSYNDvbQPCzJx6Fzpgyeorpsjn8WqRmh7NZu5WOi5CIkHg3RPDIu/NmSDxTo8C5/aFWB3Ddi8f7PGEhyQunPdCaAkVauIvAAAcMsAAAA=')"><picture class="bu"><source type="image/avif" data-srcset="photos/fm_0@800.avif 800w, photos/fm_0.avif 1600w, photos/fm_0@2560.avif 2560w" sizes="100vw"><source type="image/webp" data-srcset="photos/fm_0@800.webp 800w, photos/fm_0.webp 1600w, photos/fm_0@2560.webp 2560w" sizes="100vw"><img data-src="photos/fm_0.webp" width="1600" height="1576" alt="" loading="eager" decoding="async" class="bu-img hero-img" onload="this.classList.add('is-loaded')"></picture></div>
-    <div class="hero-slide" style="background-image:url('data:image/webp;base64,UklGRmAAAABXRUJQVlA4IFQAAADQAwCdASoYABAAPt1apkwopSOiMAgBEBuJaQAAW+lAtV/LYzG/vMAA/vHaa9Wc9+HFOxRxBYoX1X3sP0NT6VLat1JUqs5riGIb/RhVxqbg5tugAAA=')"><picture class="bu"><source type="image/avif" data-srcset="photos/mk_0@800.avif 800w, photos/mk_0.avif 1600w" sizes="100vw"><source type="image/webp" data-srcset="photos/mk_0@800.webp 800w, photos/mk_0.webp 1600w" sizes="100vw"><img data-src="photos/mk_0.webp" width="1600" height="1067" alt="" loading="eager" decoding="async" class="bu-img hero-img" onload="this.classList.add('is-loaded')"></picture></div>
-    <div class="hero-slide" style="background-image:url('data:image/webp;base64,UklGRnoAAABXRUJQVlA4IG4AAABQBACdASoYABIAPt1gqE4opaOpMBgIASAbiWUAzYQPYEDtWM4M2Q3i64tQANy/RCB0eIpovYlUZddhN2bPYQ401B7ET+uLxRLuUHPgGcbNXdikz3BAxnMi46uOEeI/tRK26ge3CzYC8Hr8BBAAAA==')"><picture class="bu"><source type="image/avif" data-srcset="photos/na_0@800.avif 800w, photos/na_0.avif 1600w, photos/na_0@2560.avif 2560w" sizes="100vw"><source type="image/webp" data-srcset="photos/na_0@800.webp 800w, photos/na_0.webp 1600w, photos/na_0@2560.webp 2560w" sizes="100vw"><img data-src="photos/na_0.webp" width="1600" height="1200" alt="" loading="eager" decoding="async" class="bu-img hero-img" onload="this.classList.add('is-loaded')"></picture></div>
-    <div class="hero-slide" style="background-image:url('data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAAAwBACdASoLABgAPt1apkyopSOiMAgBEBuJZQC/OBuTifKL6bEo7uXk5AAA/sxlc6VuEM6BpGmV5smJOMBWxOWCHiC7SjbRccyksQfG2Qo8LY4O1FrNi0ybV1VGprfsRe7MQFcgAlNNP6PrxZ02gAAA')"><picture class="bu"><source type="image/avif" data-srcset="photos/hb_1@800.avif 358w, photos/hb_1.avif 717w, photos/hb_1@2560.avif 1146w" sizes="100vw"><source type="image/webp" data-srcset="photos/hb_1@800.webp 358w, photos/hb_1.webp 717w, photos/hb_1@2560.webp 1146w" sizes="100vw"><img data-src="photos/hb_1.webp" width="717" height="1600" alt="" loading="eager" decoding="async" class="bu-img hero-img" onload="this.classList.add('is-loaded')"></picture></div>
+    <div class="hero-poster"></div>
+    <div class="hero-scrim"></div>
   </div>
 
   <div class="hero-chrome">
@@ -89,17 +99,6 @@
     </div>
     <h1 class="hero-title"><span class="ch" style="animation-delay:600ms">J</span><span class="ch" style="animation-delay:650ms">e</span><span class="ch" style="animation-delay:700ms">r</span><span class="ch" style="animation-delay:750ms">r</span><span class="ch" style="animation-delay:800ms">y</span><span class="ch" style="animation-delay:850ms">t</span><span class="ch" style="animation-delay:900ms">h</span><span class="ch" style="animation-delay:950ms">e</span><span class="ch" style="animation-delay:1000ms">p</span><span class="ch" style="animation-delay:1050ms">o</span><span class="ch" style="animation-delay:1100ms">p</span><span class="ch" style="animation-delay:1150ms">p</span><span class="ch" style="animation-delay:1200ms">e</span><span class="ch" style="animation-delay:1250ms">r</span></h1>
     <div class="hero-sub">洪 立 楷 ／ 影 像 作 品</div>
-  </div>
-
-  <div class="hero-dots">
-    <button type="button" class="is-active" aria-label="Slide 1"></button>
-    <button type="button" aria-label="Slide 2"></button>
-    <button type="button" aria-label="Slide 3"></button>
-    <button type="button" aria-label="Slide 4"></button>
-    <button type="button" aria-label="Slide 5"></button>
-    <button type="button" aria-label="Slide 6"></button>
-    <button type="button" aria-label="Slide 7"></button>
-    <button type="button" aria-label="Slide 8"></button>
   </div>
 
   <div class="hero-hint" aria-hidden="true">

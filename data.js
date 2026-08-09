@@ -14,6 +14,8 @@
 
   // Hero carousel — 每個系列各出一張「站主自排的第一張」（sort-studio 的 order.json 首位
   // ＝站主心中該系列的門面），末位補哈蘇第二張湊滿 8 格。
+  // 2026-08-09 起 hero 改放雲影片（見下方 HERO_VIDEOS），這份名單不再渲染成輪播；
+  // 保留下來的用途：首頁 og:image 仍取 HERO_SLIDES[0]，另備日後版位取用。
   window.HERO_SLIDES = [
     'photos/hb_0.webp',
     'photos/pt_0.webp',
@@ -23,6 +25,20 @@
     'photos/mk_0.webp',
     'photos/na_0.webp',
     'photos/hb_1.webp',
+  ];
+
+  // Hero 雲影片 —— 首頁 hero 背景（2026-08-09 起取代照片輪播）
+  // 母帶在 網站照片\影片\（唯讀，不進版控），轉檔產物在 video\：
+  //   cloud-1 ← 20260728 8.mov   12.5s  黃昏海面與小船
+  //   cloud-2 ← 20260728 14.mov  10.5s  夕照海面碎光
+  //   cloud-3 ← 20260807 13.mov  18.5s  積雲（唯一真的「雲」，但三支同組沿用 cloud- 命名）
+  // 輪播方式＝每次來訪輪值一支（localStorage heroVidIdx 遞增），支與支之間無轉場；
+  // 循環接點吃 <video loop> 的原生硬回切，不做融接。
+  // poster 給的是「不含副檔名的基底」，實際檔案是 <base>.avif|.webp 與 <base>@960.avif|.webp。
+  window.HERO_VIDEOS = [
+    { id: 'cloud-1', mp4: 'video/cloud-1.mp4', mp4_720: 'video/cloud-1@720.mp4', poster: 'photos/hero-poster-1' },
+    { id: 'cloud-2', mp4: 'video/cloud-2.mp4', mp4_720: 'video/cloud-2@720.mp4', poster: 'photos/hero-poster-2' },
+    { id: 'cloud-3', mp4: 'video/cloud-3.mp4', mp4_720: 'video/cloud-3@720.mp4', poster: 'photos/hero-poster-3' },
   ];
 
   // Deep Zoom — 系列 → 哪幾張掛得起「鑽細節」的切片（node make-deepzoom.js 產出）

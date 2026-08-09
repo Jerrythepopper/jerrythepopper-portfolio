@@ -420,3 +420,60 @@ html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); }
 
 /* ---- 標題中文副標不拆字：整組換行（市場頁「果/菜市場」被拆開的修正,對其他短副標無感） ---- */
 .page-head h1 .jp, .section h2 .jp { white-space: nowrap; }
+
+/* =============================================================================
+   S21 hero 雲影片（2026-08-09）——取代照片輪播
+   三層由下而上：.hero-poster（首幀靜圖，永遠在）→ .hero-video（site.js 建，淡入蓋上）
+   → .hero-scrim（壓暗漸層，等同原 .hero-slide::after，讓標題永遠讀得到）。
+   影片本身沒有轉場：支與支之間是「每次來訪換一支」，循環接點吃 <video loop> 的硬回切。
+   唯一的淡入是「海報→影片」這道技術交接，讓解碼完成的那一刻不要硬跳。
+   .hero-slide / .hero-dots 的舊規則留在 styles.css（唯讀），沒有元素吃得到，無副作用。
+   ============================================================================= */
+.hero-poster {
+  position: absolute;
+  inset: 0;
+  background-image: var(--hp);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+/* AVIF 版（理由同 --bg-Ns：var() 不吃「後者覆蓋前者」的退路，只能靠 @supports 切換） */
+@supports (background-image: image-set(url("a.avif") type("image/avif"))) {
+  .hero-poster { background-image: var(--hps, var(--hp)); }
+}
+/* 窄螢幕換 960 版海報：影片也同步降到 720p（挑檔在 site.js，斷點對齊這裡的 820px） */
+@media (max-width: 820px) {
+  .hero-poster { background-image: var(--hpm, var(--hp)); }
+  @supports (background-image: image-set(url("a.avif") type("image/avif"))) {
+    .hero-poster { background-image: var(--hpms, var(--hpm)); }
+  }
+}
+
+.hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+}
+/* opacity:0 只在有 JS 時成立（同 .bu-img 的作法）——這裡影片本來就由 JS 建，
+   但寫成 html.js 前綴可保證「樣式先到、腳本沒到」的空窗期不會蓋出一片黑 */
+html.js .hero-video { transition: opacity 900ms var(--ease-out); }
+.hero-video.is-on { opacity: 1; }
+
+.hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(120% 80% at 50% 80%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.45) 100%);
+}
+
+/* 減少動態：site.js 根本不建 video，這裡只是把過場一併關掉當雙保險 */
+@media (prefers-reduced-motion: reduce) {
+  .hero-video, html.js .hero-video { transition: none; }
+}

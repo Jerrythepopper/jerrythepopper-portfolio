@@ -20,6 +20,7 @@ const win = {};
 new Function('window', fs.readFileSync(path.join(ROOT, 'data.js'), 'utf8'))(win);
 const PHOTOS = win.PHOTOS;
 const HERO_SLIDES = win.HERO_SLIDES;
+const HERO_VIDEOS = win.HERO_VIDEOS || [];
 const SECTIONS = win.SECTIONS;
 const DEEPZOOM = win.DEEPZOOM || {};
 
@@ -208,7 +209,7 @@ function head(o) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>document.documentElement.className+=' js'</script>
-<title>${esc(o.title)}</title>
+${o.headExtra || ''}<title>${esc(o.title)}</title>
 <meta name="description" content="${esc(o.desc)}">
 ${o.robots ? `<meta name="robots" content="noindex">\n` : ''}
 <link rel="canonical" href="${esc(canonical)}">
@@ -304,25 +305,58 @@ function shell(o) {
 }
 
 // ---------- 首頁 ----------
+/* hero 海報的四個自訂屬性：--hp/--hps 是寬螢幕（1920），--hpm/--hpms 是窄螢幕（960）；
+   帶 s 的是 image-set（AVIF 優先），不帶的是純 url() ——「同名宣告兩次後者覆蓋前者」那套
+   退路對 var() 無效（理由同 bgVars 的註解），所以拆成兩個變數由 patch.css 的 @supports 決定。
+   base 是不含副檔名的基底（photos/hero-poster-1），實體檔為 <base>.avif|.webp 與 <base>@960.*。*/
+function heroPosterVars(base) {
+  const iset = (b) =>
+    `image-set(url('${b}.avif') type('image/avif'),url('${b}.webp') type('image/webp'))`;
+  return `--hp:url('${base}.webp');--hps:${iset(base)};` +
+    `--hpm:url('${base}@960.webp');--hpms:${iset(base + '@960')}`;
+}
+
+/* hero 的 <head> 段：海報變數 ＋ 輪值腳本 ＋ 海報 preload。
+   全部擺 <head> 是為了 LCP —— 海報是 CSS 背景圖，若等到 body 裡的 .hero-poster 佈局完才
+   被發現，會比舊版那張 fetchpriority=high 的 <img> 晚一大截。這裡的作法：
+     ① <style> 先把第 1 支的四個變數寫在 :root —— 無 JS 環境的完整退路。
+     ② 腳本輪值出本次支數，改寫 :root 的行內樣式（行內勝過 <style> 規則）。變數掛在 :root
+        而不是元素上，所以趕在 .hero-poster 存在之前就能定案，繼承下去即可。
+     ③ 順手插一條 preload：解析到 <head> 就開抓，不必等 CSS 套用。只 preload AVIF 並標
+        type —— 不支援 AVIF 的瀏覽器會直接略過這條，退回 image-set 選 WebP，不會雙抓。
+   窄螢幕判斷用 innerWidth<=820，斷點與 patch.css 的海報 960 版、site.js 的 720p 挑檔一致。 */
+function heroHead(rel) {
+  // data.js 沒有 HERO_VIDEOS 就整段不出：hero 退成純黑底＋壓暗漸層，build 不會炸
+  if (!HERO_VIDEOS.length) { console.warn('! data.js 沒有 HERO_VIDEOS —— hero 不會有海報也不會有影片'); return ''; }
+  const vids = JSON.stringify(HERO_VIDEOS).replace(/</g, '\\u003c');
+  return `<style>:root{${heroPosterVars(rel + HERO_VIDEOS[0].poster)}}</style>
+<script>
+window.__HERO_VIDEOS=${vids};
+(function(){var L=window.__HERO_VIDEOS,i=0,R='${rel}';
+try{var k='heroVidIdx',p=parseInt(localStorage.getItem(k),10);
+i=((isFinite(p)?p:-1)+1)%L.length;localStorage.setItem(k,String(i));}catch(e){i=0;}
+window.__HERO_IDX=i;
+var b=R+L[i].poster,sm=window.innerWidth<=820,
+s=function(x){return "image-set(url('"+x+".avif') type('image/avif'),url('"+x+".webp') type('image/webp'))";},
+d=document.documentElement.style;
+if(i>0){d.setProperty('--hp',"url('"+b+".webp')");d.setProperty('--hps',s(b));
+d.setProperty('--hpm',"url('"+b+"@960.webp')");d.setProperty('--hpms',s(b+'@960'));}
+var l=document.createElement('link');l.rel='preload';l.as='image';l.type='image/avif';
+l.setAttribute('fetchpriority','high');l.href=b+(sm?'@960':'')+'.avif';
+document.head.appendChild(l);})();
+</script>
+`;
+}
+
 function heroBlock() {
-  // 第 1 張＝首屏 LCP，eager＋high priority；第 2 張起延後到首屏之後才載
-  // （8 張全在視窗內，loading="lazy" 對它們無效，只能由 site.js 主動補載）
-  const slides = HERO_SLIDES.map((s, i) =>
-    `    <div class="hero-slide${i === 0 ? ' is-active' : ''}" style="${lqipBg(s)}">` +
-    pictureTag(s, '', {
-      alt: '', sizes: SIZES.hero, cls: 'hero-img',
-      priority: i === 0, loading: i === 0 ? false : 'eager', deferred: i > 0,
-    }) + '</div>'
-  ).join('\n');
   const chars = [...'Jerrythepopper'].map((ch, i) =>
     `<span class="ch" style="animation-delay:${600 + i * 50}ms">${ch === ' ' ? '&nbsp;' : esc(ch)}</span>`
   ).join('');
-  const dots = HERO_SLIDES.map((_, i) =>
-    `    <button type="button"${i === 0 ? ' class="is-active"' : ''} aria-label="Slide ${i + 1}"></button>`
-  ).join('\n');
+
   return `<section class="hero" data-screen-label="00 Hero">
   <div class="hero-mv" aria-hidden="true">
-${slides}
+    <div class="hero-poster"></div>
+    <div class="hero-scrim"></div>
   </div>
 
   <div class="hero-chrome">
@@ -342,10 +376,6 @@ ${slides}
     </div>
     <h1 class="hero-title">${chars}</h1>
     <div class="hero-sub">洪 立 楷 ／ 影 像 作 品</div>
-  </div>
-
-  <div class="hero-dots">
-${dots}
   </div>
 
   <div class="hero-hint" aria-hidden="true">
@@ -436,6 +466,7 @@ ${teaser({
 
   return shell({
     rel: '', current: 'home', main,
+    headExtra: heroHead(''),
     title: 'Jerrythepopper 洪立楷｜攝影 × 3D 作品集 Photography & 3D Portfolio',
     desc: clip(oneLine('以影像捕捉人文、街頭與空間的情緒。攝影師、3D 創作者，Based in Taipei。曾與 Hasselblad、Leica、Sony、Oppo、Giant 等品牌合作。'), 155),
     canonicalPath: '/',
@@ -842,6 +873,17 @@ function build() {
   const ph = walk(path.join(DIST, 'photos'));
   const nPhotos = ph.n;
 
+  // video 整資料夾複製（hero 雲影片，比照 photos）；不存在就整段跳過，build 不失敗
+  let videoBytes = 0, videoFiles = 0;
+  const videoDir = path.join(ROOT, 'video');
+  if (fs.existsSync(videoDir)) {
+    fs.cpSync(videoDir, path.join(DIST, 'video'), { recursive: true });
+    const r = walk(path.join(DIST, 'video'));
+    videoBytes = r.b; videoFiles = r.n;
+  } else {
+    console.warn('! 找不到 video\\ —— hero 影片不會進 dist，首頁會停在海報靜圖');
+  }
+
   // 報告
   console.log('dist 產出：');
   let total = 0;
@@ -853,6 +895,7 @@ function build() {
   const photoBytes = ph.b;
   console.log(`  ${String((photoBytes / 1024).toFixed(1)).padStart(8)} KB  photos/ (${nPhotos} 檔，含 dz 切片)`);
   if (vendorFiles) console.log(`  ${String((vendorBytes / 1024).toFixed(1)).padStart(8)} KB  vendor/ (${vendorFiles} 檔，按需載入不計首屏)`);
+  if (videoFiles) console.log(`  ${String((videoBytes / 1024).toFixed(1)).padStart(8)} KB  video/ (${videoFiles} 檔，hero 影片，load 之後才拉不計首屏)`);
   console.log(`合計（不含照片）${total.toFixed(1)} KB；含照片 ${((total * 1024 + photoBytes) / 1048576).toFixed(1)} MB`);
   console.log(`SITE_ORIGIN = ${SITE_ORIGIN}`);
 }
