@@ -34,6 +34,16 @@ const MANIFEST = (() => {
   catch (e) { console.warn('! photos-manifest.json 解析失敗：' + e.message); return {}; }
 })();
 
+// ---------- photo-alts.json（逐張中文替代文字，S23 看圖隊產出） ----------
+// 鍵＝photos\ 底下去掉副檔名的檔名（hb_0 / td_61…），值＝一句 6–40 字的畫面描述。
+// 查無條目就退回舊的「系列名 + 編號」（Street 3），所以新照片沒補句子也不會空 alt。
+const ALTS = (() => {
+  const p = path.join(ROOT, 'photo-alts.json');
+  if (!fs.existsSync(p)) { console.warn('! 找不到 photo-alts.json，alt 全數退回「系列名+編號」'); return {}; }
+  try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
+  catch (e) { console.warn('! photo-alts.json 解析失敗：' + e.message); return {}; }
+})();
+
 // ---------- helpers ----------
 const esc = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -90,6 +100,8 @@ const mKey = (src) => {
   return m ? m[1] : null;
 };
 const mEntry = (src) => { const k = mKey(src); return (k && MANIFEST[k]) || null; };
+// 逐張 alt：photo-alts.json 查得到就用那句，查不到退回呼叫端給的 fallback（系列名+編號）
+const altOf = (src, fallback) => { const k = mKey(src); return (k && ALTS[k]) || fallback; };
 const srcsetOf = (e, fmt, rel) =>
   e.formats[fmt].map((x) => `${rel}photos/${x.f} ${x.w}w`).join(', ');
 
@@ -396,7 +408,7 @@ function categorySection(s, index) {
   <div class="fade-up section-inner${alt ? ' _reverse' : ''}" style="transition-delay:0ms">
     <a href="${slugOf(s.id)}/" class="sec-media" aria-label="${esc(s.en)}" style="${lqipBg(cover)}">
       <span class="sec-num">No. ${esc(s.number)}</span>
-      ${pictureTag(cover, '', { alt: s.en, sizes: SIZES.section })}
+      ${pictureTag(cover, '', { alt: altOf(cover, s.en), sizes: SIZES.section })}
     </a>
     <div class="sec-body">
       <div class="eyebrow">
@@ -418,7 +430,7 @@ function teaser(o) {
   <div class="fade-up section-inner${o.reverse ? ' _reverse' : ''}" style="transition-delay:0ms">
     <a href="${o.href}" class="sec-media" style="${lqipBg(o.cover)}">
       <span class="sec-num">No. ${o.num}</span>
-      ${pictureTag(o.cover, '', { alt: o.alt, sizes: SIZES.section })}
+      ${pictureTag(o.cover, '', { alt: altOf(o.cover, o.alt), sizes: SIZES.section })}
     </a>
     <div class="sec-body">
       <div class="eyebrow">
@@ -508,14 +520,19 @@ function categoryPage(s, screenLabel) {
   const wide = s.layout === 'single';
   const frames = photos.map((src, i) => {
     const dz = dzFor(i);
+    const a = altOf(src, s.en + ' ' + (i + 1));
     const dzAttr = dz
       ? ` data-dzi="../${esc(dz.dzi)}" data-dz-label="${esc(dz.label || '')}"` +
         ` data-osd="../vendor/openseadragon.min.js"` +
-        ` aria-label="${esc(s.en + ' ' + (i + 1) + '，開啟 Deep Zoom 檢視器')}"`
+        ` aria-label="${esc(a + '，開啟 Deep Zoom 檢視器')}"`
       : '';
     const badge = dz ? `\n    <span class="dz-badge"><span class="dot" aria-hidden="true"></span>Deep Zoom</span>` : '';
-    return `  <button type="button" class="gframe${dz ? ' has-dz' : ''}" style="${lqipBg(src)}"${fullAttrs(src, '../')}${dzAttr}>
-    ${pictureTag(src, '../', { alt: s.en + ' ' + (i + 1), sizes: wide ? SIZES.single : SIZES.masonry })}${badge}
+    // --ar＝高/寬（manifest 查得到就用真尺寸）：masonry 版位的 grid row span 靠它算，
+    // 讓 site.js 不必等圖載完就能定版（見 patch.css「masonry 閱讀順序」段）
+    const e = mEntry(src);
+    const ar = e && e.w && e.h ? `;--ar:${(e.h / e.w).toFixed(4)}` : '';
+    return `  <button type="button" class="gframe${dz ? ' has-dz' : ''}" style="${lqipBg(src)}${ar}"${fullAttrs(src, '../')}${dzAttr}>
+    ${pictureTag(src, '../', { alt: a, sizes: wide ? SIZES.single : SIZES.masonry })}${badge}
   </button>`;
   }).join('\n');
 

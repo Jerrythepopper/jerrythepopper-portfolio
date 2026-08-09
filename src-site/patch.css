@@ -477,3 +477,63 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
 @media (prefers-reduced-motion: reduce) {
   .hero-video, html.js .hero-video { transition: none; }
 }
+
+/* =============================================================================
+   S23（2026-08-09）版位／動線三帖：
+   ① masonry 閱讀順序  ② 燈箱 → Deep Zoom 轉乘鈕  ③ Deep Zoom 檢視器左右導航
+   ============================================================================= */
+
+/* ---- ① masonry 閱讀順序：CSS columns → 兩欄 grid ------------------------------
+   `column-count:2` 是「先填滿左欄再開右欄」，策展順序的前幾張會全擠在左側。
+   改成兩欄 grid ＋ 逐張 grid-row span（site.js 依已知長寬比 × 實測欄寬算），
+   DOM 順序完全不動，靠 grid 自動放置得到 1左 2右 3左… 的交錯閱讀序。
+   .is-grid 由 site.js 在 span 都寫好之後才掛 —— 沒 JS 就吃 styles.css 的舊排版。 */
+.gallery.masonry-2.is-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(20px, 3vw, 40px);
+  row-gap: 0;                      /* 直向間距沿用 .gframe 既有的 margin-bottom */
+  grid-auto-rows: 4px;             /* 步距，與 site.js 的 UNIT 同值（越小直向間距越齊） */
+  grid-auto-flow: row;
+  align-items: start;              /* 不讓磚被拉伸到整格高，否則 LQIP 底色會露出來 */
+}
+/* 單欄斷點：site.js 會自己把 .is-grid 拆掉，這裡是「拆掉之前」的雙保險 */
+@media (max-width: 720px) {
+  .gallery.masonry-2.is-grid { display: block; }
+}
+
+/* ---- ② 燈箱 → Deep Zoom 轉乘鈕（字階／字距沿用 .dz-badge 語彙） ---------------
+   使用者實測抓到的洞：從別張翻到有切片的那張時，燈箱裡沒有任何入口。
+   鈕就浮在計數器旁邊，翻到沒切片的照片自動收起（hidden 也一併退出 Tab 序）。 */
+.lb-count-row {
+  display: flex; align-items: center; gap: 16px;
+  pointer-events: none;            /* 這排的空白處＝點背景關閉，維持既有動線 */
+}
+.lb-dz {
+  pointer-events: auto;            /* 只有鈕本身收點擊 */
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px 4px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.34);
+  color: rgba(255,255,255,0.82);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  cursor: zoom-in;
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+.lb-dz:hover { background: rgba(255,255,255,0.1); border-color: var(--color-white); color: var(--color-white); }
+.lb-dz:focus-visible { outline: 2px solid var(--color-white); outline-offset: 3px; }
+.lb-dz[hidden] { display: none; }
+
+/* ---- ③ Deep Zoom 檢視器左右導航（樣式沿用燈箱 .lb-prev / .lb-next） ---------- */
+.dzv-prev, .dzv-next { top: 50%; transform: translateY(-50%); font-size: 24px; z-index: 3; }
+.dzv-prev { left: 24px; }
+.dzv-next { right: 24px; }
+@media (max-width: 720px) {
+  .dzv-prev { left: 10px; }
+  .dzv-next { right: 10px; }
+}

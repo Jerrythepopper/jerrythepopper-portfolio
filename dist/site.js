@@ -41,6 +41,81 @@
     else window.addEventListener('load', function () { setTimeout(promote, 120); });
   })();
 
+  /* ---------- ⓪b masonry 閱讀順序（S23，2026-08-09） -------------------------
+     舊版位是 CSS `column-count:2`：多欄排版會「先把左欄填滿、再開右欄」，於是策展
+     順序的前幾張全擠在左側，讀者由上往下看到的完全不是站主排的順序。
+     改成兩欄 grid ＋ 逐張 grid-row span：DOM 順序一個字不動（燈箱 index、SEO、
+     無 JS 退路都跟著不動），靠 grid 的自動放置產生「1左 2右 3左…」的交錯閱讀序。
+     span 用「已知長寬比 × 實測欄寬」算，不等圖載完 ＝ 零版面跳動、blur-up 照舊。
+     沒 JS 就沒有 .is-grid，維持 styles.css 的 column-count 舊行為。
+  ------------------------------------------------------------------------ */
+  (function () {
+    var g = document.querySelector('.gallery.masonry-2');
+    if (!g) return;
+    var frames = g.querySelectorAll('.gframe');
+    if (!frames.length) return;
+    var UNIT = 4;                                   // grid-auto-rows 步距（px），與 patch.css 同值
+    var single = window.matchMedia('(max-width: 720px)');   // 斷點對齊 styles.css / patch.css
+
+    function ratioOf(f) {
+      var r = parseFloat(f.style.getPropertyValue('--ar'));   // build 期由 manifest 寫上
+      if (isFinite(r) && r > 0) return r;
+      var im = f.querySelector('img');
+      var w = im && (+im.getAttribute('width') || im.naturalWidth);
+      var h = im && (+im.getAttribute('height') || im.naturalHeight);
+      return (w && h) ? (h / w) : 1;
+    }
+
+    var lastW = -1;
+    function layout() {
+      var i;
+      if (single.matches) {                          // 單欄：回一般流，源順序天然正確
+        lastW = -1;
+        g.classList.remove('is-grid');
+        for (i = 0; i < frames.length; i++) {
+          frames[i].style.gridRow = '';
+          frames[i].style.gridColumn = '';
+        }
+        return;
+      }
+      g.classList.add('is-grid');                    // 先上 grid，才量得到真正的欄寬
+      var colW = frames[0].getBoundingClientRect().width;
+      if (!colW) return;
+      // 欄寬沒變就別重算：ResizeObserver 看得到自己改出來的高度變化，這道閘擋掉迴圈
+      if (Math.abs(colW - lastW) < 0.5) return;
+      lastW = colW;
+      var mb = parseFloat(getComputedStyle(frames[0]).marginBottom) || 0;
+      // 欄與列都自己指派，不交給 grid 自動放置。兩個實測到的理由：
+      //   ① 純自動放置＝貪心找「先空出來的那欄」，左邊連兩張矮圖就排出「左左」，
+      //      開頭幾張的左右交錯保不住（nature 實測 index 4/5 同欄）。
+      //   ② 只釘欄、列留 auto 也不行：自動放置的游標是「兩欄共用且列號單調」的，
+      //      換欄時會被上一張的起始列頂著走，短的那張下面就空出一大塊（film 實測
+      //      同欄間距被撐到 124px，正常是 41）。釘死起始列才是真 masonry。
+      // 前 FORCE 張硬性交錯（讀者第一眼就看得出策展順序是左右走的），其餘填目前
+      // 較短的那欄。兩種指派都讓位置單調不倒退 → 第 i+1 張不會跑到第 i 張上方。
+      var FORCE = 6, rows = [0, 0];
+      for (i = 0; i < frames.length; i++) {
+        // 外框高度＝欄寬 × 長寬比，再加自己的下外距；向上取整到步距，避免壓到下一張
+        var span = Math.max(1, Math.ceil((colW * ratioOf(frames[i]) + mb) / UNIT));
+        var c = i < FORCE ? (i % 2) : (rows[0] <= rows[1] ? 0 : 1);
+        frames[i].style.gridColumn = String(c + 1);
+        frames[i].style.gridRow = (rows[c] + 1) + ' / span ' + span;
+        rows[c] += span;
+      }
+    }
+
+    var pending = 0;
+    function schedule() {
+      if (pending) return;
+      pending = 1;
+      requestAnimationFrame(function () { pending = 0; layout(); });
+    }
+    layout();                                        // 同步跑一次：首屏不會先閃一下多欄版位
+    window.addEventListener('resize', schedule);
+    if (window.ResizeObserver) new window.ResizeObserver(schedule).observe(g);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  })();
+
   /* ---------- ① fade-up（IntersectionObserver threshold 0.18） ---------- */
   (function () {
     var els = document.querySelectorAll('.fade-up');
@@ -179,12 +254,16 @@
   /* ---------- ④ Deep Zoom 檢視器（哈蘇限定，OpenSeadragon 按需載入） --------
      一般燈箱給的是「一張大圖」；Deep Zoom 給的是切片金字塔——放到 1:1 也不糊，
      而且只下載視野內那幾塊 tile。344 KB 的 OSD 只在使用者真的點角標時才進場。
-     操作：滾輪／雙指／雙擊縮放、拖曳平移、Esc 關閉、+ − 0 與方向鍵。
+     操作：滾輪／雙指／雙擊縮放、拖曳平移、Esc 關閉、+ − 0。
+     2026-08-09 S23：←→ 改成「切換上/下一件 DZ 作品」（與燈箱同慣例），平移移到
+     Shift+方向鍵；畫面左右另加 ‹ › 鈕，循環走同一頁 DEEPZOOM 表內的作品。
   ------------------------------------------------------------------------ */
   var deepZoom = (function () {
     var libState = 0;                 // 0 未載 / 1 載入中 / 2 就緒 / 3 失敗
     var waiting = [];
     var box = null, viewer = null, zoomEl = null, lastFocus = null;
+    // 同頁所有掛了切片的磚（＝DEEPZOOM 表在 DOM 裡的投影），供 ‹ › 循環切換
+    var items = [], cur = 0, fallbackFn = null;
 
     function ensureLib(url, cb) {
       if (libState === 2) { cb(true); return; }
@@ -215,6 +294,10 @@
       zoomEl.textContent = (pct < 10 ? pct.toFixed(1) : Math.round(pct)) + '%';
     }
 
+    var isArrow = function (k) {
+      return k === 'ArrowLeft' || k === 'ArrowRight' || k === 'ArrowUp' || k === 'ArrowDown';
+    };
+
     function onKey(e) {
       if (e.key === 'Escape') { e.preventDefault(); close(); return; }
       if (!viewer || !viewer.viewport) return;
@@ -222,15 +305,35 @@
       if (e.key === '+' || e.key === '=') { e.preventDefault(); vp.zoomBy(1.5); vp.applyConstraints(); return; }
       if (e.key === '-' || e.key === '_') { e.preventDefault(); vp.zoomBy(1 / 1.5); vp.applyConstraints(); return; }
       if (e.key === '0') { e.preventDefault(); viewer.viewport.goHome(); return; }
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        e.preventDefault();
+      if (!isArrow(e.key)) return;
+      e.preventDefault();
+      if (e.shiftKey) {                                    // Shift+方向鍵＝平移（與燈箱同慣例）
         var b = vp.getBounds();
         vp.panBy(new window.OpenSeadragon.Point(
           (e.key === 'ArrowRight' ? d : e.key === 'ArrowLeft' ? -d : 0) * b.width,
           (e.key === 'ArrowDown' ? d : e.key === 'ArrowUp' ? -d : 0) * b.height
         ));
         vp.applyConstraints();
+        return;
       }
+      if (e.key === 'ArrowLeft') go(-1);                   // 無 Shift 的 ←→＝換作品
+      else if (e.key === 'ArrowRight') go(1);
+    }
+
+    /* 切換到同頁 DEEPZOOM 表的上/下一件（循環）。沿用同一個 viewer，只換 tileSource：
+       OSD 的 open() 會自己 goHome()，縮放/位置因此一併復位。 */
+    function go(d) {
+      if (!box || !viewer || items.length < 2) return;
+      cur = (cur + d + items.length) % items.length;
+      var b = items[cur];
+      var dzi = b.getAttribute('data-dzi');
+      if (!dzi) return;
+      fallbackFn = null;                                   // 換過作品後就沒有對應的燈箱退路了
+      var l = box.querySelector('.dzv-loading');
+      if (l) l.style.display = '';
+      box.querySelector('.dzv-label').textContent = b.getAttribute('data-dz-label') || 'Deep Zoom';
+      zoomEl.textContent = '—';
+      try { viewer.open(dzi); } catch (err) {}
     }
 
     function close() {
@@ -249,18 +352,27 @@
       box.setAttribute('role', 'dialog');
       box.setAttribute('aria-modal', 'true');
       box.setAttribute('aria-label', 'Deep Zoom 檢視器');
+      var multi = items.length > 1;
       box.innerHTML =
         '<div class="dzv-loading">Loading tiles…</div>' +
         '<div class="dzv-canvas"></div>' +
         '<button class="lb-btn dzv-close" type="button" aria-label="關閉">✕</button>' +
+        (multi
+          ? '<button class="lb-btn dzv-prev" type="button" aria-label="上一件 Deep Zoom 作品">‹</button>' +
+            '<button class="lb-btn dzv-next" type="button" aria-label="下一件 Deep Zoom 作品">›</button>'
+          : '') +
         '<div class="dzv-bar"><span class="dzv-label"></span><span class="dzv-hint"></span></div>' +
         '<div class="dzv-zoom">—</div>';
       box.querySelector('.dzv-label').textContent = label || 'Deep Zoom';
       box.querySelector('.dzv-hint').textContent = coarse
-        ? '雙指縮放 · 拖曳平移 · 雙擊放大'
-        : '滾輪／雙擊縮放 · 拖曳平移 · ＋ − 0 · ESC 關閉';
+        ? '雙指縮放 · 拖曳平移 · 雙擊放大' + (multi ? ' · ‹ › 切換作品' : '')
+        : '滾輪／雙擊縮放 · 拖曳平移' + (multi ? ' · ←→ 切換作品' : '') + ' · ＋ − 0 · ESC 關閉';
       zoomEl = box.querySelector('.dzv-zoom');
       box.querySelector('.dzv-close').addEventListener('click', close);
+      if (multi) {
+        box.querySelector('.dzv-prev').addEventListener('click', function () { go(-1); });
+        box.querySelector('.dzv-next').addEventListener('click', function () { go(1); });
+      }
       document.getElementById('root').appendChild(box);
       document.body.style.overflow = 'hidden';
 
@@ -284,17 +396,19 @@
       });
       // 鍵盤統一由我們處理，避免與 OSD 內建快捷鍵重複作用
       viewer.addHandler('canvas-key', function (e) { e.preventDefaultAction = true; });
+      // 換作品時要再亮一次 Loading，所以只藏不拆（原本是 removeChild）
       viewer.addHandler('open', function () {
         var l = box && box.querySelector('.dzv-loading');
-        if (l && l.parentNode) l.parentNode.removeChild(l);
+        if (l) l.style.display = 'none';
         fmtZoom();
       });
       viewer.addHandler('zoom', fmtZoom);
       viewer.addHandler('animation', fmtZoom);
       // 切片抓不到就別把使用者卡在空畫布：收掉檢視器，退回一般燈箱
       viewer.addHandler('open-failed', function () {
+        var f = fallbackFn;
         close();
-        if (fallback) fallback();
+        if (f) f();
       });
       window.addEventListener('keydown', onKey);
       box.querySelector('.dzv-close').focus();
@@ -304,6 +418,12 @@
       var dzi = btn.getAttribute('data-dzi');
       var lib = btn.getAttribute('data-osd');
       if (!dzi || !lib) { if (fallback) fallback(); return; }
+      // 每次開啟時重建清單（DOM 順序＝data.js 的 DEEPZOOM 順序），‹ › 照它循環
+      items = [];
+      var all = document.querySelectorAll('.gframe[data-dzi]');
+      for (var i = 0; i < all.length; i++) items.push(all[i]);
+      cur = Math.max(0, items.indexOf(btn));
+      fallbackFn = fallback || null;
       lastFocus = document.activeElement;
       ensureLib(lib, function (ok) {
         if (!ok) { if (fallback) fallback(); return; }   // 載不到就退回一般燈箱
@@ -337,7 +457,7 @@
       alts.push(im ? (im.getAttribute('alt') || '') : '');
     }
 
-    var lb = null, stage = null, pic = null, stageImg = null, counter = null, hint = null;
+    var lb = null, stage = null, pic = null, stageImg = null, counter = null, hint = null, dzBtn = null;
     var index = 0, lastFocus = null;
 
     // 縮放狀態
@@ -408,18 +528,30 @@
         '<button class="lb-btn lb-prev" type="button" aria-label="上一張">‹</button>' +
         '<button class="lb-btn lb-next" type="button" aria-label="下一張">›</button>' +
         '<div class="lb-stage" tabindex="0" role="button" aria-pressed="false" aria-label="放大圖片至原生解析度"><picture class="lb-pic"><img alt=""></picture></div>' +
-        '<div class="lb-bar"><div class="lb-counter"></div><div class="lb-hint"></div></div>';
+        '<div class="lb-bar"><div class="lb-count-row"><div class="lb-counter"></div>' +
+        '<button class="lb-dz" type="button" hidden>Deep Zoom <span aria-hidden="true">↗</span></button></div>' +
+        '<div class="lb-hint"></div></div>';
       stage = lb.querySelector('.lb-stage');
       pic = lb.querySelector('.lb-pic');
       stageImg = pic.querySelector('img');
       counter = lb.querySelector('.lb-counter');
       hint = lb.querySelector('.lb-hint');
+      dzBtn = lb.querySelector('.lb-dz');
 
       lb.addEventListener('click', close);                                   // 點背景關閉（既有）
       stage.addEventListener('click', function (e) { e.stopPropagation(); });
       lb.querySelector('.lb-close').addEventListener('click', function (e) { e.stopPropagation(); close(); });
       lb.querySelector('.lb-prev').addEventListener('click', function (e) { e.stopPropagation(); step(-1); });
       lb.querySelector('.lb-next').addEventListener('click', function (e) { e.stopPropagation(); step(1); });
+      // 轉乘：翻到有切片的那幾張時，計數器旁浮出入口 —— 關燈箱、換 Deep Zoom 檢視器接手
+      dzBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var f = frames[index];
+        if (!f || !f.getAttribute('data-dzi')) return;
+        var i = index;
+        close();
+        deepZoom.open(f, function () { open(i); });      // OSD 載不到就把燈箱開回來
+      });
 
       window.addEventListener('resize', function () {
         if (!lb || lb.style.display === 'none') return;
@@ -540,12 +672,19 @@
       stageImg = pic.querySelector('img');
       stageImg.addEventListener('load', function () { measure(); clampPan(); applyTransform(); });
       counter.textContent = pad2(index + 1) + ' ／ ' + pad2(srcs.length);
+      // 這張掛得起切片才亮轉乘鈕；翻到沒切片的就收起來（hidden 也一併退出 Tab 序）
+      var hasDz = !!(frames[index] && frames[index].getAttribute('data-dzi'));
+      dzBtn.hidden = !hasDz;
       measure(); syncZoomState();
     }
     function step(d) { index = (index + d + srcs.length) % srcs.length; paint(); }
 
     function focusables() {
-      return lb.querySelectorAll('.lb-close, .lb-prev, .lb-next, .lb-stage');
+      // 焦點環按 DOM 序；轉乘鈕只有在這張有切片時才在序列裡（hidden 就跳過）
+      var all = lb.querySelectorAll('.lb-close, .lb-prev, .lb-next, .lb-stage, .lb-dz');
+      var out = [];
+      for (var i = 0; i < all.length; i++) if (!all[i].hidden) out.push(all[i]);
+      return out;
     }
 
     function onKey(e) {
