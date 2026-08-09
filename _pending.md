@@ -71,3 +71,13 @@
 - 2026-08-08：施工範圍「全做」（靜態化+SEO+產線+git init）；派工嚴格度=標準。
 - 2026-08-08 批次裁決（本人遠端）：D2 網域=www.jerrythepopper.com／D3 限動連結保留／D5 修字誤／D6 展覽3檔+Brands改30+／D7 街址拿掉／D8 導流做／D9 浮水印不要／D11 雙語=要,排v2。未答：D1（GitHub CLI 裝否）、D4（系列文案材料）、D12（正式照片,等回家）。
 - 2026-08-08：dithermobile（HUD 副案）整案不做——與本站無關,記於 HUD 記憶。
+
+---
+# 🚀 2026-08-09 16:08 正式上線
+https://www.jerrythepopper.com — Pages 部署 1m8s 成功;www/apex/子頁全 200;HTTPS 憑證即時簽發+強制導向已開。DNS 三項使用者自力完成一次到位（含 TXT 防搶掛）。
+## 上線後清單（擇日,不急）
+1. Cloudflare 橙雲三件套（第 5 步:proxied+Web Analytics+AI Training 封鎖）——建議明天後（讓憑證/快取穩一天）
+2. Google Search Console 登記+提交 sitemap
+3. Google 商家檔案（台北攝影師地圖區側門）
+4. IG bio 連結確認（原本就指 jerrythepopper.com=自動繼承 ✓）
+5. 真機最後巡禮:正式網域上的影片/DZ/深色（理論上與區網同,Range 在 Pages 原生支援）
