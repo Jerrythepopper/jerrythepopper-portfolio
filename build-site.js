@@ -49,6 +49,163 @@ const esc = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/* ---------- 中文分詞斷行 segmentZh（S25 2026-08-09） -------------------------
+   問題：中文沒有詞間空白，瀏覽器預設「每個漢字都是可斷點」，於是「朱銘美術/館」
+   「捷安/特」「紀實計/畫」這種腰斬到處都是；配上兩端對齊之後更明顯。
+
+   作法：建置期就把詞切好，每個詞包一層 <span class="nb">（patch.css 給 nowrap），
+   斷行只能發生在詞與詞之間。全部在 build 期算完 ＝ 執行期零成本、零依賴。
+
+   分詞來源三層，由強到弱：
+     ① NB_LOCK 專有名詞表 —— ICU 的通用詞庫不認得品牌／專案名（實測「朱銘美術館」
+        被切成 朱/銘/美術館、「捷安特」切成 捷/安/特），這些只能明列。長詞優先比對。
+     ② Intl.Segmenter('zh-Hant', {granularity:'word'}) —— Node 內建（完整 ICU），
+        一般詞彙交給它。
+     ③ 單字黏合啟發式 —— ICU 常把雙字詞拆成兩個單字（募/資、攝影/集）。落單的漢字
+        （排除「的了與和在是」這類本來就該獨立的虛字）往後黏一個單元，黏不到就往前，
+        最長 6 字封頂免得整句變成一條不可斷的長龍。
+
+   標點：收尾類（，。、）」等）黏前一個詞 —— 標點不可出現在行首（禁則）；
+         起首類（（《「等）黏後一個詞 —— 也不可出現在行尾。
+   拉丁：連續的英數（含詞間單一空白）當一個單元；超過 24 字的長串不包 nb，
+         留給 overflow-wrap 兜底，避免窄螢幕橫向溢出。
+   換行：\n 原樣保留（subtitle 吃 white-space:pre-line，段落結構靠它）。
+--------------------------------------------------------------------------- */
+const SEGMENTER = (typeof Intl !== 'undefined' && Intl.Segmenter)
+  ? new Intl.Segmenter('zh-Hant', { granularity: 'word' })
+  : null;
+
+// 專有名詞／固定搭配（長的排前面，比對時長詞優先）。新增品牌或專案名記得補這裡。
+const NB_LOCK = [
+  '台北第一果菜批發市場', '第一果菜批發市場', '臺北農產運銷公司', '果菜批發市場',
+  '朱銘美術館', '新光攝影展', '孤僻Goopi', '名發建設', '三發建設', '晶悅建設',
+  '果菜市場', '紀實計畫', '創意企劃', '形象拍攝', '教學內容', '影像敘事', '品牌合作',
+  '空間裝置', '課程製作', '攝影教學', '虛實結合', '視覺概念', '場景設計',
+  '募資出版', '攝影集', '捷安特', '蝦皮', '洪立楷', '輪轉',
+  '靜態影像', '動態範圍', '拍攝主題', '觀看方式', '人文風景', '底片攝影',
+  '畫面的重量', '時間流動', '孤寂感', '虛擬世界', '各座城市', '拖車',
+  '3D創作者', '3D視覺', '3D創作', '3D領域',
+].sort((a, b) => b.length - a.length);
+
+const RE_LATIN = /[A-Za-z0-9]/;
+const RE_CJK = /[㐀-鿿豈-﫿]/;
+// 本來就該獨立成單元的虛字：黏合啟發式跳過它們，否則「的」會被拖進前一個詞裡
+const NB_SOLO = new Set('的了與和在是也我你他她它們都就而或及以被把從到對為不沒很更再又最等之於並則但很個中上下前後'.split(''));
+const PUNCT_CLOSE = '，。、；：！？）〕】》」』〉·…—～%,.;:!?)]}’”';
+const PUNCT_OPEN = '（〔【《「『〈([{‘“';
+
+function segmentZh(text) {
+  if (text == null) return '';
+  return String(text).split('\n').map(segLine).join('\n');
+}
+
+function segLine(line) {
+  if (!line) return '';
+  // ① 專有名詞先鎖起來，剩下的碎片才交給 Segmenter
+  let units = [];
+  let rest = line;
+  (function lock(s) {
+    if (!s) return;
+    for (const term of NB_LOCK) {
+      const at = s.indexOf(term);
+      if (at >= 0) {
+        lock(s.slice(0, at));
+        units.push(term);
+        lock(s.slice(at + term.length));
+        return;
+      }
+    }
+    units = units.concat(segWords(s));
+  })(rest);
+
+  units = mergeLatin(units);
+  units = glueSingles(units);
+  units = attachPunct(units);
+  return units.map(emit).join('');
+}
+
+// ② Intl.Segmenter（沒有就整串當一個單元，退化成舊行為，build 不會炸）
+function segWords(s) {
+  if (!s) return [];
+  if (!SEGMENTER) return [s];
+  return [...SEGMENTER.segment(s)].map((x) => x.segment);
+}
+
+// ③-a 拉丁／數字連成一個單元（詞間單一空白也吃進來：Leica Camera Taiwan ＝ 一體）
+function mergeLatin(u) {
+  const out = [];
+  for (const t of u) {
+    const prev = out[out.length - 1];
+    const isLat = (x) => x && RE_LATIN.test(x[x.length - 1]) && !RE_CJK.test(x);
+    const startsLat = t && RE_LATIN.test(t[0]) && !RE_CJK.test(t);
+    if (prev !== undefined && startsLat && isLat(prev)) { out[out.length - 1] = prev + t; continue; }
+    if (prev !== undefined && t === ' ' ) { out.push(t); continue; }
+    // "Leica" + " " + "Camera" → 三段合一（中間那段空白已在 out 尾端）
+    if (out.length >= 2 && out[out.length - 1] === ' ' && startsLat && isLat(out[out.length - 2])
+        && (out[out.length - 2] + ' ' + t).length <= 24) {
+      out.splice(out.length - 2, 2, out[out.length - 2] + ' ' + t);
+      continue;
+    }
+    out.push(t);
+  }
+  return out;
+}
+
+/* ③-b 落單漢字黏回鄰居，修 ICU 把雙字詞拆散的老問題（募/資、捷/安/特）。
+   方向不能一律往後：後綴型的字（感 性 化 者 集 館…）要往前黏，否則「孤寂感與」會把
+   「感」拖去跟「與」湊成一組。列在 NB_SUFFIX 的往前，其餘往後，黏不到就換另一邊。 */
+const NB_SUFFIX = new Set('感性化者集館式度力學家業品物心面部分種類樣法子頭兒員師'.split(''));
+function glueSingles(u) {
+  const out = [];
+  const cjkWord = (x) => x && RE_CJK.test(x[0]);
+  const back = (t) => {
+    const prev = out[out.length - 1];
+    if (cjkWord(prev) && (prev + t).length <= 6) { out[out.length - 1] = prev + t; return true; }
+    return false;
+  };
+  for (let i = 0; i < u.length; i++) {
+    const t = u[i];
+    const solo = t.length === 1 && RE_CJK.test(t) && !NB_SOLO.has(t);
+    if (solo) {
+      const nxt = u[i + 1];
+      const fwdOk = cjkWord(nxt) && (t + nxt).length <= 6;
+      if (NB_SUFFIX.has(t)) {
+        if (back(t)) continue;
+        if (fwdOk) { out.push(t + nxt); i++; continue; }
+      } else {
+        if (fwdOk) { out.push(t + nxt); i++; continue; }
+        if (back(t)) continue;
+      }
+    }
+    out.push(t);
+  }
+  return out;
+}
+
+// ③-c 標點黏詞：收尾類不落行首、起首類不落行尾
+function attachPunct(u) {
+  const out = [];
+  for (let i = 0; i < u.length; i++) {
+    const t = u[i];
+    if (t.length && PUNCT_CLOSE.indexOf(t[0]) >= 0 && out.length && out[out.length - 1] !== ' ') {
+      out[out.length - 1] += t; continue;
+    }
+    if (t.length === 1 && PUNCT_OPEN.indexOf(t) >= 0 && i + 1 < u.length) {
+      u[i + 1] = t + u[i + 1]; continue;
+    }
+    out.push(t);
+  }
+  return out;
+}
+
+// 空白原樣輸出（保留斷點）；純拉丁長串不包 nb，交給 overflow-wrap 免得橫向溢出
+function emit(t) {
+  if (!t) return '';
+  if (!t.trim()) return esc(t);
+  if (!RE_CJK.test(t) && t.length > 24) return esc(t);
+  return `<span class="nb">${esc(t)}</span>`;
+}
+
 const pad = (n, w) => String(n).padStart(w, '0');
 const photosFor = (id) => PHOTOS[id === '3d' ? 'three_d' : id];
 const slugOf = (id) => id;                       // data.js 的 id 直接當網址片段
@@ -317,15 +474,23 @@ function shell(o) {
 }
 
 // ---------- 首頁 ----------
-/* hero 海報的四個自訂屬性：--hp/--hps 是寬螢幕（1920），--hpm/--hpms 是窄螢幕（960）；
+/* hero 海報的六個自訂屬性，三個尺寸階：
+     --hp /--hps   寬螢幕 1920
+     --hpm/--hpms  窄螢幕 ＠1x   960
+     --hpl/--hpls  窄螢幕 ＠2x↑ 1440   ← 2026-08-09 S25 新增
    帶 s 的是 image-set（AVIF 優先），不帶的是純 url() ——「同名宣告兩次後者覆蓋前者」那套
    退路對 var() 無效（理由同 bgVars 的註解），所以拆成兩個變數由 patch.css 的 @supports 決定。
-   base 是不含副檔名的基底（photos/hero-poster-1），實體檔為 <base>.avif|.webp 與 <base>@960.*。*/
+   base 是不含副檔名的基底（photos/hero-poster-1），實體檔為 <base>.avif|.webp
+   與 <base>@960.* / <base>@1440.*。
+   為什麼要 1440：手機 hero 是滿版，iPhone 390 CSS px × 3 DPR ＝ 1170 實體像素，原本
+   一律吃 960 版的窄螢幕分支等於把 960 拉去填 1170，站主真機看得出糊。1440 有餘裕，
+   又不必把桌機那張 1920 整個丟給手機。 */
 function heroPosterVars(base) {
   const iset = (b) =>
     `image-set(url('${b}.avif') type('image/avif'),url('${b}.webp') type('image/webp'))`;
   return `--hp:url('${base}.webp');--hps:${iset(base)};` +
-    `--hpm:url('${base}@960.webp');--hpms:${iset(base + '@960')}`;
+    `--hpm:url('${base}@960.webp');--hpms:${iset(base + '@960')};` +
+    `--hpl:url('${base}@1440.webp');--hpls:${iset(base + '@1440')}`;
 }
 
 /* hero 的 <head> 段：海報變數 ＋ 輪值腳本 ＋ 海報 preload。
@@ -336,7 +501,10 @@ function heroPosterVars(base) {
         而不是元素上，所以趕在 .hero-poster 存在之前就能定案，繼承下去即可。
      ③ 順手插一條 preload：解析到 <head> 就開抓，不必等 CSS 套用。只 preload AVIF 並標
         type —— 不支援 AVIF 的瀏覽器會直接略過這條，退回 image-set 選 WebP，不會雙抓。
-   窄螢幕判斷用 innerWidth<=820，斷點與 patch.css 的海報 960 版、site.js 的 720p 挑檔一致。 */
+   窄螢幕判斷用 innerWidth<=820，斷點與 patch.css 的海報 960 版、site.js 的 720p 挑檔一致。
+   窄螢幕再依 devicePixelRatio 分兩階（S25）：≥2 給 @1440、否則 @960 —— 這裡挑的檔必須
+   跟 patch.css 那組 (max-width:820px) and (min-resolution:2dppx) 選的是同一張，
+   不然 preload 抓一張、CSS 用另一張，等於白抓一份。 */
 function heroHead(rel) {
   // data.js 沒有 HERO_VIDEOS 就整段不出：hero 退成純黑底＋壓暗漸層，build 不會炸
   if (!HERO_VIDEOS.length) { console.warn('! data.js 沒有 HERO_VIDEOS —— hero 不會有海報也不會有影片'); return ''; }
@@ -348,13 +516,14 @@ window.__HERO_VIDEOS=${vids};
 try{var k='heroVidIdx',p=parseInt(localStorage.getItem(k),10);
 i=((isFinite(p)?p:-1)+1)%L.length;localStorage.setItem(k,String(i));}catch(e){i=0;}
 window.__HERO_IDX=i;
-var b=R+L[i].poster,sm=window.innerWidth<=820,
+var b=R+L[i].poster,sm=window.innerWidth<=820,hi=(window.devicePixelRatio||1)>=2,
 s=function(x){return "image-set(url('"+x+".avif') type('image/avif'),url('"+x+".webp') type('image/webp'))";},
 d=document.documentElement.style;
 if(i>0){d.setProperty('--hp',"url('"+b+".webp')");d.setProperty('--hps',s(b));
-d.setProperty('--hpm',"url('"+b+"@960.webp')");d.setProperty('--hpms',s(b+'@960'));}
+d.setProperty('--hpm',"url('"+b+"@960.webp')");d.setProperty('--hpms',s(b+'@960'));
+d.setProperty('--hpl',"url('"+b+"@1440.webp')");d.setProperty('--hpls',s(b+'@1440'));}
 var l=document.createElement('link');l.rel='preload';l.as='image';l.type='image/avif';
-l.setAttribute('fetchpriority','high');l.href=b+(sm?'@960':'')+'.avif';
+l.setAttribute('fetchpriority','high');l.href=b+(sm?(hi?'@1440':'@960'):'')+'.avif';
 document.head.appendChild(l);})();
 </script>
 `;
@@ -417,7 +586,7 @@ function categorySection(s, index) {
         <span>${esc(s.eyebrow)}</span>
       </div>
       <h2>${esc(s.en)}<span class="jp">${esc(s.zh)}</span></h2>
-      <p class="lede">${esc(s.lede)}</p>
+      <p class="lede">${segmentZh(s.lede)}</p>
 ${metaBlock}      <a href="${slugOf(s.id)}/" class="cta">View series <span class="arr">→</span></a>
     </div>
   </div>
@@ -439,7 +608,7 @@ function teaser(o) {
         <span>${esc(o.eyebrow)}</span>
       </div>
       <h2>${esc(o.h2en)}<span class="jp">${esc(o.h2zh)}</span></h2>
-      <p class="lede">${esc(o.lede)}</p>
+      <p class="lede">${segmentZh(o.lede)}</p>
       <div class="meta">${o.metas.map((m) => `<span>${esc(m)}</span>`).join('')}</div>
       <a href="${o.href}" class="cta">${esc(o.cta)} <span class="arr">→</span></a>
     </div>
@@ -451,7 +620,7 @@ function homePage() {
   const intro = `<section class="intro">
   <div class="fade-up intro-inner" style="transition-delay:0ms">
     <div class="eyebrow">Selected · 2018 — 2026</div>
-    <p class="intro-lede">以影像捕捉人文、街頭與空間的情緒。<br>在孤寂感與時間流動中，找到畫面的重量。</p>
+    <p class="intro-lede">${segmentZh('以影像捕捉人文、街頭與空間的情緒。')}<br>${segmentZh('在孤寂感與時間流動中，找到畫面的重量。')}</p>
     <p>Photographer · 3D Creator · Based in Taipei. Brand collaborations with Hasselblad, Leica, Sony, Oppo, Giant, and more.</p>
   </div>
 </section>`;
@@ -471,7 +640,7 @@ ${teaser({
     label: '09 About', cls: '', reverse: true, href: 'about/', num: '09',
     cover: ABOUT_PORTRAIT, alt: 'About', eyebrow: 'Photographer · 3D Creator',
     h2en: 'About', h2zh: '關於我',
-    lede: 'Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者，Stairs Space 共同經營者。',
+    lede: 'Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者。',
     metas: ['Based in Taipei', 'SEVEN / Asia-Pacific'], cta: 'Read more',
   })}
 </main>`;
@@ -508,7 +677,7 @@ function categoryPage(s, screenLabel) {
   const photos = photosFor(s.id);
   // subtitle / meta 皆可留空（文案未定的系列）：空的就不渲染該塊，不留空殼 DOM
   const subtitle = s.subtitle
-    ? `    <p class="subtitle">${esc(s.subtitle)}</p>\n`
+    ? `    <p class="subtitle">${segmentZh(s.subtitle)}</p>\n`
     : '';
   const metaBlock = s.meta.length
     ? `    <div class="meta">${s.meta.map((m) => `<span>${esc(m)}</span>`).join('')}</div>\n`
@@ -516,6 +685,11 @@ function categoryPage(s, screenLabel) {
   // Deep Zoom：本系列有登記切片的張數，磚上掛角標＋data-dzi（site.js 開專用 viewer）
   const dzList = DEEPZOOM[s.id] || [];
   const dzFor = (i) => dzList.find((d) => d.idx === i);
+  /* 角標本身只寫「Deep Zoom」，沒說可以點；站主真機回報看不懂那是入口。這行話擺在
+     版頭尾巴（subtitle/meta 之後、gallery 之前），有掛切片的系列才出現。 */
+  const dzNote = dzList.length
+    ? `    <p class="dz-note">帶有 DEEP ZOOM 標記的作品，可點入以原始尺寸細看。</p>\n`
+    : '';
 
   const wide = s.layout === 'single';
   const frames = photos.map((src, i) => {
@@ -544,7 +718,7 @@ function categoryPage(s, screenLabel) {
       <span>${esc(s.eyebrow)}</span>
     </div>
     <h1>${esc(s.en)}<span class="jp">${esc(s.zh)}</span></h1>
-${subtitle}${metaBlock}  </div>
+${subtitle}${metaBlock}${dzNote}  </div>
 
 <section class="gallery ${s.layout === 'single' ? 'single _wide' : 'masonry-2'}">
 ${frames}
@@ -680,7 +854,7 @@ ${tiles}
 const ABOUT_PORTRAIT = 'photos/about-portrait.webp';
 
 function aboutPage() {
-  const desc = clip(oneLine('Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者，Stairs Space 共同經營者。以影像捕捉人文、街頭與空間的情緒。'), 155);
+  const desc = clip(oneLine('Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者。以影像捕捉人文、街頭與空間的情緒。'), 155);
   const main = `<main class="page" data-screen-label="10 About">
   <div class="fade-up page-head" style="transition-delay:0ms">
     <div class="eyebrow">
@@ -697,9 +871,9 @@ function aboutPage() {
     <h2>Jerrythepopper 洪立楷</h2>
     <div class="role">Photographer · 3D Creator · Based in Taipei</div>
 
-    <p>1996年生於台北。攝影師、3D創作者，Stairs Space 共同經營者。</p>
-    <p>以影像捕捉人文、街頭與空間的情緒，擅長在孤寂感與時間流動中找到畫面的重量。除了攝影，也持續探索3D視覺與虛實場景的交錯，嘗試讓靜態影像走向更立體的敘事。</p>
-    <p>曾與 Hasselblad、Leica、Sony、Oppo、Giant、新光攝影展、朱銘美術館、蝦皮等品牌合作，執行形象拍攝、教學內容與創意企劃。紀實計畫《輪轉》記錄台北第一果菜批發市場的人與故事，歷時一年多，最終透過募資出版攝影集。</p>
+    <p>${segmentZh('1996年生於台北。攝影師、3D創作者。')}</p>
+    <p>${segmentZh('以影像捕捉人文、街頭與空間的情緒，擅長在孤寂感與時間流動中找到畫面的重量。除了攝影，也持續探索3D視覺與虛實場景的交錯，嘗試讓靜態影像走向更立體的敘事。')}</p>
+    <p>${segmentZh('曾與 Hasselblad、Leica、Sony、Oppo、Giant、新光攝影展、朱銘美術館、蝦皮等品牌合作，執行形象拍攝、教學內容與創意企劃。紀實計畫《輪轉》記錄台北第一果菜批發市場的人與故事，歷時一年多，最終透過募資出版攝影集。')}</p>
 
     <h3>可以一起做的事</h3>
     <ul>
@@ -711,10 +885,10 @@ function aboutPage() {
 
     <h3>合作品牌</h3>
     <div class="brands">
-      <p><b>相機品牌</b>Hasselblad、Leica Camera Taiwan、Sony、Oppo、Reto</p>
-      <p><b>建築 / 商業</b>名發建設、三發建設、晶悅建設、臺北農產運銷公司、捷安特</p>
-      <p><b>文化 / 藝術</b>朱銘美術館、孤僻Goopi</p>
-      <p><b>商業平台</b>蝦皮</p>
+      <p><b>相機品牌</b>${segmentZh('Hasselblad、Leica Camera Taiwan、Sony、Oppo、Reto')}</p>
+      <p><b>建築 / 商業</b>${segmentZh('名發建設、三發建設、晶悅建設、臺北農產運銷公司、捷安特')}</p>
+      <p><b>文化 / 藝術</b>${segmentZh('朱銘美術館、孤僻Goopi')}</p>
+      <p><b>商業平台</b>${segmentZh('蝦皮')}</p>
     </div>
 
     <h3>展覽・出版・課程</h3>
@@ -731,8 +905,8 @@ function aboutPage() {
     </div>
 
     <div class="contact">
-      <div><b>Email</b><span>jerrythepopper@gmail.com</span></div>
-      <div><b>Instagram</b><span>@jerrythepopper</span></div>
+      <div><b>Email</b><span><a href="mailto:jerrythepopper@gmail.com">jerrythepopper@gmail.com</a></span></div>
+      <div><b>Instagram</b><span><a href="https://www.instagram.com/jerrythepopper" target="_blank" rel="noopener noreferrer">@jerrythepopper</a></span></div>
       <div><b>Representation</b><span>SEVEN / Asia-Pacific</span></div>
     </div>
   </div>

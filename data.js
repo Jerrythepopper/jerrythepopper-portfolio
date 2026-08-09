@@ -61,6 +61,7 @@
       { idx: 10, dzi: 'photos/dz/hb10.dzi', label: 'Deep Zoom · 8742 × 11656' },
       { idx: 13, dzi: 'photos/dz/hb13.dzi', label: 'Deep Zoom · 8742 × 11656' },
       { idx: 23, dzi: 'photos/dz/hb23.dzi', label: 'Deep Zoom · 8742 × 11656' },
+      { idx: 29, dzi: 'photos/dz/hb29.dzi', label: 'Deep Zoom · 10302 × 7727' },
       { idx: 34, dzi: 'photos/dz/hb34.dzi', label: 'Deep Zoom · 9907 × 7430' },
       { idx: 36, dzi: 'photos/dz/hb36.dzi', label: 'Deep Zoom · 11656 × 8742' },
     ],

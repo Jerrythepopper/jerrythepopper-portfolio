@@ -152,7 +152,9 @@ img { height: auto; }
 /* =============================================================================
    燈箱縮放（點圖放大到原生解析度 / 拖曳平移 / 雙指縮放 / 雙擊）
    ============================================================================= */
-.lb { overflow: hidden; }                 /* 放大後溢出的圖裁在視窗內，不生捲軸 */
+/* touch-action:none 掛在整個 overlay（不只 stage）：iOS 上雙指起手點常落在圖片外的
+   黑底，落在 .lb 才攔得住；頁面級的縮放另由 site.js 的 lockPageZoom 補刀 */
+.lb { overflow: hidden; touch-action: none; }   /* 放大後溢出的圖裁在視窗內，不生捲軸 */
 .lb-btn { z-index: 3; }
 .lb-stage {
   position: relative;
@@ -285,12 +287,74 @@ html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); }
 .gframe.has-dz:focus-visible .dz-badge { opacity: 1; }
 .gframe.has-dz { cursor: zoom-in; }
 
+/* =============================================================================
+   S25 Deep Zoom 說明行（2026-08-09）——角標寫著「Deep Zoom」但沒說可以點，
+   版頭補一句話。字階／字距沿用 eyebrow 語彙（11px、寬字距、muted），但不 uppercase
+   也不用 flex —— 它是一句中文說明，不是標籤。只有登記過切片的系列頁才會有這個元素。
+   ============================================================================= */
+.page-head .dz-note {
+  margin: 18px 0 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.9;
+  letter-spacing: 0.18em;
+  color: var(--color-text-muted);
+}
+
+/* =============================================================================
+   S25 中文斷行（2026-08-09）——兩件事，分開看：
+
+   (A) 分詞不腰斬：中文沒有詞間空白，瀏覽器把「每個漢字」都當可斷點，於是
+       「朱銘美術/館」「捷安/特」「畫面/的重量」到處都是。build-site.js 的
+       segmentZh 在建置期把詞切好、逐詞包 <span class="nb">，這裡只負責給 nowrap，
+       斷行就只能落在詞與詞之間。套用面：About 內文與品牌列、各系列頁 subtitle、
+       首頁 intro 宣言與各區塊 lede。
+   (B) 兩端對齊：只給「長段落」——About 內文與系列頁 subtitle。
+       justify 切齊右緣，line-break:strict 收嚴禁則，text-wrap:pretty 讓末行不落單。
+       刻意不套的三處：.brands（8em 兩欄 grid 的短行，justify 會拉出大洞）、
+       .contact（同理）、以及首頁 intro/lede 的置中展示字（節奏是刻意的）。
+   ============================================================================= */
+.nb { white-space: nowrap; }
+/* 護欄：詞單元不可斷，萬一遇到超長的純英文串（未來新增文案）也不許撐破版面 */
+.about-body p,
+.page-head .subtitle,
+.intro-lede,
+.sec-body .lede { overflow-wrap: break-word; }
+
+/* (B) 只有長段落吃兩端對齊 */
+.about-body > p,
+.page-head .subtitle {
+  text-align: justify;
+  text-wrap: pretty;
+  line-break: strict;
+}
+/* 保險：品牌兩欄與聯絡方式不吃上面那條（選擇器已用 > 隔開，這裡是明寫意圖） */
+.about-body .brands p,
+.contact div { text-align: start; }
+
+/* =============================================================================
+   S25 About 聯絡方式改成真連結（2026-08-09）——手機上點了要能開信件／IG App。
+   外觀沿用 .contact span 原樣（襯線、同色、無底線），只在 hover / focus 時補一道
+   低調底線當作可點的提示；觸控裝置沒有 hover，靠的是「點下去真的有反應」。
+   ============================================================================= */
+.contact span a {
+  color: inherit;
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+.contact span a:hover,
+.contact span a:focus-visible {
+  text-decoration: underline;
+  text-decoration-color: var(--color-line);
+}
+
 /* ---- 全螢幕 Deep Zoom 檢視器（非標準燈箱：整個視窗都是可縮放的畫布） ---- */
 .dzv {
   position: fixed; inset: 0;
   z-index: 1200;
   background: #0d0e12;
   animation: lb-fade 0.32s var(--ease-out);
+  touch-action: none;                     /* 縮放平移全交給 OSD，瀏覽器別接手 */
 }
 .dzv-canvas { position: absolute; inset: 0; }
 .dzv-canvas .openseadragon-canvas { outline: none; }
@@ -446,6 +510,15 @@ html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); }
   .hero-poster { background-image: var(--hpm, var(--hp)); }
   @supports (background-image: image-set(url("a.avif") type("image/avif"))) {
     .hero-poster { background-image: var(--hpms, var(--hpm)); }
+  }
+}
+/* S25：窄螢幕但高密度（手機幾乎都是）換 1440 版。iPhone 390 CSS px × 3 ＝ 1170 實體
+   像素，960 版拉上去糊得看得出來。這段必須排在上面那段之後才蓋得掉（同特異度靠順序）。
+   build-site.js 的 preload 也依 devicePixelRatio>=2 挑同一張，別讓兩邊選到不同檔。 */
+@media (max-width: 820px) and (min-resolution: 2dppx) {
+  .hero-poster { background-image: var(--hpl, var(--hp)); }
+  @supports (background-image: image-set(url("a.avif") type("image/avif"))) {
+    .hero-poster { background-image: var(--hpls, var(--hpl)); }
   }
 }
 

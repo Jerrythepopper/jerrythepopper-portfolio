@@ -11,6 +11,39 @@
   var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
+  /* ---------- 共用：iOS 頁面級雙指縮放的攔截 --------------------------------
+     iOS Safari 的雙指縮放是「頁面級」的，會蓋過 touch-action:none —— 在燈箱／
+     Deep Zoom 檢視器裡捏一下，整個網頁（含 overlay）被放大推出視野，而且因為
+     overlay 佔滿畫面、沒有可見的頁面邊界可抓，使用者很難縮回來（站主真機回報的
+     「螢幕噴飛回不來」）。
+
+     兩條路一起堵，缺一不可：
+       ① gesturestart / gesturechange / gestureend —— Safari 專屬的縮放手勢事件，
+          preventDefault 掉才不會啟動頁面縮放。
+       ② touchmove 且觸點 ≥2 —— 沒發 gesture* 事件的路徑（跨元素起手等）由它兜底；
+          單指不攔，燈箱的單指平移／swipe 照舊走 Pointer Events。
+     兩者都必須 passive:false，否則 preventDefault 無效。
+     回傳 unbind()：overlay 關閉時務必呼叫，別讓攔截漏到正常頁面上。
+  ------------------------------------------------------------------------ */
+  function lockPageZoom(el) {
+    if (!el) return function () {};
+    function stop(e) { e.preventDefault(); }
+    function stopMulti(e) {
+      if (e.touches && e.touches.length > 1) e.preventDefault();
+    }
+    var opt = { passive: false };
+    el.addEventListener('gesturestart', stop, opt);
+    el.addEventListener('gesturechange', stop, opt);
+    el.addEventListener('gestureend', stop, opt);
+    el.addEventListener('touchmove', stopMulti, opt);
+    return function () {
+      el.removeEventListener('gesturestart', stop, opt);
+      el.removeEventListener('gesturechange', stop, opt);
+      el.removeEventListener('gestureend', stop, opt);
+      el.removeEventListener('touchmove', stopMulti, opt);
+    };
+  }
+
   /* ---------- ⓪ blur-up 收尾 ------------------------------------------------
      主圖的淡入靠 <img onload> 內聯掛 is-loaded（時序上最保險）。這裡只補兩件事：
      ① script 執行前就載完的圖（onload 已經過去了）補上 class；
@@ -225,6 +258,9 @@
       v.setAttribute('aria-hidden', 'true');
       v.setAttribute('disablepictureinpicture', '');
       v.setAttribute('disableremoteplayback', '');
+      // autoplay 屬性：iOS 低電量模式外的自動播放靠它起頭，下面的 play() 只是補刀
+      v.autoplay = true;
+      v.setAttribute('autoplay', '');
       v.preload = 'auto';
       v.setAttribute('data-hero-idx', String(idx));
       v.setAttribute('data-hero-id', String(item.id || ''));
@@ -240,7 +276,29 @@
       var scrim = mv.querySelector('.hero-scrim');
       if (scrim) mv.insertBefore(v, scrim); else mv.appendChild(v);
 
-      function play() { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+      /* iOS 的自動播放是「有條件的」：muted + playsinline 齊備才准，而且 autoplay 屬性
+         有時仍會被擋（低電量模式、剛開分頁還沒互動過）。三道保險由弱到強：
+           ① autoplay 屬性 —— 一般情況就夠。
+           ② 插入 DOM 後顯式 play() —— 屬性錯過時機（動態建的元素）時補上。
+           ③ play() 被拒 → 掛一次性 touchstart/pointerdown，使用者第一次碰螢幕就重試。
+         低電量模式連 ③ 都會拒，那就停在海報那一幀 —— 這是預期的降級，不再往下處理。 */
+      var retryBound = false;
+      function bindTouchRetry() {
+        if (retryBound) return;
+        retryBound = true;
+        function once() {
+          document.removeEventListener('touchstart', once, true);
+          document.removeEventListener('pointerdown', once, true);
+          retryBound = false;
+          play();
+        }
+        document.addEventListener('touchstart', once, true);
+        document.addEventListener('pointerdown', once, true);
+      }
+      function play() {
+        var p = v.play();
+        if (p && p.catch) p.catch(function () { bindTouchRetry(); });
+      }
       play();
       document.addEventListener('visibilitychange', function () {
         if (document.hidden) v.pause(); else play();
@@ -261,7 +319,7 @@
   var deepZoom = (function () {
     var libState = 0;                 // 0 未載 / 1 載入中 / 2 就緒 / 3 失敗
     var waiting = [];
-    var box = null, viewer = null, zoomEl = null, lastFocus = null;
+    var box = null, viewer = null, zoomEl = null, lastFocus = null, unlockZoom = null;
     // 同頁所有掛了切片的磚（＝DEEPZOOM 表在 DOM 裡的投影），供 ‹ › 循環切換
     var items = [], cur = 0, fallbackFn = null;
 
@@ -339,6 +397,7 @@
     function close() {
       if (!box) return;
       window.removeEventListener('keydown', onKey);
+      if (unlockZoom) { unlockZoom(); unlockZoom = null; }
       if (viewer) { try { viewer.destroy(); } catch (err) {} viewer = null; }
       if (box.parentNode) box.parentNode.removeChild(box);
       box = null; zoomEl = null;
@@ -375,6 +434,7 @@
       }
       document.getElementById('root').appendChild(box);
       document.body.style.overflow = 'hidden';
+      unlockZoom = lockPageZoom(box);       // 雙指交給 OSD，不讓 Safari 縮放整頁
 
       viewer = window.OpenSeadragon({
         element: box.querySelector('.dzv-canvas'),
@@ -458,7 +518,7 @@
     }
 
     var lb = null, stage = null, pic = null, stageImg = null, counter = null, hint = null, dzBtn = null;
-    var index = 0, lastFocus = null;
+    var index = 0, lastFocus = null, unlockZoom = null;
 
     // 縮放狀態
     var scale = 1, tx = 0, ty = 0, fitW = 0, fitH = 0, maxScale = 1;
@@ -566,6 +626,9 @@
     /* ----- 指標：滑鼠拖曳平移／單擊切換；觸控單指平移／雙擊切換／雙指縮放 ----- */
     function bindPointer() {
       var pts = {}, n = 0, drag = null, pinch = null, downT = 0, moved = 0, lastTap = 0;
+      // swipe 換張用：整段手勢的淨位移，以及「這段手勢曾經多指」的旗標
+      var sdx = 0, sdy = 0, multi = false;
+      var SWIPE = 40;                        // 水平位移門檻（px）
 
       function arr() { var a = []; for (var k in pts) a.push(pts[k]); return a; }
       function count() { var c = 0; for (var k in pts) c++; return c; }
@@ -577,8 +640,10 @@
         n = count();
         if (n === 1) {
           downT = Date.now(); moved = 0; pinch = null;
+          sdx = 0; sdy = 0; multi = false;
           drag = { x: e.clientX, y: e.clientY, tx: tx, ty: ty };
         } else if (n === 2) {
+          multi = true;                      // 進過雙指就不再算 swipe（與縮放手勢互斥）
           drag = null;
           var a = arr();
           var d = Math.sqrt(Math.pow(a[0].x - a[1].x, 2) + Math.pow(a[0].y - a[1].y, 2)) || 1;
@@ -602,6 +667,7 @@
           clampPan(); applyTransform(); syncZoomState();
         } else if (drag) {
           var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+          sdx = dx; sdy = dy;
           moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
           if (scale > 1.01) {
             stage.classList.add('is-dragging');
@@ -618,6 +684,14 @@
         stage.classList.remove('is-dragging');
         if (pinch && n < 2) { pinch = null; drag = null; }
         if (drag && n === 0) {
+          /* 未放大時的單指水平滑動＝換張（iOS 慣例：左滑看下一張）。
+             三道排除，免得跟既有手勢打架：① 放大中留給平移；② 這段手勢進過雙指
+             （縮放）就不算；③ 水平位移要明顯壓過垂直，避免捲頁誤觸。 */
+          if (scale <= 1.01 && !multi && Math.abs(sdx) >= SWIPE && Math.abs(sdx) > Math.abs(sdy) * 1.2) {
+            step(sdx < 0 ? 1 : -1);
+            drag = null; sdx = 0; sdy = 0;
+            return;
+          }
           var tap = moved < 6 && (Date.now() - downT) < 400;
           if (tap) {
             if (e.pointerType === 'mouse') {
@@ -722,6 +796,7 @@
       lastFocus = document.activeElement;
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', onKey);
+      unlockZoom = lockPageZoom(lb);        // 開啟期間雙指只作用在照片上
       lb.querySelector('.lb-close').focus();
     }
     function close() {
@@ -730,6 +805,7 @@
       lb.style.display = 'none';
       document.body.style.overflow = '';
       window.removeEventListener('keydown', onKey);
+      if (unlockZoom) { unlockZoom(); unlockZoom = null; }
       if (lastFocus && lastFocus.focus) lastFocus.focus();
     }
 
