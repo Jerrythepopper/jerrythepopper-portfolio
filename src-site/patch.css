@@ -842,11 +842,14 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
   display: inline-flex; align-items: center; justify-content: center;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  /* S35：預設 65% 墨色（工具層降一階，讓中間選單文字仍是視覺主角）；
+     hover／focus 恢復全墨，見下方 :hover / :focus-visible。 */
+  opacity: 0.65;
   transition: opacity var(--dur-fast) var(--ease-out), scale 140ms var(--ease-out);
 }
-.theme-toggle:hover { opacity: 0.6; }
+.theme-toggle:hover { opacity: 1; }
 .theme-toggle:active { scale: 0.96; }
-.theme-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.theme-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; opacity: 1; }
 .theme-toggle svg {
   position: absolute;
   width: 18px; height: 18px;
@@ -921,9 +924,10 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
   transform: translateY(-50%);
   width: 44px; height: 44px;
   color: var(--color-white);
-  opacity: 0.85;
+  /* S35：同步 frosted nav-actions 那套「65% 降墨、hover/focus 恢復全墨」語言 */
+  opacity: 0.65;
 }
-.hero-chrome > .theme-toggle:hover { opacity: 0.6; }
+.hero-chrome > .theme-toggle:hover { opacity: 1; }
 
 /* =============================================================================
    S29 語言切換鈕（2026-08-09）——中文頁一顆「EN」、英文頁一顆「中」，兩處出現：
@@ -947,11 +951,13 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
   white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  /* S35：與 .theme-toggle 同一套語言——預設 65% 墨色，hover／focus 恢復全墨 */
+  opacity: 0.65;
   transition: opacity var(--dur-fast) var(--ease-out), scale 140ms var(--ease-out);
 }
-.lang-toggle:hover { opacity: 0.6; }
+.lang-toggle:hover { opacity: 1; }
 .lang-toggle:active { scale: 0.96; }
-.lang-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.lang-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .lang-toggle { transition: none; } }
 /* 與主題鈕同一條紀律：首頁 hero 未捲動時整條 frosted 不可見，鈕也要退出 Tab 序 */
 .frosted:not(.is-static):not(.visible) .lang-toggle { visibility: hidden; }
@@ -969,9 +975,10 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
   transform: translateY(-50%);
   min-width: 36px; height: 44px;
   color: var(--color-white);
-  opacity: 0.85;
+  /* S35：同步 frosted nav-actions 那套「65% 降墨、hover/focus 恢復全墨」語言 */
+  opacity: 0.65;
 }
-.hero-chrome > .lang-toggle:hover { opacity: 0.6; }
+.hero-chrome > .lang-toggle:hover { opacity: 1; }
 
 /* 2026-08-09 S32：Android 360px 級窄機實測，hero 左上 wordmark 尾段「 · Photography
    / 3D」會撞上右上 EN 鈕（S29 驗收只測過 iPhone 390px，剛好沒撞——360px 才露餡）。
@@ -1060,4 +1067,57 @@ html[lang="en"] .page-head .subtitle {
 @media (max-width: 880px) {
   .frosted .brand { line-height: 1; display: inline-flex; align-items: center; }
   .frosted nav a { display: inline-flex; align-items: center; line-height: 1; }
+}
+
+/* =============================================================================
+   S35 導覽三層墨色分層（2026-08-09，站主核准設計案）——EN／月亮兩顆「工具層」
+   壓到 65% 墨色（用 opacity，數值見上方 .theme-toggle／.lang-toggle／
+   .hero-chrome 覆寫區塊），跟選單文字的全墨拉開一階；hover/focus-visible
+   時兩顆各自恢復 opacity:1（規則同樣寫在上面各自的區塊，過渡沿用既有
+   --dur-fast，沒有新增 transition-duration）。
+   -----------------------------------------------------------------------------
+   這裡收尾剩下「分隔細線」：.nav-actions 左緣一條 hairline，把「工具層」跟
+   nav 選單視覺上斷開。用 ::before 而非 border-left，因為 border 會撐滿
+   .nav-actions 自身高度（桌機 28px／手機 44px 熱區），視覺太粗太滿版；
+   ::before 用 top:20%+height:60% 精確收到「約六成、置中」。
+   顏色吃既有 --color-line-faint（styles.css 已定義、patch.css 已在
+   dark-mode 區塊覆寫成暖白 14%）——不新開色階，深淺兩模式自動各自成立。
+   padding-left 是那條線與 EN 之間、以及線與左邊 nav 項之間的呼吸空間；
+   ≤880px 用得到（nav 進入水平捲動窗，見 P0-2／S34），數值刻意收在
+   8～14px，讓可捲動窗寬度的縮水不超過一個字元的量。
+   ============================================================================= */
+.nav-actions {
+  position: relative;
+  padding-left: 20px;
+}
+.nav-actions::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 1px;
+  background: var(--color-line-faint);
+}
+@media (max-width: 880px) { .nav-actions { padding-left: 14px; } }
+@media (max-width: 720px) { .nav-actions { padding-left: 10px; } }
+@media (max-width: 480px) { .nav-actions { padding-left: 8px; } }
+
+/* =============================================================================
+   S36 Android 橫向溢出護欄（2026-08-09）——本機無法重現（推定為特定字型的字寬
+   誤差把某個文字節點撐出視窗），先上兩道防線：
+   1) html/body 開 overflow-x:clip（clip 不像 hidden 會建立新的 formatting
+      context，對 position:fixed 的 .frosted／.lb／.dzv／hero-chrome 定位零
+      副作用；舊瀏覽器不支援 clip 會直接忽略該行，讓下一行 hidden 接手）。
+   2) 兩個長字串嫌疑犯（About 頁 email、footer 接案行 email）補
+      overflow-wrap:anywhere 兜底——styles.css 原檔沒有給這兩處這條規則
+      （原檔零觸及，覆寫只能寫在這裡）。
+   ============================================================================= */
+html, body {
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+.contact span a,
+.foot-hire a {
+  overflow-wrap: anywhere;
 }
