@@ -29,7 +29,7 @@
 
 ---
 
-# 英文 lede（08-08 Fable 代筆,humanizer 紀律;取代設計時期舊句,待使用者掃一眼）
+# 英文 lede（08-08 Fable 代筆——**08-09 使用者裁決：首頁 lede 全中文**,以下五句退出首頁,留檔備用〔雙語切換 v2 或 SEO description 可再用〕;首頁 lede 改取使用者中文自述句,已套用）
 
 - **Portraits**: Pictures of friends, and the people who matter to me.
 - **Street**: Everyone reads the world their own way. Street photography is how I read a city.
