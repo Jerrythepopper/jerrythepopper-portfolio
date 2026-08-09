@@ -1892,6 +1892,15 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
 }
 .hero-chrome > .lang-toggle:hover { opacity: 0.6; }
 
+/* 2026-08-09 S32：Android 360px 級窄機實測，hero 左上 wordmark 尾段「 · Photography
+   / 3D」會撞上右上 EN 鈕（S29 驗收只測過 iPhone 390px，剛好沒撞——360px 才露餡）。
+   build-site.js 已把尾段包成 <span class="wm-tail">，這裡在超窄屏收掉它，只留
+   JERRYTHEPOPPER；眉標本來就有 PHOTOGRAPHY · 3D 字樣，零資訊損失。
+   斷點 385px：390px（S29 已驗證的下限）留一點餘裕、360px 以下確定收。 */
+@media (max-width: 385px) {
+  .hero-wordmark .wm-tail { display: none; }
+}
+
 /* =============================================================================
    S29 英文頁排版：不吃中文那套兩端對齊
    -----------------------------------------------------------------------------

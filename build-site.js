@@ -661,7 +661,7 @@ function heroBlock(lhref) {
 
   <div class="hero-chrome">
     <a href="./" class="hero-wordmark">
-      <span class="en">Jerrythepopper · Photography / 3D</span>
+      <span class="en">Jerrythepopper<span class="wm-tail"> · Photography / 3D</span></span>
     </a>
     <div class="hero-topnav">
       <a href="work/">Work</a>

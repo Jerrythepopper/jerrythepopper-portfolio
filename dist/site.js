@@ -410,7 +410,7 @@
   var deepZoom = (function () {
     var libState = 0;                 // 0 未載 / 1 載入中 / 2 就緒 / 3 失敗
     var waiting = [];
-    var box = null, viewer = null, zoomEl = null, lastFocus = null, unlockZoom = null;
+    var box = null, viewer = null, zoomEl = null, lastFocus = null, unlockZoom = null, unbindWheel = null, unbindPinch = null;
     // 同頁所有掛了切片的磚（＝DEEPZOOM 表在 DOM 裡的投影），供 ‹ › 循環切換
     var items = [], cur = 0, fallbackFn = null;
 
@@ -489,11 +489,82 @@
       if (!box) return;
       window.removeEventListener('keydown', onKey);
       if (unlockZoom) { unlockZoom(); unlockZoom = null; }
+      if (unbindWheel) { unbindWheel(); unbindWheel = null; }
+      if (unbindPinch) { unbindPinch(); unbindPinch = null; }
       if (viewer) { try { viewer.destroy(); } catch (err) {} viewer = null; }
       if (box.parentNode) box.parentNode.removeChild(box);
       box = null; zoomEl = null;
       document.body.style.overflow = '';
       if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+
+    /* 觸控板滾動縮放（2026-08-09 S32）：OSD 內建 scrollToZoom 對每個 wheel 事件只看
+       正負號（見 vendor 原始碼 T()：n = deltaY?deltaY<0?1:-1:0），不管幅度大小都乘一次
+       zoomPerScroll —— 滑鼠滾輪一次觸發一個大 delta 的離散事件，觀感正常；觸控板連續
+       滾動在同一段動作裡連發幾十個小 delta 事件，同一顆固定倍率被連乘幾十次＝「動一下
+       就放超大」。改成倍率正比於 deltaY（見下方 factor 公式）就能把兩種輸入裝置的物理
+       手感拉平；deltaMode===1（行模式，少數傳統滑鼠／某些瀏覽器的離散滾輪）先 ×16 折算
+       成像素幅度，否則同一份 factor 公式對它幾乎沒反應。
+       ctrlKey：Mac 觸控板的雙指捏合在 Chrome/Edge 是包成 wheel+ctrlKey:true 的合成事件
+       （非 Safari 專屬的 gesturestart 系列，見下方 bindPinch），deltaY 幅度較大、給較大
+       的係數讓捏合手感跟得上手指移動速度。 */
+    function dzWheelFactor(e) {
+      var dy = e.deltaY;
+      if (e.deltaMode === 1) dy *= 16;                         // 行模式先折算成像素模式
+      else if (e.deltaMode === 2) dy *= (box.clientHeight || window.innerHeight); // 罕見的整頁模式，保底
+      return Math.pow(e.ctrlKey ? 1.008 : 1.0022, -dy);
+    }
+    function dzViewportPoint(e) {
+      var mouse = window.OpenSeadragon.getMousePosition(e);
+      var off = window.OpenSeadragon.getElementOffset(viewer.canvas);
+      return viewer.viewport.pointFromPixel(mouse.minus(off), true);
+    }
+    function bindWheel(el) {
+      function onWheel(e) {
+        if (!viewer || !viewer.viewport) return;
+        e.preventDefault();
+        e.stopPropagation();                // 攔在 OSD 自己掛在 canvas 上的 wheel 處理前面
+        viewer.viewport.zoomBy(dzWheelFactor(e), dzViewportPoint(e));
+        viewer.viewport.applyConstraints();
+      }
+      // capture：搶在 OSD 掛於 .dzv-canvas（box 的子節點）上的 bubble-phase 監聽器之前
+      // 攔截；配合下方 OSD 初始化把 gestureSettingsMouse.scrollToZoom 關掉，雙保險。
+      el.addEventListener('wheel', onWheel, { capture: true, passive: false });
+      return function () { el.removeEventListener('wheel', onWheel, { capture: true }); };
+    }
+
+    /* Safari 觸控板雙指捏合（2026-08-09 S32）：Mac 觸控板的捏合在 Safari 走
+       gesturestart/gesturechange/gestureend（Chrome/Edge 走上面的 wheel+ctrlKey），既有
+       lockPageZoom() 只 preventDefault 擋掉頁面縮放，捏合本身沒有任何效果（站主回報
+       「捏合手勢無效」）。這裡另掛一組轉譯成 OSD zoomBy 的處理；e.scale 是「相對手勢
+       起點」的累計比值（規格：gesturestart 時恆為 1），要拿相鄰兩次 gesturechange 的比值
+       才是「這一小段動作」的縮放量，所以每次都跟上一次的 e.scale 相除、再把 prevScale
+       更新成當次值。非 Safari 瀏覽器不會發這三個事件，掛了也是靜態零成本。
+       真機（iPad/iPhone Safari）雙指仍走 Pointer Events 的多指分支（bindPointer 的
+       touch 路徑／OSD 自己的 gestureSettingsTouch.pinchToZoom），跟這裡互不相干。 */
+    function bindPinch(el) {
+      var active = false, prevScale = 1;
+      function start(e) { e.preventDefault(); active = true; prevScale = 1; }
+      function change(e) {
+        e.preventDefault();
+        if (!active || !viewer || !viewer.viewport) return;
+        var cur = e.scale;
+        var ratio = cur / (prevScale || 1);
+        prevScale = cur;
+        if (!isFinite(ratio) || ratio <= 0 || ratio === 1) return;
+        viewer.viewport.zoomBy(ratio, dzViewportPoint(e));
+        viewer.viewport.applyConstraints();
+      }
+      function end(e) { e.preventDefault(); active = false; }
+      var opt = { passive: false };
+      el.addEventListener('gesturestart', start, opt);
+      el.addEventListener('gesturechange', change, opt);
+      el.addEventListener('gestureend', end, opt);
+      return function () {
+        el.removeEventListener('gesturestart', start, opt);
+        el.removeEventListener('gesturechange', change, opt);
+        el.removeEventListener('gestureend', end, opt);
+      };
     }
 
     function mount(dzi, label, fallback) {
@@ -550,9 +621,14 @@
            下面 canvas-drag-end / flick 結束再補一次 applyConstraints 把它釘回去。 */
         visibilityRatio: 1,
         constrainDuringPan: true,
-        gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true, scrollToZoom: true },
+        // scrollToZoom 關閉：wheel 縮放改由下面 bindWheel() 自己算比例式倍率
+        // （OSD 內建版本按每個 wheel 事件的正負號固定乘一次係數，觸控板連發會暴衝，
+        // 見 bindWheel 註解）；pinchToZoom 給真觸控螢幕用，跟這裡無關，維持開。
+        gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true, scrollToZoom: false },
         gestureSettingsTouch: { pinchToZoom: true, dblClickToZoom: true, flickEnabled: true },
       });
+      unbindWheel = bindWheel(box);
+      unbindPinch = bindPinch(box);
       // 鍵盤統一由我們處理，避免與 OSD 內建快捷鍵重複作用
       viewer.addHandler('canvas-key', function (e) { e.preventDefaultAction = true; });
       // 拖曳／flick 收手後把畫面釘回邊界內（見上面 visibilityRatio 那段註解）
@@ -819,9 +895,17 @@
       stage.addEventListener('pointerup', up);
       stage.addEventListener('pointercancel', up);
 
+      // 2026-08-09 S32：與 Deep Zoom 檢視器（deepZoom.bindWheel 那段）同一條公式——
+      // 倍率正比於 deltaY，觸控板連發的小 delta 才不會被當成滑鼠整顆滾輪算，一路乘到暴衝；
+      // ctrlKey：Mac 觸控板雙指捏合在 Chrome/Edge 會包成 wheel+ctrlKey:true，給較大係數；
+      // deltaMode===1（行模式）先 ×16 折算成像素，這裡原本就是比例式，只是先前沒吃這兩項。
       stage.addEventListener('wheel', function (e) {
         e.preventDefault();
-        zoomTo(scale * Math.exp(-e.deltaY * 0.0018), e.clientX, e.clientY);
+        var dy = e.deltaY;
+        if (e.deltaMode === 1) dy *= 16;
+        else if (e.deltaMode === 2) dy *= window.innerHeight;
+        var factor = Math.pow(e.ctrlKey ? 1.008 : 1.0022, -dy);
+        zoomTo(scale * factor, e.clientX, e.clientY);
       }, { passive: false });
     }
 
