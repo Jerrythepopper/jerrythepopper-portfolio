@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>document.documentElement.className+=' js'</script>
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1f1d1a" media="(prefers-color-scheme: dark)">
+<script>document.documentElement.className+=' js';try{var t=localStorage.getItem('jtpTheme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <title>Street 街拍｜Jerrythepopper Photography</title>
 <meta name="description" content="從接觸攝影以來，我一直喜歡在街頭捕捉各式人文風景。我相信每個人解讀這個世界的方式都不同——街拍，就是我解讀各座城市的方式。">
 
@@ -66,6 +68,10 @@
     <a href="../work/">Work</a>
     <a href="../about/">About</a>
   </nav>
+  <button class="theme-toggle" type="button" aria-label="切換深淺色" title="切換深淺色">
+    <svg class="ic-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.3M12 19.1v2.3M4.5 4.5l1.6 1.6M17.9 17.9l1.6 1.6M2.6 12h2.3M19.1 12h2.3M4.5 19.5l1.6-1.6M17.9 6.1l1.6-1.6"/></svg>
+    <svg class="ic-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 14.7A8.5 8.5 0 0 1 9.3 3.7a8.5 8.5 0 1 0 11 11Z"/></svg>
+  </button>
 </div>
 <main class="page" data-screen-label="04 Street">
   <div class="fade-up page-head" style="transition-delay:0ms">
@@ -173,7 +179,7 @@
       <li><a href="../portraits/">Portraits 人像</a></li>
       <li><a href="../street/">Street 街拍</a></li>
       <li><a href="../nature/">Nature 自然</a></li>
-      <li><a href="../3d/">3D 立體</a></li>
+      <li><a href="../3d/">3D</a></li>
       <li><a href="../film/">Film 底片</a></li>
       <li><a href="../market/">果菜市場 輪轉</a></li>
       </ul>

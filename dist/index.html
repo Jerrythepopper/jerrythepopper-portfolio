@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>document.documentElement.className+=' js'</script>
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1f1d1a" media="(prefers-color-scheme: dark)">
+<script>document.documentElement.className+=' js';try{var t=localStorage.getItem('jtpTheme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <style>:root{--hp:url('photos/hero-poster-1.webp');--hps:image-set(url('photos/hero-poster-1.avif') type('image/avif'),url('photos/hero-poster-1.webp') type('image/webp'));--hpm:url('photos/hero-poster-1@960.webp');--hpms:image-set(url('photos/hero-poster-1@960.avif') type('image/avif'),url('photos/hero-poster-1@960.webp') type('image/webp'));--hpl:url('photos/hero-poster-1@1440.webp');--hpls:image-set(url('photos/hero-poster-1@1440.avif') type('image/avif'),url('photos/hero-poster-1@1440.webp') type('image/webp'))}</style>
 <script>
 window.__HERO_VIDEOS=[{"id":"cloud-1","mp4":"video/cloud-1.mp4","mp4_720":"video/cloud-1@720.mp4","poster":"photos/hero-poster-1"},{"id":"cloud-2","mp4":"video/cloud-2.mp4","mp4_720":"video/cloud-2@720.mp4","poster":"photos/hero-poster-2"},{"id":"cloud-3","mp4":"video/cloud-3.mp4","mp4_720":"video/cloud-3@720.mp4","poster":"photos/hero-poster-3"}];
@@ -75,6 +77,10 @@ document.head.appendChild(l);})();
     <a href="work/">Work</a>
     <a href="about/">About</a>
   </nav>
+  <button class="theme-toggle" type="button" aria-label="切換深淺色" title="切換深淺色">
+    <svg class="ic-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.3M12 19.1v2.3M4.5 4.5l1.6 1.6M17.9 17.9l1.6 1.6M2.6 12h2.3M19.1 12h2.3M4.5 19.5l1.6-1.6M17.9 6.1l1.6-1.6"/></svg>
+    <svg class="ic-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 14.7A8.5 8.5 0 0 1 9.3 3.7a8.5 8.5 0 1 0 11 11Z"/></svg>
+  </button>
 </div>
 <main data-screen-label="01 Home">
 <section class="hero" data-screen-label="00 Hero">
@@ -92,6 +98,10 @@ document.head.appendChild(l);})();
       <span class="sep">|</span>
       <a href="about/">Contact</a>
     </div>
+    <button class="theme-toggle" type="button" aria-label="切換深淺色" title="切換深淺色">
+    <svg class="ic-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.3M12 19.1v2.3M4.5 4.5l1.6 1.6M17.9 17.9l1.6 1.6M2.6 12h2.3M19.1 12h2.3M4.5 19.5l1.6-1.6M17.9 6.1l1.6-1.6"/></svg>
+    <svg class="ic-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 14.7A8.5 8.5 0 0 1 9.3 3.7a8.5 8.5 0 1 0 11 11Z"/></svg>
+  </button>
   </div>
 
   <div class="hero-title-wrap">
@@ -110,7 +120,7 @@ document.head.appendChild(l);})();
 <section class="intro">
   <div class="fade-up intro-inner" style="transition-delay:0ms">
     <div class="eyebrow">Selected · 2018 — 2026</div>
-    <p class="intro-lede"><span class="nb">以</span><span class="nb">影像</span><span class="nb">捕捉</span><span class="nb">人文、</span><span class="nb">街頭</span><span class="nb">與</span><span class="nb">空間</span><span class="nb">的</span><span class="nb">情緒。</span><br><span class="nb">在</span><span class="nb">孤寂感</span><span class="nb">與</span><span class="nb">時間流動</span><span class="nb">中，</span><span class="nb">找到</span><span class="nb">畫面的重量。</span></p>
+    <p class="intro-lede"><span class="nb">以</span><span class="nb">影像</span><span class="nb">捕捉</span><span class="nb">人文、</span><span class="nb">街頭</span><span class="nb">與</span><span class="nb">空間</span><span class="nb">的</span><span class="nb">情緒。</span><br><span class="nb">在</span><span class="nb">孤寂感</span><span class="nb">與</span><span class="nb">時間流動</span><span class="nb">中，</span><span class="nb">找到</span><span class="nb">我的樣貌。</span></p>
     <p>Photographer · 3D Creator · Based in Taipei. Brand collaborations with Hasselblad, Leica, Sony, Oppo, Giant, and more.</p>
   </div>
 </section>
@@ -181,7 +191,7 @@ document.head.appendChild(l);})();
         <span>Series · 004</span>
       </div>
       <h2>Nature<span class="jp">自然</span></h2>
-      <p class="lede"><span class="nb">我</span><span class="nb">時常被</span><span class="nb">大自然</span><span class="nb">震懾，</span><span class="nb">記下</span><span class="nb">它們</span><span class="nb">的</span><span class="nb">樣子。</span></p>
+      <p class="lede"><span class="nb">我</span><span class="nb">時常被</span><span class="nb">大自然</span><span class="nb">震懾，</span><span class="nb">所以</span><span class="nb">努力</span><span class="nb">記下</span><span class="nb">他們</span><span class="nb">的</span><span class="nb">樣貌。</span></p>
       <a href="nature/" class="cta">View series <span class="arr">→</span></a>
     </div>
   </div>
@@ -198,8 +208,8 @@ document.head.appendChild(l);})();
         <span class="flow-line in" style="width:40px"></span>
         <span>Series · 005</span>
       </div>
-      <h2>3D<span class="jp">立體</span></h2>
-      <p class="lede"><span class="nb">喜歡</span><span class="nb">探索</span><span class="nb">攝影</span><span class="nb">與</span> <span class="nb">3D</span> <span class="nb">領域</span><span class="nb">的</span><span class="nb">邊界。</span></p>
+      <h2>3D</h2>
+      <p class="lede"><span class="nb">探索</span><span class="nb">攝影</span><span class="nb">與</span> <span class="nb">3D</span> <span class="nb">領域</span><span class="nb">的</span><span class="nb">邊界。</span></p>
       <a href="3d/" class="cta">View series <span class="arr">→</span></a>
     </div>
   </div>
@@ -253,7 +263,7 @@ document.head.appendChild(l);})();
         <span>Selected · 2023 — 2026</span>
       </div>
       <h2>Work<span class="jp">工作</span></h2>
-      <p class="lede"><span class="nb">Brand collaborations and</span> <span class="nb">editorial projects.</span> <span class="nb">Click any tile to view</span> <span class="nb">the project.</span></p>
+      <p class="lede"><span class="nb">品牌合作</span><span class="nb">與</span><span class="nb">商業</span><span class="nb">工作</span><span class="nb">精選。</span></p>
       <div class="meta"><span>Hasselblad</span><span>Leica</span><span>Sony</span><span>Oppo</span><span>Goopi</span><span>Reto</span></div>
       <a href="work/" class="cta">View work <span class="arr">→</span></a>
     </div>
@@ -294,7 +304,7 @@ document.head.appendChild(l);})();
       <li><a href="portraits/">Portraits 人像</a></li>
       <li><a href="street/">Street 街拍</a></li>
       <li><a href="nature/">Nature 自然</a></li>
-      <li><a href="3d/">3D 立體</a></li>
+      <li><a href="3d/">3D</a></li>
       <li><a href="film/">Film 底片</a></li>
       <li><a href="market/">果菜市場 輪轉</a></li>
       </ul>

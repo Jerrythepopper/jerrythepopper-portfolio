@@ -11,6 +11,50 @@
   var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
+  /* ---------- ⓪ 深淺色切換（S24） ------------------------------------------
+     三態語意只有兩顆按鈕：沒點過＝跟系統走（<html> 上沒有 data-theme），點一下＝
+     釘死到另一邊並寫進 localStorage，再點一次＝釘到回來。要回到「跟系統」請清
+     站台資料——刻意不做三態鈕，兩態的心智模型才不會每次都要猜現在是第幾態。
+
+     防閃的那半段不在這裡：<head> 最前面有一段同步小腳本先把 data-theme 掛上去，
+     所以 CSS 一到位就是最終色，不會先閃一格白再翻黑（本檔是 defer，來不及）。
+
+     兩顆鈕（frosted nav 一顆、hero 右上角一顆）不各自持有狀態：外觀由 :root 的
+     --tt-sun / --tt-moon 決定，這裡只改一個屬性，兩顆自動同步。用事件委派掛在
+     document 上，之後任何版位再加第三顆也不必回來改這裡。
+  ------------------------------------------------------------------------ */
+  (function () {
+    var KEY = 'jtpTheme';
+    function systemDark() {
+      return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    function current() {
+      var t = document.documentElement.getAttribute('data-theme');
+      return (t === 'dark' || t === 'light') ? t : (systemDark() ? 'dark' : 'light');
+    }
+    var ttTimer = null;
+    document.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest && e.target.closest('.theme-toggle');
+      if (!btn) return;
+      var next = current() === 'dark' ? 'light' : 'dark';
+      /* 過渡只在「使用者真的點了鈕」時存在（見 patch.css .theme-transitioning）：
+         掛上去 → 換色 → 420ms 後拆掉。開頁的防閃腳本與系統偏好自動翻面都不經過
+         這裡，所以那兩條路徑維持瞬切；減少動態時整段跳過。 */
+      if (!reduce) {
+        document.documentElement.classList.add('theme-transitioning');
+        clearTimeout(ttTimer);
+        ttTimer = setTimeout(function () {
+          document.documentElement.classList.remove('theme-transitioning');
+        }, 420);
+      }
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem(KEY, next); } catch (err) {}
+      // 手機瀏覽器的網址列底色跟著走（<head> 那條 theme-color 只認系統偏好）
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m) { m.removeAttribute('media'); m.setAttribute('content', next === 'dark' ? '#1f1d1a' : '#f7f7f7'); }
+    });
+  })();
+
   /* ---------- 共用：iOS 頁面級雙指縮放的攔截 --------------------------------
      iOS Safari 的雙指縮放是「頁面級」的，會蓋過 touch-action:none —— 在燈箱／
      Deep Zoom 檢視器裡捏一下，整個網頁（含 overlay）被放大推出視野，而且因為
@@ -234,12 +278,34 @@
     var list = window.__HERO_VIDEOS;
     if (!list || !list.length) return;
 
+    /* ---- 真機除錯信標（S24）：iPhone 上影片不播，但手上沒有那台機器的 console。
+       只在「不是正式網域」時開——本機 / 區網測試會回報，www.jerrythepopper.com
+       永遠一則都不發（這道閘門在 dist 產物裡看得到，別拿掉）。
+       送到 preview-server.js 的 POST /debug-log，失敗完全靜默：診斷工具不該
+       在使用者面前製造第二個錯誤。 ---- */
+    var DEBUG = location.hostname !== 'www.jerrythepopper.com';
+    function beacon(stage, extra) {
+      if (!DEBUG) return;
+      try {
+        var d = { stage: stage, ua: navigator.userAgent, href: location.href };
+        for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) d[k] = extra[k];
+        fetch('/debug-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(d),
+          keepalive: true,
+        }).catch(function () {});
+      } catch (err) { /* 靜默 */ }
+    }
+
     var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     var saveData = !!(conn && conn.saveData);
     if (reduce || saveData) {
       mv.setAttribute('data-hero-video', reduce ? 'skipped-reduced-motion' : 'skipped-save-data');
+      beacon('skipped', { reduce: reduce, saveData: saveData });
       return;
     }
+    beacon('branch-ok', { reduce: false, saveData: false, coarse: coarse, dpr: window.devicePixelRatio || 1 });
 
     var idx = typeof window.__HERO_IDX === 'number' ? window.__HERO_IDX : 0;
     var item = list[idx] || list[0];
@@ -297,8 +363,27 @@
       }
       function play() {
         var p = v.play();
-        if (p && p.catch) p.catch(function () { bindTouchRetry(); });
+        if (p && p.catch) p.catch(function (err) {
+          beacon('play-rejected', {
+            errName: err && err.name, errMessage: err && err.message,
+            readyState: v.readyState, networkState: v.networkState,
+            mediaErr: v.error ? (v.error.code + ':' + (v.error.message || '')) : null,
+            src: v.currentSrc || v.src,
+          });
+          bindTouchRetry();
+        });
       }
+      // <video> 自己的錯誤（404 / 不支援的編碼 / 解碼失敗 / 傳輸中斷）走這條
+      v.addEventListener('error', function () {
+        beacon('video-error', {
+          mediaErr: v.error ? (v.error.code + ':' + (v.error.message || '')) : 'unknown',
+          readyState: v.readyState, networkState: v.networkState, src: v.currentSrc || v.src,
+        });
+      });
+      // 播成功也回報一則，才分得出「沒收到＝腳本沒跑」還是「收到 ok＝問題在別處」
+      v.addEventListener('playing', function () {
+        beacon('playing', { readyState: v.readyState, src: v.currentSrc || v.src });
+      }, { once: true });
       play();
       document.addEventListener('visibilitychange', function () {
         if (document.hidden) v.pause(); else play();
@@ -449,6 +534,14 @@
         blendTime: reduce ? 0 : 0.25,
         maxZoomPixelRatio: 2,
         minZoomImageRatio: 0.85,
+        /* 平移約束（S24 手機真機回報「照片可以拖到幾乎出畫」）：
+           visibilityRatio 維持 1 —— 讀過 vendor 的 _applyBoundaryConstraints 才敢寫這行：
+           它的算式是 e = (viewport 比 content 大 ? ratio*content : ratio*viewport)，
+           所以 1 ＝ 最嚴（縮小時整張圖不准離開視窗、放大時視窗不准離開圖），
+           0.85 反而是「准 15% 跑出去」＝比現況更鬆。要「≥85% 可見」，1 是嚴格滿足的那一邊。
+           真正的漏洞在 flick 慣性：手指放開後那段動量會衝出邊界，得等彈簧
+           （springStiffness 7）慢慢拉回來，中途截圖就是站主看到的那張。
+           下面 canvas-drag-end / flick 結束再補一次 applyConstraints 把它釘回去。 */
         visibilityRatio: 1,
         constrainDuringPan: true,
         gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true, scrollToZoom: true },
@@ -456,6 +549,18 @@
       });
       // 鍵盤統一由我們處理，避免與 OSD 內建快捷鍵重複作用
       viewer.addHandler('canvas-key', function (e) { e.preventDefaultAction = true; });
+      // 拖曳／flick 收手後把畫面釘回邊界內（見上面 visibilityRatio 那段註解）
+      // 護欄：applyConstraints 自己也會起一段動畫，不擋的話 animation-finish 會自我回呼
+      var snapping = false;
+      function snapBack() {
+        if (snapping || !viewer || !viewer.viewport) return;
+        snapping = true;
+        try { viewer.viewport.applyConstraints(); } catch (err) {}
+        setTimeout(function () { snapping = false; }, 350);
+      }
+      viewer.addHandler('canvas-drag-end', snapBack);
+      viewer.addHandler('canvas-pinch', snapBack);
+      viewer.addHandler('animation-finish', snapBack);
       // 換作品時要再亮一次 Loading，所以只藏不拆（原本是 removeChild）
       viewer.addHandler('open', function () {
         var l = box && box.querySelector('.dzv-loading');

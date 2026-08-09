@@ -14,3 +14,6 @@ backups/
 # 2026-08-09 修：commit 2c9302b 這行是用 Big5 位元組寫進來的（PowerShell 預設 ANSI
 # codepage），git 拿 UTF-8 路徑去比對永遠比不中＝母帶其實一直沒被忽略。重寫成 UTF-8。
 網站照片/
+
+# 真機除錯信標（preview-server.js 的 POST /debug-log 落地檔，只在本機/區網測試時產生）
+_review-uiux-*/phone-debug.log

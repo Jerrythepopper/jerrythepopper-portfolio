@@ -49,6 +49,13 @@ const esc = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;')
   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/* 系列的中文副標可以是空字串（S24 2026-08-09：3D 拿掉「立體」）。
+   空值時要「優雅省略」——不留空的 <span class="jp">（它有 margin-left/字距，
+   會在標題右邊多出一段空白），純文字場合也不能留下 "3D " 的尾空格（title、
+   JSON-LD name、footer 清單、llms.txt 都吃這一份）。 */
+const zhSpan = (s) => (s.zh ? `<span class="jp">${esc(s.zh)}</span>` : '');
+const enZh = (s) => (s.zh ? `${s.en} ${s.zh}` : s.en);
+
 /* ---------- 中文分詞斷行 segmentZh（S25 2026-08-09） -------------------------
    問題：中文沒有詞間空白，瀏覽器預設「每個漢字都是可斷點」，於是「朱銘美術/館」
    「捷安/特」「紀實計/畫」這種腰斬到處都是；配上兩端對齊之後更明顯。
@@ -83,7 +90,7 @@ const NB_LOCK = [
   '空間裝置', '課程製作', '攝影教學', '虛實結合', '視覺概念', '場景設計',
   '募資出版', '攝影集', '捷安特', '蝦皮', '洪立楷', '輪轉',
   '靜態影像', '動態範圍', '拍攝主題', '觀看方式', '人文風景', '底片攝影',
-  '畫面的重量', '時間流動', '孤寂感', '虛擬世界', '各座城市', '拖車',
+  '自身的模樣', '我的樣貌', '時間流動', '孤寂感', '虛擬世界', '各座城市', '拖車',
   '3D創作者', '3D視覺', '3D創作', '3D領域',
 ].sort((a, b) => b.length - a.length);
 
@@ -377,7 +384,9 @@ function head(o) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>document.documentElement.className+=' js'</script>
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1f1d1a" media="(prefers-color-scheme: dark)">
+<script>document.documentElement.className+=' js';try{var t=localStorage.getItem('jtpTheme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 ${o.headExtra || ''}<title>${esc(o.title)}</title>
 <meta name="description" content="${esc(o.desc)}">
 ${o.robots ? `<meta name="robots" content="noindex">\n` : ''}
@@ -406,6 +415,18 @@ ${ld}
 <div id="root">`;
 }
 
+/* 深淺切換鈕（S24）——同一顆 markup 出現兩處：frosted nav 最右端、hero 右上角。
+   狀態不寫在鈕上（沒有 aria-pressed 也沒有 class 切換）：外觀由 :root 的
+   --tt-sun / --tt-moon 決定，JS 只改 <html data-theme>，兩顆自動同步。
+   兩個 icon 都留在 DOM 裡交叉淡出（見 patch.css），所以沒有「換圖」那一格空白。
+   顯示的是「點下去會變成哪一邊」：亮場出月亮、暗場出太陽。 */
+function themeToggle() {
+  return `<button class="theme-toggle" type="button" aria-label="切換深淺色" title="切換深淺色">
+    <svg class="ic-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.3M12 19.1v2.3M4.5 4.5l1.6 1.6M17.9 17.9l1.6 1.6M2.6 12h2.3M19.1 12h2.3M4.5 19.5l1.6-1.6M17.9 6.1l1.6-1.6"/></svg>
+    <svg class="ic-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 14.7A8.5 8.5 0 0 1 9.3 3.7a8.5 8.5 0 1 0 11 11Z"/></svg>
+  </button>`;
+}
+
 function frosted(rel, current) {
   // 子頁（非首頁）常駐顯示：分享連結直達時第一屏就有站名與返回路徑（P1-1）
   // is-static 寫在 class 裡而非靠 JS，無 JS 環境一樣看得到
@@ -420,12 +441,13 @@ function frosted(rel, current) {
   <nav aria-label="Sticky">
 ${items}
   </nav>
+  ${themeToggle()}
 </div>`;
 }
 
 function footer(rel) {
   const series = SECTIONS.map((s) =>
-    `      <li><a href="${rel}${slugOf(s.id)}/">${esc(s.en === 'Taipei Wholesale Market' ? '果菜市場 輪轉' : s.en + ' ' + s.zh)}</a></li>`
+    `      <li><a href="${rel}${slugOf(s.id)}/">${esc(s.en === 'Taipei Wholesale Market' ? '果菜市場 輪轉' : enZh(s))}</a></li>`
   ).join('\n');
   return `<footer class="foot">
   <div class="foot-inner">
@@ -549,6 +571,7 @@ function heroBlock() {
       <span class="sep">|</span>
       <a href="about/">Contact</a>
     </div>
+    ${themeToggle()}
   </div>
 
   <div class="hero-title-wrap">
@@ -585,7 +608,7 @@ function categorySection(s, index) {
         <span class="flow-line in" style="width:40px"></span>
         <span>${esc(s.eyebrow)}</span>
       </div>
-      <h2>${esc(s.en)}<span class="jp">${esc(s.zh)}</span></h2>
+      <h2>${esc(s.en)}${zhSpan(s)}</h2>
       <p class="lede">${segmentZh(s.lede)}</p>
 ${metaBlock}      <a href="${slugOf(s.id)}/" class="cta">View series <span class="arr">→</span></a>
     </div>
@@ -620,7 +643,7 @@ function homePage() {
   const intro = `<section class="intro">
   <div class="fade-up intro-inner" style="transition-delay:0ms">
     <div class="eyebrow">Selected · 2018 — 2026</div>
-    <p class="intro-lede">${segmentZh('以影像捕捉人文、街頭與空間的情緒。')}<br>${segmentZh('在孤寂感與時間流動中，找到畫面的重量。')}</p>
+    <p class="intro-lede">${segmentZh('以影像捕捉人文、街頭與空間的情緒。')}<br>${segmentZh('在孤寂感與時間流動中，找到我的樣貌。')}</p>
     <p>Photographer · 3D Creator · Based in Taipei. Brand collaborations with Hasselblad, Leica, Sony, Oppo, Giant, and more.</p>
   </div>
 </section>`;
@@ -633,7 +656,7 @@ ${teaser({
     label: '08 Work', cls: ' _alt', reverse: false, href: 'work/', num: '08',
     cover: PHOTOS.hasselblad[7], alt: 'Work', eyebrow: 'Selected · 2023 — 2026',
     h2en: 'Work', h2zh: '工作',
-    lede: 'Brand collaborations and editorial projects. Click any tile to view the project.',
+    lede: '品牌合作與商業工作精選。',
     metas: ['Hasselblad', 'Leica', 'Sony', 'Oppo', 'Goopi', 'Reto'], cta: 'View work',
   })}
 ${teaser({
@@ -668,7 +691,7 @@ function nextSeriesBlock(s) {
       <span>Next Series</span>
       <span class="n">${esc(nx.number)}</span>
     </span>
-    <span class="next-title">${esc(nx.en)}<span class="jp">${esc(nx.zh)}</span><span class="arr" aria-hidden="true">→</span></span>
+    <span class="next-title">${esc(nx.en)}${zhSpan(nx)}<span class="arr" aria-hidden="true">→</span></span>
   </a>
 </section>`;
 }
@@ -717,7 +740,7 @@ function categoryPage(s, screenLabel) {
       <span class="flow-line in" style="width:56px"></span>
       <span>${esc(s.eyebrow)}</span>
     </div>
-    <h1>${esc(s.en)}<span class="jp">${esc(s.zh)}</span></h1>
+    <h1>${esc(s.en)}${zhSpan(s)}</h1>
 ${subtitle}${metaBlock}${dzNote}  </div>
 
 <section class="gallery ${s.layout === 'single' ? 'single _wide' : 'masonry-2'}">
@@ -733,14 +756,14 @@ ${nextSeriesBlock(s)}
     : clip(oneLine(s.subtitle || s.lede), 155);
   return shell({
     rel: '../', current: s.id, main,
-    title: `${s.en} ${s.zh}｜Jerrythepopper Photography`,
+    title: `${enZh(s)}｜Jerrythepopper Photography`,
     desc,
     canonicalPath: `/${slugOf(s.id)}/`,
     ogImage: photos[s.coverIdx],
     jsonld: {
       '@context': 'https://schema.org',
       '@type': 'ImageGallery',
-      name: `${s.en} ${s.zh}`,
+      name: `${enZh(s)}`,
       description: desc,
       url: `${SITE_ORIGIN}/${slugOf(s.id)}/`,
       author: PERSON_LD,
@@ -872,7 +895,7 @@ function aboutPage() {
     <div class="role">Photographer · 3D Creator · Based in Taipei</div>
 
     <p>${segmentZh('1996年生於台北。攝影師、3D創作者。')}</p>
-    <p>${segmentZh('以影像捕捉人文、街頭與空間的情緒，擅長在孤寂感與時間流動中找到畫面的重量。除了攝影，也持續探索3D視覺與虛實場景的交錯，嘗試讓靜態影像走向更立體的敘事。')}</p>
+    <p>${segmentZh('以影像捕捉人文、街頭與空間的情緒，擅長在孤寂感與時間流動中找到自身的模樣。除了攝影，也持續探索3D視覺與虛實場景的交錯，嘗試讓靜態影像走向更立體的敘事。')}</p>
     <p>${segmentZh('曾與 Hasselblad、Leica、Sony、Oppo、Giant、新光攝影展、朱銘美術館、蝦皮等品牌合作，執行形象拍攝、教學內容與創意企劃。紀實計畫《輪轉》記錄台北第一果菜批發市場的人與故事，歷時一年多，最終透過募資出版攝影集。')}</p>
 
     <h3>可以一起做的事</h3>
@@ -885,10 +908,10 @@ function aboutPage() {
 
     <h3>合作品牌</h3>
     <div class="brands">
-      <p><b>相機品牌</b>${segmentZh('Hasselblad、Leica Camera Taiwan、Sony、Oppo、Reto')}</p>
-      <p><b>建築 / 商業</b>${segmentZh('名發建設、三發建設、晶悅建設、臺北農產運銷公司、捷安特')}</p>
-      <p><b>文化 / 藝術</b>${segmentZh('朱銘美術館、孤僻Goopi')}</p>
-      <p><b>商業平台</b>${segmentZh('蝦皮')}</p>
+      <p><b>相機品牌</b><span class="bd">${segmentZh('Hasselblad、Leica Camera Taiwan、Sony、Oppo、Reto')}</span></p>
+      <p><b>建築 / 商業</b><span class="bd">${segmentZh('名發建設、三發建設、晶悅建設、臺北農產運銷公司、捷安特')}</span></p>
+      <p><b>文化 / 藝術</b><span class="bd">${segmentZh('朱銘美術館、孤僻Goopi')}</span></p>
+      <p><b>商業平台</b><span class="bd">${segmentZh('蝦皮')}</span></p>
     </div>
 
     <h3>展覽・出版・課程</h3>
@@ -944,12 +967,16 @@ function notFoundPage() {
     <div class="notfound-icon">${cloudIcon()}</div>
     <h1>哇你怎麼跑到這裡？！</h1>
     <p>沒有這頁面餒。</p>
-    <a href="./" class="cta">回首頁 <span class="arr">→</span></a>
+    <a href="/" class="cta">回首頁 <span class="arr">→</span></a>
   </div>
 </main>`;
 
+  /* rel 用根絕對路徑 '/' 而不是 ''（S24 實測抓到）：GitHub Pages 對任何不存在的網址
+     都回這一份 404.html，但網址列留在原本那個深層路徑上，相對的 "styles.css" 因此
+     解析成 /不存在的/路徑/styles.css → 整頁裸奔沒有樣式（深色模式當然也不會生效）。
+     只有站台掛在網域根目錄時這樣寫才對——本站正是（見 SITE_ORIGIN）。 */
   return shell({
-    rel: '', current: '404', main,
+    rel: '/', current: '404', main,
     title: '404 找不到頁面｜Jerrythepopper Photography',
     desc,
     canonicalPath: '/404.html',
@@ -978,7 +1005,7 @@ function robotsTxt() {
 
 function llmsTxt() {
   const lines = SECTIONS.map((s) =>
-    `- [${s.en} ${s.zh}](${SITE_ORIGIN}/${slugOf(s.id)}/)：${oneLine(s.lede)}`
+    `- [${enZh(s)}](${SITE_ORIGIN}/${slugOf(s.id)}/)：${oneLine(s.lede)}`
   );
   return `# Jerrythepopper 洪立楷 — Photography & 3D Portfolio
 

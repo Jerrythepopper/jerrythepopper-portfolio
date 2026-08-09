@@ -1455,6 +1455,28 @@ html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); }
 .about-body .brands p { display: grid; grid-template-columns: 8em 1fr; column-gap: 8px; }
 .about-body .brands b { display: block; min-width: 0; margin-right: 0; }
 
+/* ---- S24：品牌欄疊字（站主截圖，桌機與手機皆有：「Leica Camera Taiwan」印在
+   「Sony、」上面）。真因不是寬度不夠，是 grid item 數量爆掉：
+     .brands p 是 grid: 8em 1fr，原本內容是「一個匿名文字塊」＝恰好 2 個 grid item
+     （標籤 b ＋ 內容）。S25 的 segmentZh 把內容切成一串 <span class="nb"> 之後，
+     每個 span 都成了獨立 grid item，被自動放置演算法輪流丟進兩欄——於是
+     「Leica Camera Taiwan」被分配到 112px 的標籤欄，nowrap 讓它硬撐出格子，
+     直接印在右欄的「Sony、」上。逐 rect 比對驗不出來：grid 給的 rect 只有 112px，
+     溢出去的是墨水不是盒子。
+   修法：build-site.js 在 <b> 之後包一層 <span class="bd">，grid item 恢復成 2 個，
+   .nb 在 .bd 內部照正常 inline 排版換行。min-width:0 讓它在 1fr 欄真的縮得下去。
+   ≤600px 再收成單欄（標籤自成一行），並開保險絲：overflow-wrap 對 nowrap 元素無效，
+   所以得先解掉 nowrap，再用 word-break:keep-all 擋住中文逐字斷開。 ---- */
+.about-body .brands .bd { min-width: 0; }
+@media (max-width: 600px) {
+  .about-body .brands p { grid-template-columns: 1fr; }
+  .about-body .brands .nb {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* ---- 標題中文副標不拆字：整組換行（市場頁「果/菜市場」被拆開的修正,對其他短副標無感） ---- */
 .page-head h1 .jp, .section h2 .jp { white-space: nowrap; }
 
@@ -1583,3 +1605,243 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
   .dzv-prev { left: 10px; }
   .dzv-next { right: 10px; }
 }
+
+/* =============================================================================
+   S24 深色模式（2026-08-09）——攝影作品集的暗房形態
+   -----------------------------------------------------------------------------
+   三條原則，違反哪一條都會讓暗場變成「亮場的負片」：
+
+   ① 暗房不是反轉，是重新調配。底色 #1f1d1a 是暖墨黑（oklch 0.232 0.006 78）——
+      米白紙感 #f7f7f7 的暗場對應物。刻意近中性（C=0.006）：色度再高會替照片染色，
+      而照片是這個房間裡唯一的光源，牆不能有顏色主張。也刻意不用純黑：#000 會讓
+      照片的深部與背景熔在一起，邊界消失。
+   ② 照片與影片零濾鏡零調整。這段全文沒有一條 filter / opacity 作用在 <img>、
+      <video>、或任何鋪照片的版位上；連 .work-featured 的 ::before 0.32 都原封不動。
+   ③ 明暗兩態共用同一套語意 token。深色只改 :root 的值，不改任何規則的結構——
+      所以「配色這一層」對亮場逐像素零回歸（實測 1440 首頁與哈蘇首屏 mean 0.00000/255）。
+      亮場唯一會動的是後來加上的深淺切換鈕本身（它在兩態都要看得見，見本檔末段），
+      實測差異只落在 hero 右上那顆 14×14 的圖示、以及 frosted 導覽列那一橫排。
+
+   實算對比（WCAG 2，見報告）：主文 13.39:1、次要文 4.65:1、eyebrow 同次要文、
+   序號 faint 2.82:1（純裝飾數字）、CTA 邊框 4.95:1、hairline 1.46:1。
+
+   例外清單（token 蓋不到、必須逐條點名的地方）——共通理由都是「亮場拿深色當
+   前景、暗場那個深色變成了淺色」，直接翻轉會把白字印在白底上：
+     ·  .cta:hover / .cta.on-dark:hover  ——  背景吃 var(--color-text)
+     ·  .work-featured a                 ——  背景吃 var(--color-text)
+     ·  .frosted                          ——  毛玻璃底色是寫死的 rgba(247,247,247,…)
+     ·  .hero / .lb / .dzv 系列           ——  本來就是暗底，改成對齊新基調的暖墨
+
+   -----------------------------------------------------------------------------
+   架構（S24+ 手動切換上線後改成這樣，避免「深色規則整包寫兩份」）：
+     ① --dk-*  深色的字面值，全站只寫一次。
+     ② --c-*   「可切換槽」，:root 的預設值＝亮場既有值（逐字元同值，所以 light
+               逐像素零回歸）；上面那份例外清單的規則改成吃這些槽。
+     ③ 規則本體（.frosted / .cta:hover / .lb …）只寫一次，明暗共用。
+     ④ 啟用區塊出現兩次，但裡面只有「語意 token ← --dk-*」的指派、沒有任何字面值：
+          @media (prefers-color-scheme: dark) { :root:not([data-theme=light]) {…} }
+          :root[data-theme=dark] {…}
+        為什麼非得兩份：CSS 沒有辦法把「媒體查詢」和「選擇器」用 or 串起來，
+        而規格要求「手動選擇 > 系統偏好」，兩個條件就只能各自成立。改值只要動 ①。
+   ============================================================================= */
+
+/* ---- ① 深色的字面值（唯一一份） ---- */
+:root {
+  --dk-bg: #1f1d1a;           /* 暖墨黑；oklch(0.232 0.006 78.2) */
+  --dk-bg-alt: #26231f;       /* _alt／footer／版位底：往上一階（+0.026 L），與亮場的 -0.02 同幅 */
+  --dk-text: #e9e5de;         /* 暖紙白；13.39:1 */
+  --dk-text-muted: #8b867e;   /* 次要文；4.65:1（暗場的低對比比亮場更難讀，抬到 AA 這一階） */
+  --dk-text-faint: #67635d;   /* 系列序號等純裝飾數字；2.82:1 */
+  --dk-line: rgba(233, 229, 222, 0.55);       /* CTA 邊框／flow-line 蓄勢那一畫；4.95:1 */
+  --dk-line-faint: rgba(233, 229, 222, 0.14); /* hairline：暖白 14%，暗場比亮場再吃重才不消失 */
+  /* 毛玻璃 0.78 是實算下限——捲過一張全白照片時導覽文字對玻璃仍有 6.52:1（0.72 只剩 5.30） */
+  --dk-frosted: rgba(31, 29, 26, 0.78);
+  --dk-hero: #141210;         /* 影片載入前的底：由冷黑改暖墨，與整面牆同色溫 */
+  --dk-featured: #14120f;     /* work 精選磚：比牆再凹一階，維持「窗」的角色；照片那層 opacity 不動 */
+  --dk-lb: rgba(23, 21, 19, 0.95);            /* 燈箱：比牆更深一階——看照片時房間要再暗下去 */
+  --dk-lb-bar: linear-gradient(180deg, rgba(18, 16, 14, 0) 0%, rgba(18, 16, 14, 0.52) 72%);
+  --dk-dzv: #131110;
+  --dk-dzv-bar: linear-gradient(180deg, rgba(19, 17, 16, 0) 0%, rgba(19, 17, 16, 0.62) 76%);
+
+  /* ---- ② 可切換槽：預設＝亮場既有值（照抄 styles.css，不是新值） ---- */
+  --c-frosted: rgba(247, 247, 247, 0.82);
+  --c-hero-bg: #0a0c0e;
+  --c-featured-bg: var(--color-text);
+  --c-cta-hover-fg: var(--color-white);
+  --c-cta-ondark-fg: var(--color-text);
+  --c-media-bg: #1d1d1f;
+  --c-lb-bg: rgba(43, 46, 56, 0.94);
+  --c-lb-bar: linear-gradient(180deg, rgba(20, 22, 28, 0) 0%, rgba(20, 22, 28, 0.52) 72%);
+  --c-dzv-bg: #0d0e12;
+  --c-dzv-bar: linear-gradient(180deg, rgba(13, 14, 18, 0) 0%, rgba(13, 14, 18, 0.62) 76%);
+  /* 切換鈕的日／月交叉淡出（1 = 該顆出場）。亮場出月亮＝點了會變暗 */
+  --tt-sun: 0;
+  --tt-moon: 1;
+}
+
+/* ---- ③ 吃槽的規則：明暗共用，只寫一次 ---- */
+.frosted { background: var(--c-frosted); }
+.hero { background: var(--c-hero-bg); }
+.work-featured a { background: var(--c-featured-bg); }
+.cta:hover { color: var(--c-cta-hover-fg); }
+.cta.on-dark:hover { color: var(--c-cta-ondark-fg); }
+/* 未載入的版位底：亮場 #1d1d1f 是白牆上的一個深洞，暗場改成與 _alt 同階＝「牆」。
+   LQIP 是 data URI（首次繪製就在），這條只保 CSS 到、圖還沒解碼那一瞬不閃白。 */
+.sec-media { background: var(--c-media-bg); }
+.lb { background: var(--c-lb-bg); }
+.lb-bar { background: var(--c-lb-bar); }
+.dzv { background: var(--c-dzv-bg); }
+.dzv-bar { background: var(--c-dzv-bar); }
+
+/* ---- ④ 啟用深色：系統偏好（未手動指定時）＋ 手動指定，兩者只做指派 ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg: var(--dk-bg);
+    --color-bg-alt: var(--dk-bg-alt);
+    --color-text: var(--dk-text);
+    --color-text-muted: var(--dk-text-muted);
+    --color-text-faint: var(--dk-text-faint);
+    --color-line: var(--dk-line);
+    --color-line-faint: var(--dk-line-faint);
+    --c-frosted: var(--dk-frosted);
+    --c-hero-bg: var(--dk-hero);
+    --c-featured-bg: var(--dk-featured);
+    --c-cta-hover-fg: var(--color-bg);
+    --c-cta-ondark-fg: var(--color-bg);
+    --c-media-bg: var(--color-bg-alt);
+    --c-lb-bg: var(--dk-lb);
+    --c-lb-bar: var(--dk-lb-bar);
+    --c-dzv-bg: var(--dk-dzv);
+    --c-dzv-bar: var(--dk-dzv-bar);
+    --tt-sun: 1;
+    --tt-moon: 0;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: var(--dk-bg);
+  --color-bg-alt: var(--dk-bg-alt);
+  --color-text: var(--dk-text);
+  --color-text-muted: var(--dk-text-muted);
+  --color-text-faint: var(--dk-text-faint);
+  --color-line: var(--dk-line);
+  --color-line-faint: var(--dk-line-faint);
+  --c-frosted: var(--dk-frosted);
+  --c-hero-bg: var(--dk-hero);
+  --c-featured-bg: var(--dk-featured);
+  --c-cta-hover-fg: var(--color-bg);
+  --c-cta-ondark-fg: var(--color-bg);
+  --c-media-bg: var(--color-bg-alt);
+  --c-lb-bg: var(--dk-lb);
+  --c-lb-bar: var(--dk-lb-bar);
+  --c-dzv-bg: var(--dk-dzv);
+  --c-dzv-bar: var(--dk-dzv-bar);
+  --tt-sun: 1;
+  --tt-moon: 0;
+}
+/* 系統是深色、使用者手動選亮：把 UA 元件（捲軸／表單／預設 focus 環）也拉回亮場 */
+:root[data-theme="light"] { color-scheme: light; }
+
+/* =============================================================================
+   S24 深淺切換鈕（frosted nav 最右端 ＋ hero 右上角，兩處同一顆 class、狀態同步）
+   -----------------------------------------------------------------------------
+   狀態不存在鈕上，存在 :root 的 --tt-sun / --tt-moon —— 所以兩顆（甚至將來更多顆）
+   永遠一致，JS 只要改 data-theme 一個屬性，不必逐顆同步。
+   交叉淡出用 opacity 0→1、scale 0.25→1、blur 4px→0（better-ui 指定值），
+   兩顆 icon 都留在 DOM 裡，靠 CSS transition 同時拿到進場與退場。
+   ============================================================================= */
+.theme-toggle {
+  flex: 0 0 auto;
+  position: relative;
+  width: 34px; height: 28px;
+  padding: 0; margin: 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: opacity var(--dur-fast) var(--ease-out), scale 140ms var(--ease-out);
+}
+.theme-toggle:hover { opacity: 0.6; }
+.theme-toggle:active { scale: 0.96; }
+.theme-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.theme-toggle svg {
+  position: absolute;
+  width: 18px; height: 18px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 300ms cubic-bezier(0.2, 0, 0, 1),
+              scale 300ms cubic-bezier(0.2, 0, 0, 1),
+              filter 300ms cubic-bezier(0.2, 0, 0, 1);
+}
+.theme-toggle .ic-sun {
+  opacity: var(--tt-sun);
+  scale: calc(0.25 + 0.75 * var(--tt-sun));
+  filter: blur(calc(4px - 4px * var(--tt-sun)));
+}
+.theme-toggle .ic-moon {
+  opacity: var(--tt-moon);
+  scale: calc(0.25 + 0.75 * var(--tt-moon));
+  filter: blur(calc(4px - 4px * var(--tt-moon)));
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle, .theme-toggle svg { transition: none; }
+}
+
+/* ---- 切換的那一下不要硬切（S24 ㉑） --------------------------------------
+   紀律：這段 transition 不常駐。常駐等於替全站每一個 hover／捲動觸發的顏色變化
+   都掛上 350ms 的延遲，互動會整體變鈍。作法是 site.js 在「使用者真的點了鈕」的
+   那一刻替 <html> 掛上 .theme-transitioning，420ms 後拿掉——只有這 0.42 秒存在。
+   系統偏好自動翻面、以及開頁時防閃腳本掛 data-theme 的那一次，都不會經過這裡。
+   !important 是必要的：元素自己的 transition 規則（.cta 等）特異度高過 *，
+   不蓋掉的話那些元素會照自己的節奏跑、整頁的翻面看起來就散了。
+   img / video / picture 排除在外——照片與影片本來就不變色，不必進過渡名單。 */
+@media (prefers-reduced-motion: no-preference) {
+  :root.theme-transitioning,
+  :root.theme-transitioning *:not(img):not(video):not(picture),
+  :root.theme-transitioning *::before,
+  :root.theme-transitioning *::after {
+    transition: background-color 350ms var(--ease-out),
+                color 350ms var(--ease-out),
+                border-color 350ms var(--ease-out),
+                outline-color 350ms var(--ease-out),
+                fill 350ms var(--ease-out),
+                stroke 350ms var(--ease-out) !important;
+  }
+}
+/* 導覽列排版：nav 靠自動邊距推到右邊，鈕再排在它後面（吃 .frosted 既有的 gap）。
+   沒有這行的話 justify-content:space-between 會把三個子項攤開、nav 掉到正中央。 */
+.frosted nav { margin-left: auto; }
+/* 首頁 hero 未捲動時整條 frosted 是 opacity:0 / pointer-events:none —— 但鈕仍會留在
+   Tab 序裡（看不見卻能 focus）。visibility 一起關掉，順便退出 Tab 序。 */
+.frosted:not(.is-static):not(.visible) .theme-toggle { visibility: hidden; }
+/* 手機：鈕站在可捲動項目列之外（它是 nav 的兄弟，本來就不隨捲動），熱區補到 44×44
+   ——與 P0-2 給 nav 項目的 min-height 同值，整條高度不會因此長高。 */
+@media (max-width: 880px) {
+  .theme-toggle { width: 44px; height: 44px; }
+}
+/* hero 右上角那顆：直接掛在 .hero-chrome 底下（不進 .hero-topnav）——
+   .hero-topnav 站的是第二行（top: clamp(70px, 9vw, 96px)），鈕擺進去會孤懸在
+   wordmark 下方一行的位置（站主手機截圖實錘），而且 ≤720px 時整組被藏起來
+   （styles.css:970），手機首頁就沒有入口了（frosted 要捲動才出現）。
+   對齊方式：右緣吃跟 wordmark 同一組 container padding；垂直則對到 wordmark 那
+   一行的視覺中線 —— .hero-wordmark .en 是 11px × line-height 1.3 ＝ 14.3px 高，
+   中線落在 top + 7px，所以 top 加 7px 再 translateY(-50%)。
+   熱區維持 44×44（視覺 icon 只有 18px，摸得到比看得到重要）。 */
+.hero-chrome > .theme-toggle {
+  position: absolute;
+  top: calc(clamp(24px, 4vw, 48px) + 7px);
+  right: clamp(20px, 4vw, 48px);
+  transform: translateY(-50%);
+  width: 44px; height: 44px;
+  color: var(--color-white);
+  opacity: 0.85;
+}
+.hero-chrome > .theme-toggle:hover { opacity: 0.6; }

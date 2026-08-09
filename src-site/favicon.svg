@@ -1,6 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Jerrythepopper">
   <title>Jerrythepopper</title>
   <!-- 手寫襯線 J：上方厚襯線橫畫 + 直幹 + 左勾，呼應站內 Noto Serif 氣質；透明底 -->
+  <!-- S24：深色分頁列上墨黑 J 會隱形。內嵌 media query 讓字身翻成站內的暖紙白
+       #e9e5de（不是純白，跟站內主文同一顆）。CSS 勝過 presentation attribute，
+       所以下面 path 的 fill 保留成不吃 <style> 的渲染器的退路。 -->
+  <style>
+    path { fill: #111112; }
+    @media (prefers-color-scheme: dark) { path { fill: #e9e5de; } }
+  </style>
   <path fill="#111112" d="M25 13 H51 V18.2 H41 V37
     C41 46 36 51.5 29 51.5
     C21 51.5 15.8 46.2 14.8 39.4
