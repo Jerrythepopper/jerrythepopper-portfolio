@@ -677,8 +677,8 @@ ${teaser({
   return shell({
     rel: '', current: 'home', main,
     headExtra: heroHead(''),
-    title: 'Jerrythepopper 洪立楷｜台北攝影師・3D 創作者｜攝影作品集',
-    desc: '台北攝影師、3D 創作者洪立楷（Jerrythepopper）的個人作品集——人像、街拍、底片、自然攝影與 3D 視覺創作，曾與 Hasselblad、Leica、Sony 等品牌合作。',
+    title: 'Jerrythepopper 洪立楷｜台北攝影師・3D 創作者｜人像・底片攝影・3D創作作品集',
+    desc: '台北攝影師、3D 創作者洪立楷（Jerrythepopper）的個人作品集——人像、街拍、底片、自然攝影與 3D 視覺創作，曾與 Hasselblad、Leica、Sony 等品牌合作。以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。',
     canonicalPath: '/',
     ogImage: HERO_SLIDES[0],
     jsonld: PERSON_LD,
