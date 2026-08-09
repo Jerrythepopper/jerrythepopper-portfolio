@@ -81,3 +81,8 @@ https://www.jerrythepopper.com — Pages 部署 1m8s 成功;www/apex/子頁全 2
 3. Google 商家檔案（台北攝影師地圖區側門）
 4. IG bio 連結確認（原本就指 jerrythepopper.com=自動繼承 ✓）
 5. 真機最後巡禮:正式網域上的影片/DZ/深色（理論上與區網同,Range 在 Pages 原生支援）
+
+## 上線後清單執行記錄（2026-08-09 16:25 全數完成）
+1. ✅ 橙雲三件套：proxied 生效（cf-ray KHH 高雄節點）+SSL Full strict+Web Analytics 啟用+AI 爬蟲（Search/Agent 放行,Training 全頁封鎖——預設「僅廣告頁」已改「全部」）
+2. ✅ Search Console：沿用既有已驗證資源;備援驗證=google-site-verification meta 入全站 head（c802900,60 秒部署;舊 HTML 檔案憑證綁 Squarespace 已死,雙憑證保險成立）;sitemap.xml 重新提交（紅字「無法擷取」=五月舊殘影,等 Google 重抓翻綠）
+3. 餘:Google 商家檔案（使用者擇日,Fable 陪跑）;IG bio 已天然指向網域 ✓
