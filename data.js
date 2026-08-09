@@ -48,15 +48,21 @@
 
   // Deep Zoom — 系列 → 哪幾張掛得起「鑽細節」的切片（node make-deepzoom.js 產出）
   // idx = 該系列 PHOTOS 陣列的索引；dzi = photos\dz\ 下的 .dzi 路徑（相對站根）
-  // 2026-08-09 起是真原檔：哈蘇 48 張裡長邊最大的三張（一億畫素機身，42 張長邊 ≥8000）。
-  // 同長邊者有一大票並列，取捨規則＝order.json 位置靠前者優先，但避免選到相鄰的兩張
-  // （磚挨著磚會出現兩個角標擠在一起），所以取 idx 4 之後跳過 5 選 6，順帶湊到一張橫幅。
+  // 2026-08-09 起是真原檔：哈蘇 48 張裡長邊最大者（一億畫素機身，42 張長邊 ≥8000）。
+  // 初版三張（idx 1/4/6）之後同日站主親選再加六張擴編到九張（idx 3/10/13/23/34/36），
+  // 現役三張不動、新增沿用同套規格（512px tile / overlap 1）。
   // 切片名 hbNN 的 NN 就是 idx，日後要加片只要照這個對應加就好。
   window.DEEPZOOM = {
     hasselblad: [
       { idx: 1, dzi: 'photos/dz/hb01.dzi', label: 'Deep Zoom · 8619 × 19242' },
+      { idx: 3, dzi: 'photos/dz/hb03.dzi', label: 'Deep Zoom · 7850 × 10467' },
       { idx: 4, dzi: 'photos/dz/hb04.dzi', label: 'Deep Zoom · 8742 × 11656' },
       { idx: 6, dzi: 'photos/dz/hb06.dzi', label: 'Deep Zoom · 11656 × 8742' },
+      { idx: 10, dzi: 'photos/dz/hb10.dzi', label: 'Deep Zoom · 8742 × 11656' },
+      { idx: 13, dzi: 'photos/dz/hb13.dzi', label: 'Deep Zoom · 8742 × 11656' },
+      { idx: 23, dzi: 'photos/dz/hb23.dzi', label: 'Deep Zoom · 8742 × 11656' },
+      { idx: 34, dzi: 'photos/dz/hb34.dzi', label: 'Deep Zoom · 9907 × 7430' },
+      { idx: 36, dzi: 'photos/dz/hb36.dzi', label: 'Deep Zoom · 11656 × 8742' },
     ],
   };
 
