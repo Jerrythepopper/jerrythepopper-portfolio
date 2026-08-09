@@ -454,7 +454,7 @@ function head(o) {
 <html lang="${isEn() ? 'en' : 'zh-Hant'}">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="google-site-verification" content="pEeokeSZ4f60CDCBeXLxxu_EAp34X4FzoMZ8OWKfGww">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#1f1d1a" media="(prefers-color-scheme: dark)">

@@ -2,6 +2,46 @@
    patch.css — 靜態站專用補丁（build-site.js 附加在 styles.css 之後，不改既有規則）
    ============================================================================= */
 
+/* =============================================================================
+   S35 iPhone 橫向瀏海白邊修正（2026-08-09）——站主橫向實測：左右兩條白邊＝ iOS
+   safe-area 預設縮排（build-site.js 的 <meta viewport> 已補 viewport-fit=cover
+   讓內容鋪到物理邊，這裡補退讓：互動／文字元件別被瀏海咬）。
+   核心手法：max(現有值, env(safe-area-inset-*, 0px))——env() 帶 0px fallback，
+   非瀏海環境（桌機／直向／不支援 env() 的瀏覽器）逐像素零回歸；真有瀏海時才
+   讓退讓量勝出。--container-pad 是全站共用變數（.section/.foot/.next-series/
+   page-head 等 8 處吃它），覆寫一次全部連動；其餘元件（frosted nav／hero-chrome／
+   燈箱／DZ 檢視器）各自用固定 px，逐一在原斷點內覆寫，不新增跨斷點衝突規則。
+   ============================================================================= */
+:root {
+  --container-pad: max(clamp(20px, 4vw, 64px), env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+}
+/* hero 大標容器：桌機／預設 0 32px，≤565px 斷點另有 0 20px（見下方 P0-1 區塊一併改） */
+@media (min-width: 566px) {
+  .hero-title-wrap {
+    padding-left: max(32px, env(safe-area-inset-left, 0px));
+    padding-right: max(32px, env(safe-area-inset-right, 0px));
+  }
+}
+/* frosted nav：≥721px 沿用 styles.css base clamp(20px,4vw,48px)（721-880px 與
+   ≥881px 桌機共用同一條，未被其他斷點覆寫），≤720px／≤480px 兩個窄斷點各自在
+   下方對應規則內覆寫左右 padding，避免跨斷點覆寫順序打架。 */
+@media (min-width: 721px) {
+  .frosted {
+    padding-left: max(clamp(20px, 4vw, 48px), env(safe-area-inset-left, 0px));
+    padding-right: max(clamp(20px, 4vw, 48px), env(safe-area-inset-right, 0px));
+  }
+}
+/* hero-chrome 頂欄元件（wordmark 左／topnav 右）：styles.css 固定值就是
+   clamp(20px,4vw,48px)，同公式覆寫。theme-toggle／lang-toggle 兩顆熱區在
+   patch.css 自家規則內原地覆寫（見下方對應區塊）。 */
+.hero-wordmark { left: max(clamp(20px, 4vw, 48px), env(safe-area-inset-left, 0px)); }
+.hero-topnav { right: max(clamp(20px, 4vw, 48px), env(safe-area-inset-right, 0px)); }
+/* 燈箱（.lb-close/.lb-prev/.lb-next）：styles.css 固定 24px，同公式覆寫；
+   照片畫布本體（.lb-stage img）維持鋪滿，不退讓——滿版看照片正是橫向的意義。 */
+.lb-close { right: max(24px, env(safe-area-inset-right, 0px)); }
+.lb-prev { left: max(24px, env(safe-area-inset-left, 0px)); }
+.lb-next { right: max(24px, env(safe-area-inset-right, 0px)); }
+
 /* ---- 系列頁尾「下一個系列」導流（低調，沿用 eyebrow / jp / arr 的字級與字距） ---- */
 .next-series {
   max-width: var(--container-max);
@@ -65,7 +105,11 @@ img { height: auto; }
    桌機（≥566px）完全走原曲線＝零回歸。390px → 39.8px，14 字元單行放得下。 */
 @media (max-width: 565px) {
   .hero-title { font-size: min(10.2vw, 48px); letter-spacing: 0.02em; }
-  .hero-title-wrap { padding: 0 20px; }
+  .hero-title-wrap {
+    padding-top: 0; padding-bottom: 0;
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
+  }
 }
 
 /* ---- P0-2：手機 frosted 導覽改單行水平滑動 ---------------------------------- */
@@ -110,7 +154,12 @@ img { height: auto; }
 }
 /* 手機再把整條壓扁一點（沿用既有 720px 斷點的緊湊版面） */
 @media (max-width: 720px) {
-  .frosted { padding: 6px 16px; gap: 14px; }
+  .frosted {
+    padding-top: 6px; padding-bottom: 6px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    gap: 14px;
+  }
 }
 
 /* ---- P1-1：子頁 frosted nav 初始即顯示（class 寫死，無 JS 也成立） ---------- */
@@ -358,13 +407,16 @@ html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); }
 }
 .dzv-canvas { position: absolute; inset: 0; }
 .dzv-canvas .openseadragon-canvas { outline: none; }
-.dzv-close { position: absolute; top: 24px; right: 24px; z-index: 3; font-size: 14px; }
+.dzv-close { position: absolute; top: 24px; right: max(24px, env(safe-area-inset-right, 0px)); z-index: 3; font-size: 14px; }
 .dzv-bar {
   position: absolute;
   left: 0; right: 0; bottom: 0;
   z-index: 2;
   display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 48px 16px clamp(16px, 3vh, 30px);
+  padding-top: 48px;
+  padding-bottom: clamp(16px, 3vh, 30px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
   pointer-events: none;
   text-shadow: 0 1px 6px rgba(0,0,0,0.6);
   background: linear-gradient(180deg, rgba(13,14,18,0) 0%, rgba(13,14,18,0.62) 76%);
@@ -385,7 +437,7 @@ html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); }
 /* 右下角縮放比例：數字字體，低調 */
 .dzv-zoom {
   position: absolute;
-  right: 20px; bottom: 18px;
+  right: max(20px, env(safe-area-inset-right, 0px)); bottom: 18px;
   z-index: 3;
   font-family: var(--font-numeric);
   font-size: 11px;
@@ -405,8 +457,8 @@ html.js .hero-slide .bu-img { transition: opacity 460ms var(--ease-out); }
   color: rgba(255,255,255,0.5);
 }
 @media (max-width: 720px) {
-  .dzv-close { top: 14px; right: 14px; }
-  .dzv-zoom { right: 14px; bottom: 14px; }
+  .dzv-close { top: 14px; right: max(14px, env(safe-area-inset-right, 0px)); }
+  .dzv-zoom { right: max(14px, env(safe-area-inset-right, 0px)); bottom: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .dzv { animation: none; }
@@ -626,11 +678,11 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
 
 /* ---- ③ Deep Zoom 檢視器左右導航（樣式沿用燈箱 .lb-prev / .lb-next） ---------- */
 .dzv-prev, .dzv-next { top: 50%; transform: translateY(-50%); font-size: 24px; z-index: 3; }
-.dzv-prev { left: 24px; }
-.dzv-next { right: 24px; }
+.dzv-prev { left: max(24px, env(safe-area-inset-left, 0px)); }
+.dzv-next { right: max(24px, env(safe-area-inset-right, 0px)); }
 @media (max-width: 720px) {
-  .dzv-prev { left: 10px; }
-  .dzv-next { right: 10px; }
+  .dzv-prev { left: max(10px, env(safe-area-inset-left, 0px)); }
+  .dzv-next { right: max(10px, env(safe-area-inset-right, 0px)); }
 }
 
 /* =============================================================================
@@ -865,7 +917,7 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
 .hero-chrome > .theme-toggle {
   position: absolute;
   top: calc(clamp(24px, 4vw, 48px) + 7px);
-  right: clamp(20px, 4vw, 48px);
+  right: max(clamp(20px, 4vw, 48px), env(safe-area-inset-right, 0px));
   transform: translateY(-50%);
   width: 44px; height: 44px;
   color: var(--color-white);
@@ -913,7 +965,7 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
 .hero-chrome > .lang-toggle {
   position: absolute;
   top: calc(clamp(24px, 4vw, 48px) + 7px);
-  right: calc(clamp(20px, 4vw, 48px) + 46px);
+  right: calc(max(clamp(20px, 4vw, 48px), env(safe-area-inset-right, 0px)) + 46px);
   transform: translateY(-50%);
   min-width: 36px; height: 44px;
   color: var(--color-white);
@@ -985,7 +1037,12 @@ html[lang="en"] .page-head .subtitle {
      這就是「熱區」與「留白」互換：留白從鈕與鈕之間搬到熱區與熱區之間，
      鈕本身仍在同一顆右側叢集裡，貼齊螢幕右緣）。取 gap=26px，中心距=46px，
      留 2px 安全邊界。 */
-  .frosted { padding: 4px 4px 4px 6px; gap: 2px; }
+  .frosted {
+    padding-top: 4px; padding-bottom: 4px;
+    padding-left: max(6px, env(safe-area-inset-left, 0px));
+    padding-right: max(4px, env(safe-area-inset-right, 0px));
+    gap: 2px;
+  }
   .nav-actions { gap: 26px; }
   .theme-toggle { width: 20px; height: 20px; }
   .lang-toggle { min-width: 19px; height: 20px; padding: 0; }
