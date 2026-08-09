@@ -28,13 +28,18 @@
   ];
 
   // Hero 雲影片 —— 首頁 hero 背景（2026-08-09 起取代照片輪播）
-  // 母帶在 網站照片\影片\（唯讀，不進版控），轉檔產物在 video\：
-  //   cloud-1 ← 20260728 8.mov   12.5s  黃昏海面與小船
+  // 母帶在 網站照片\影片\（唯讀，不進版控），轉檔產物在 video\。
+  // 順序＝站主指定（2026-08-09 裁定）：積雲那支打頭陣，首次來訪就是它；
+  // 其餘兩支照檔名序跟在後面。陣列順序即輪值順序，cloud-N 編號與它一致。
+  //   cloud-1 ← 20260807 13.mov  18.5s  積雲（首次來訪播這支）
   //   cloud-2 ← 20260728 14.mov  10.5s  夕照海面碎光
-  //   cloud-3 ← 20260807 13.mov  18.5s  積雲（唯一真的「雲」，但三支同組沿用 cloud- 命名）
+  //   cloud-3 ← 20260728 8.mov   12.5s  黃昏海面與小船
   // 輪播方式＝每次來訪輪值一支（localStorage heroVidIdx 遞增），支與支之間無轉場；
   // 循環接點吃 <video loop> 的原生硬回切，不做融接。
   // poster 給的是「不含副檔名的基底」，實際檔案是 <base>.avif|.webp 與 <base>@960.avif|.webp。
+  // 註：08-09 指定新順序時，實體檔已一併改名（原 cloud-1↔cloud-3 對調），所以這裡照
+  // cloud-1→2→3 自然排列就是站主要的播放序，不要再把陣列倒過來寫——那會跟改名相消，
+  // 首播變回小船那支（實測過）。要換順序請改檔名或整組一起動，並重跑輪值驗收。
   window.HERO_VIDEOS = [
     { id: 'cloud-1', mp4: 'video/cloud-1.mp4', mp4_720: 'video/cloud-1@720.mp4', poster: 'photos/hero-poster-1' },
     { id: 'cloud-2', mp4: 'video/cloud-2.mp4', mp4_720: 'video/cloud-2@720.mp4', poster: 'photos/hero-poster-2' },
