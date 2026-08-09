@@ -105,3 +105,7 @@ Mac 觸控板捏合+平滑縮放 ✓／Safari 手勢 ✓／Android 360 重疊修
 **Cloudflare AI Training 全頁封鎖會連 Googlebot 一起擋（403）**——Googlebot 是「搜尋+訓練雙重身分」爬蟲,UI 警語有寫但被輕看;上線兩小時即被站主的網址審查抓到。修復=Training 改回「Block on pages with ads」（零廣告站=實質放行）;訓練防線本來就由 robots.txt 承擔（GPTBot/ClaudeBot/CCBot/Google-Extended,正規管道不傷搜尋）。18:53 測試線上網址=綠色「可建立索引」+影片探索偵測到影片。**教訓：動 AI 爬蟲開關後必須立刻用 Search Console 實測 Googlebot 通行。**
 
 | S33 | DZ 擴編 10→20 張（站主逐張親審:換將三張後定案 idx 0/8/14/15/17/18/20/24/38/43 新增） | 站主「心很癢」 | **已完成**（5a1f464）:切片 +169MB,dist 總量 813MB（<950 停手線）;中英各 20 角標/←→ 環狀切換 20 張實測;**再擴編需先開 R2 逃生梯**（帳本備忘） |
+
+| S34 | 手機導覽空間工學（JTP 縮寫=站主慣用/鈕群靠邊/垂直 0px 對齊） | 站主 iPhone 抓洞 | **已完成**（3ad9601）:可滑動窗 101→282px（2.8×）;+200 指標差 19px=實作者拒犧牲 44px 熱區,裁量正確 |
+| S35 | 橫向瀏海滿版（viewport-fit=cover+29 條 env() 安全區退讓,全帶 fallback） | 站主橫向抓白邊 | **已完成**（3efee78）:一般環境逐位元組零回歸;真機瀏海效果待站主複測 |
+| S36 | 導覽三層墨色（工具層 0.65+hairline 分隔「ABOUT│EN」）＋Android 橫滑護欄（overflow-x clip+長字串兜底） | 站主設計提問+Android 抓洞 | **已完成**（6fd567c）:fixed 定位零副作用實證;可滑窗僅縮 8px;Android 實效待真機複測 |
