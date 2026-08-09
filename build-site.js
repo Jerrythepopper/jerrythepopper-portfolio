@@ -521,12 +521,14 @@ function frosted(rel, current, lhref) {
     return `    <a href="${rel}${slugOf(i.key)}/"${cls}${cur}>${esc(isEn() && i.labelEn ? i.labelEn : i.label)}</a>`;
   }).join('\n');
   return `<div class="frosted${always ? ' is-static' : ''}" aria-hidden="${always ? 'false' : 'true'}"${always ? ' data-always="1"' : ''}>
-  <a href="${rel || './'}" class="brand">Jerrythepopper</a>
+  <a href="${rel || './'}" class="brand"><span class="brand-full">Jerrythepopper</span><span class="brand-abbr">JTP</span></a>
   <nav aria-label="Sticky">
 ${items}
   </nav>
-  ${langToggle(lhref)}
-  ${themeToggle()}
+  <div class="nav-actions">
+    ${langToggle(lhref)}
+    ${themeToggle()}
+  </div>
 </div>`;
 }
 
