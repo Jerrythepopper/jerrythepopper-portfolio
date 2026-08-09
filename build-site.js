@@ -72,6 +72,18 @@ const ALTS = (() => {
   catch (e) { console.warn('! photo-alts.json 解析失敗：' + e.message); return {}; }
 })();
 
+// ---------- 資產版本指紋（防「新 HTML＋舊 CSS/JS」快取時間差） ----------
+// styles.css/site.js 的連結帶 ?v=<內容雜湊>：內容一變網址就變，瀏覽器不可能拿舊檔配新頁。
+// 雜湊來源=會影響這兩份產物的全部源檔（styles 原檔+patch、site.js、雙語 data）。
+const ASSET_V = (() => {
+  const crypto = require('crypto');
+  const h = crypto.createHash('md5');
+  for (const f of ['styles.css', 'src-site/patch.css', 'src-site/site.js', 'data.js', 'data-en.js']) {
+    try { h.update(fs.readFileSync(path.join(ROOT, f))); } catch (e) { /* 檔案不在就跳過 */ }
+  }
+  return h.digest('hex').slice(0, 8);
+})();
+
 // ---------- helpers ----------
 const esc = (s) => String(s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -466,7 +478,7 @@ ${ogDims}<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="${o.rel}styles.css">
+<link rel="stylesheet" href="${o.rel}styles.css?v=${ASSET_V}">
 <noscript><style>.fade-up{opacity:1;transform:none}.hero-title .ch{opacity:1;transform:none;animation:none}</style></noscript>
 <script type="application/ld+json">
 ${ld}
@@ -559,7 +571,7 @@ ${series}
 
 function tail(rel) {
   return `</div>
-<script src="${rel}site.js" defer></script>
+<script src="${rel}site.js?v=${ASSET_V}" defer></script>
 </body>
 </html>
 `;
