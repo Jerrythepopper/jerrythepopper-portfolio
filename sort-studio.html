@@ -121,6 +121,8 @@
     user-select: none; -webkit-user-select: none;
     cursor: grab;
     transition: box-shadow var(--ease) .2s, opacity var(--ease) .2s;
+    content-visibility: auto;            /* 大量縮圖時跳過離屏格子的版面/繪製工 */
+    contain-intrinsic-size: 160px 200px; /* 固定尺寸佔位，避免 content-visibility 造成的捲動跳動 */
   }
   .tile:hover { box-shadow: 0 2px 14px rgba(0,0,0,.09); }
   .tile.dragging { opacity: .28; cursor: grabbing; }
@@ -169,9 +171,10 @@
   .marker[hidden] { display: none; }
   /* 拖曳中跟著游標的殘影 */
   .ghost {
-    position: fixed; z-index: 50; pointer-events: none; opacity: .92;
+    position: fixed; left: 0; top: 0; z-index: 50; pointer-events: none; opacity: .92;
     border: 1px solid var(--line-strong); background: #fff;
     box-shadow: 0 8px 30px rgba(0,0,0,.22); overflow: hidden;
+    will-change: transform;              /* 拖曳位移一律走 transform，跳過 layout */
   }
   .ghost img { width: 100%; height: 100%; object-fit: cover; display: block; }
   body.dragging, body.dragging * { cursor: grabbing !important; }
@@ -254,6 +257,110 @@
     Array.prototype.slice.call(grid.querySelectorAll('.tile')).forEach(function (el) { el.remove(); });
   }
 
+  // ---------- 縮圖化（載入輕量縮圖取代原檔全解析度） ----------
+  var THUMB_W = 320;   // 縮圖目標寬（像素）
+  var THUMB_BATCH = 8; // 每批處理張數，批間讓出主執行緒避免凍結 UI
+
+  // 把任意可畫來源（ImageBitmap／canvas／img）縮成 ≤THUMB_W 寬的 webp objectURL
+  function drawToThumbURL(src, alreadySized) {
+    return new Promise(function (resolve) {
+      var w = src.width, h = src.height;
+      if (!w || !h) { if (src.close) src.close(); resolve(null); return; }
+      var tw, th;
+      if (alreadySized) { tw = w; th = h; }
+      else {
+        var scale = Math.min(1, THUMB_W / w);
+        tw = Math.max(1, Math.round(w * scale));
+        th = Math.max(1, Math.round(h * scale));
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = tw; canvas.height = th;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(src, 0, 0, tw, th);
+      if (src.close) src.close(); // ImageBitmap 用完即釋放，避免記憶體洩漏
+      canvas.toBlob(function (blob) {
+        resolve(blob ? URL.createObjectURL(blob) : null);
+      }, 'image/webp', 0.8);
+    });
+  }
+
+  // 不支援 createImageBitmap resize 選項的環境：先解出全圖再用 canvas 縮
+  function canvasFallbackThumb(file) {
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () { URL.revokeObjectURL(url); resolve(drawToThumbURL(img, false)); };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
+  function makeThumbnail(file, name) {
+    if (!BROWSER_RENDERABLE.test(name)) return Promise.resolve(null); // tif/tiff 等瀏覽器畫不出來
+    if (typeof createImageBitmap !== 'function') return canvasFallbackThumb(file);
+    var ok;
+    try { ok = createImageBitmap(file, { resizeWidth: THUMB_W, resizeQuality: 'low' }); }
+    catch (e) { return canvasFallbackThumb(file); }
+    return ok.then(function (bmp) {
+      var already = bmp.width <= THUMB_W + 1; // resize 選項是否被瀏覽器實際套用
+      return drawToThumbURL(bmp, already);
+    }).catch(function () { return canvasFallbackThumb(file); });
+  }
+
+  // 把縮圖套進已存在的格子；還在處理中的格子先留白（.thumb 背景本身即淺灰佔位）
+  function setTileThumb(it) {
+    if (!it.el) return;
+    var thumb = it.el.querySelector('.thumb');
+    if (!thumb || thumb.querySelector('img') || thumb.querySelector('.noimg')) return;
+    if (it.url) {
+      var img = document.createElement('img');
+      img.src = it.url; img.alt = it.name; img.draggable = false;
+      img.addEventListener('error', function () {
+        img.remove();
+        var d = document.createElement('div'); d.className = 'noimg'; d.textContent = it.name;
+        thumb.appendChild(d);
+      });
+      thumb.appendChild(img);
+    } else {
+      var d2 = document.createElement('div'); d2.className = 'noimg'; d2.textContent = it.name + '\n（無法預覽）';
+      thumb.appendChild(d2);
+    }
+  }
+
+  // 分批產生縮圖＋顯示進度，避免一次處理大量大圖凍結 UI
+  function generateThumbnails(applied, tail) {
+    var list = items.slice();
+    var total = list.length, done = 0;
+
+    function yieldFrame() {
+      return new Promise(function (res) {
+        if (typeof requestAnimationFrame === 'function') { requestAnimationFrame(function () { setTimeout(res, 0); }); }
+        else { setTimeout(res, 0); }
+      });
+    }
+
+    function step(startIdx) {
+      var batch = list.slice(startIdx, startIdx + THUMB_BATCH);
+      if (!batch.length) {
+        say('已載入 ' + items.length + ' 張照片。' + applied + tail, 'ok');
+        return;
+      }
+      return Promise.all(batch.map(function (it) {
+        return makeThumbnail(it.file, it.name).then(function (url) {
+          it.url = url;
+          setTileThumb(it);
+          done++;
+        });
+      })).then(function () {
+        say('處理中 ' + done + '/' + total, null);
+        return yieldFrame();
+      }).then(function () { return step(startIdx + THUMB_BATCH); });
+    }
+
+    say('處理中 0/' + total, null);
+    return step(0);
+  }
+
   // files: [{ name, file }]；orderData: 已讀好的 order.json 物件或 null
   function load(files, orderData, label, handle) {
     clearItems();
@@ -264,12 +371,7 @@
     imgs.sort(function (a, b) { return cmpName(a.name, b.name); });
 
     items = imgs.map(function (f) {
-      return {
-        name: f.name,
-        file: f.file,
-        url: BROWSER_RENDERABLE.test(f.name) ? URL.createObjectURL(f.file) : null,
-        el: null
-      };
+      return { name: f.name, file: f.file, url: null, el: null }; // url 待縮圖化完成後補上
     });
 
     var applied = '';
@@ -290,14 +392,14 @@
       applied = '\n已套用資料夾裡既有的 order.json（可接續調整）。';
     }
 
-    render();
+    render(); // 先把格子/順序畫出來，縮圖在背景陸續補上，不擋互動
+
     if (!items.length) {
       say('這個資料夾裡沒有可用的圖片（支援 jpg / jpeg / png / tif / tiff / webp / avif）。', 'warn');
-    } else {
-      say('已載入 ' + items.length + ' 張照片。' + applied +
-          (canFSA && dirHandle ? '\n存檔會直接寫進這個資料夾。' : '\n相容模式：存檔會下載 order.json，請自行放進該資料夾。'),
-          'ok');
+      return Promise.resolve();
     }
+    var tail = (canFSA && dirHandle ? '\n存檔會直接寫進這個資料夾。' : '\n相容模式：存檔會下載 order.json，請自行放進該資料夾。');
+    return generateThumbnails(applied, tail);
   }
 
   function readOrderJson(file) {
@@ -353,19 +455,7 @@
 
     var thumb = document.createElement('div');
     thumb.className = 'thumb';
-    if (it.url) {
-      var img = document.createElement('img');
-      img.src = it.url; img.alt = it.name; img.draggable = false;
-      img.addEventListener('error', function () {
-        thumb.innerHTML = '';
-        var d = document.createElement('div'); d.className = 'noimg'; d.textContent = it.name;
-        thumb.appendChild(d);
-      });
-      thumb.appendChild(img);
-    } else {
-      var d2 = document.createElement('div'); d2.className = 'noimg'; d2.textContent = it.name + '\n（無法預覽）';
-      thumb.appendChild(d2);
-    }
+    // 縮圖尚在背景產生中，先留白（.thumb 底色即淺灰佔位）；就緒後由 setTileThumb() 補上
 
     var idx = document.createElement('span'); idx.className = 'idx'; idx.textContent = '1';
 
@@ -461,6 +551,7 @@
     g.className = 'ghost';
     g.style.width = drag.w + 'px';
     g.style.height = (drag.w) + 'px';
+    g.style.transform = 'translate3d(' + (drag.x0 - drag.ox) + 'px,' + (drag.y0 - drag.oy) + 'px,0)';
     var src = drag.tile.querySelector('img');
     if (src) { var gi = document.createElement('img'); gi.src = src.src; g.appendChild(gi); }
     document.body.appendChild(g);
@@ -478,8 +569,7 @@
       beginDrag();
     }
     ev.preventDefault();
-    drag.ghost.style.left = (ev.clientX - drag.ox) + 'px';
-    drag.ghost.style.top = (ev.clientY - drag.oy) + 'px';
+    drag.ghost.style.transform = 'translate3d(' + (ev.clientX - drag.ox) + 'px,' + (ev.clientY - drag.oy) + 'px,0)'; // 走 transform，不觸發 layout
     drag.target = computeTarget(ev.clientX, ev.clientY);
     paintMarker(drag.target);
     autoScroll(ev.clientY);
@@ -617,7 +707,9 @@
     cover: function () { return coverName; },
     json: orderJson,
     save: save,
-    move: move
+    move: move,
+    load: load,          // 測試用：餵合成 files（跳過真實目錄挑選對話框），回傳 Promise（縮圖化完成時 resolve）
+    thumbW: THUMB_W
   };
 })();
 </script>
