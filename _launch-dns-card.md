@@ -14,9 +14,12 @@
 ## 第 2 步：改 www 的 CNAME
 Target：jerrythepopper.com → **jerrythepopper.github.io**
 
-## 第 3 步：加 1 筆 TXT（防搶掛驗證）
-Type=TXT；Name 與內容由 GitHub 當天生成，Fable 現場提供。
-（格式會像 Name=`_github-pages-challenge-Jerrythepopper`、內容=一串亂碼）
+## 第 3 步：加 1 筆 TXT（防搶掛驗證——此功能無 API,本人網頁操作,約 1 分鐘）
+1. 瀏覽器開 `github.com/settings/pages` → Verified domains → **Add a domain** → 輸入 `jerrythepopper.com` → Add
+2. GitHub 顯示 TXT 的 Name（`_github-pages-challenge-jerrythepopper`）與 Content（隨機碼）
+3. Cloudflare DNS → Add record → Type=**TXT** → Name 貼 `_github-pages-challenge-jerrythepopper`（會自動接上主網域）→ Content 貼隨機碼 → Save
+4. 回 GitHub 按 **Verify**（DNS 傳播需幾分鐘,失敗稍等再按）
+※ 此筆=防搶掛保險,不卡上線——當天順手做即可,忘了也能事後補。
 
 ## 第 4 步：雲朵轉灰（DNS only）
 上述所有記錄的橙色雲朵（Proxied）→ 點成灰色。
