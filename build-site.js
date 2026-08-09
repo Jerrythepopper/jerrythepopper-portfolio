@@ -30,6 +30,28 @@ const HERO_VIDEOS = win.HERO_VIDEOS || [];
 const SECTIONS = win.SECTIONS;
 const DEEPZOOM = win.DEEPZOOM || {};
 
+/* ---------- data-en.js（英文版文案，S29 2026-08-09） -------------------------
+   雙語架構的三條紀律：
+     ① 中文版輸出逐位元組零回歸 —— 所有 lang 分支都寫成「LANG==='zh' 時走原路」，
+        唯二允許動到中文頁的是 hreflang 三行與語言切換鈕（本次刻意的增量）。
+     ② 內容集中：英文的每一句都住 data-en.js（源自 _content-en-draft.md），
+        本檔只負責排版，不內嵌英文散句。
+     ③ 路徑分兩種：linkRel＝同語言頁面互連（/en/ 樹內就在 /en/ 裡繞），
+        assetRel＝到站根資產（styles.css / photos / video / vendor / favicon）。
+        英文頁多一層 /en/，所以 assetRel = linkRel + '../'。
+--------------------------------------------------------------------------- */
+const winEn = {};
+new Function('window', fs.readFileSync(path.join(ROOT, 'data-en.js'), 'utf8'))(winEn);
+const EN = winEn.EN;
+const EN_SWITCH_ZH = winEn.EN_SWITCH_ZH;
+
+// 目前正在生成哪一語版本。build() 先跑完整套中文、再翻牌成 'en' 跑第二套。
+let LANG = 'zh';
+const isEn = () => LANG === 'en';
+const assetRel = (linkRel) => (isEn() ? linkRel + '../' : linkRel);
+// 語言切換鈕的目的地＝「同一頁的另一語版本」。slugPath 是站根之後那一段（首頁給 ''）
+const langHref = (aRel, slugPath) => (isEn() ? aRel + slugPath : aRel + 'en/' + slugPath);
+
 // ---------- photos-manifest.json（ingest-photos.js 產出的高畫質總表） ----------
 // 有條目 → 走 <picture>（AVIF/WebP × 多尺寸 ＋ LQIP blur-up）
 // 無條目 → 退回單 src 舊路徑（結構上保留零回歸分支，手放進 photos\ 的圖照樣能用）
@@ -61,6 +83,11 @@ const esc = (s) => String(s)
    JSON-LD name、footer 清單、llms.txt 都吃這一份）。 */
 const zhSpan = (s) => (s.zh ? `<span class="jp">${esc(s.zh)}</span>` : '');
 const enZh = (s) => (s.zh ? `${s.en} ${s.zh}` : s.en);
+
+/* 英文頁的三個「拿掉中文」開關（S29）。標題旁的中文副標（哈蘇／人像…）在英文頁隱藏，
+   純文字場合（title / JSON-LD / footer / llms.txt）同步只留英文。 */
+const zhTag = (s) => (isEn() ? '' : zhSpan(s));
+const secName = (s) => (isEn() ? s.en : enZh(s));
 
 /* ---------- 中文分詞斷行 segmentZh（S25 2026-08-09） -------------------------
    問題：中文沒有詞間空白，瀏覽器預設「每個漢字都是可斷點」，於是「朱銘美術/館」
@@ -111,6 +138,11 @@ function segmentZh(text) {
   if (text == null) return '';
   return String(text).split('\n').map(segLine).join('\n');
 }
+
+/* 分詞只對中文有意義：英文本來就有詞間空白，包 nb 反而讓 justify 拉出大洞
+   （英文頁另有 :root[lang] 規則把 justify 關掉，改吃自然的 ragged-right）。
+   所以英文版走純 esc()，一個 <span class="nb"> 都不出。 */
+const seg = (text) => (isEn() ? esc(text == null ? '' : text) : segmentZh(text));
 
 function segLine(line) {
   if (!line) return '';
@@ -364,7 +396,7 @@ const NAV = [
   { key: 'nature', label: 'Nature' },
   { key: '3d', label: '3D' },
   { key: 'film', label: 'Film' },
-  { key: 'market', label: '果菜市場' },
+  { key: 'market', label: '果菜市場', labelEn: 'Market' },   // 唯一需要換字的項目（其餘本來就是英文）
   { key: 'work', label: 'Work' },
   { key: 'about', label: 'About' },
 ];
@@ -399,8 +431,15 @@ function head(o) {
   const ogDims = ogEntry
     ? `<meta property="og:image:width" content="${ogEntry.w}">\n<meta property="og:image:height" content="${ogEntry.h}">\n`
     : '';
+  /* hreflang 三件套（S29）：中英互指成對 ＋ x-default 指中文版（原生語版）。
+     只有「有對應語版」的頁面才掛（o.alt）——404 是 noindex，不進這個網。 */
+  const altLinks = o.alt
+    ? `<link rel="alternate" hreflang="zh-Hant" href="${esc(SITE_ORIGIN + o.alt.zh)}">\n` +
+      `<link rel="alternate" hreflang="en" href="${esc(SITE_ORIGIN + o.alt.en)}">\n` +
+      `<link rel="alternate" hreflang="x-default" href="${esc(SITE_ORIGIN + o.alt.zh)}">\n`
+    : '';
   return `<!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="${isEn() ? 'en' : 'zh-Hant'}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -412,9 +451,9 @@ ${o.headExtra || ''}<title>${esc(o.title)}</title>
 <meta name="description" content="${esc(o.desc)}">
 ${o.robots ? `<meta name="robots" content="noindex">\n` : ''}
 <link rel="canonical" href="${esc(canonical)}">
-<meta property="og:type" content="website">
+${altLinks}<meta property="og:type" content="website">
 <meta property="og:site_name" content="Jerrythepopper Photography">
-<meta property="og:locale" content="zh_TW">
+<meta property="og:locale" content="${isEn() ? 'en_US' : 'zh_TW'}">
 <meta property="og:title" content="${esc(o.title)}">
 <meta property="og:description" content="${esc(o.desc)}">
 <meta property="og:url" content="${esc(canonical)}">
@@ -448,27 +487,40 @@ function themeToggle() {
   </button>`;
 }
 
-function frosted(rel, current) {
+/* 語言切換鈕（S29）——兩處：frosted nav 最右（主題鈕左邊）、hero 右上（主題鈕左邊）。
+   刻意做成 <a> 而不是 <button>：它就是一條連結（可 Cmd+點開新分頁、可被爬蟲跟隨），
+   鍵盤可達靠原生 Tab 序，不必補 tabindex。hreflang 讓瀏覽器/爬蟲知道對面是哪一語。
+   href 指的是「當前頁的另一語版本」，不是首頁——往返回得到同一頁。 */
+function langToggle(href) {
+  const t = isEn() ? EN.langToggle : EN_SWITCH_ZH;
+  const other = isEn() ? 'zh-Hant' : 'en';
+  return `<a class="lang-toggle" href="${esc(href)}" hreflang="${other}" lang="${other}"` +
+    ` aria-label="${esc(t.label)}" title="${esc(t.label)}">${esc(t.text)}</a>`;
+}
+
+function frosted(rel, current, lhref) {
   // 子頁（非首頁）常駐顯示：分享連結直達時第一屏就有站名與返回路徑（P1-1）
   // is-static 寫在 class 裡而非靠 JS，無 JS 環境一樣看得到
   const always = current !== 'home';
   const items = NAV.map((i) => {
     const cls = i.key === current ? ' class="is-active"' : '';
     const cur = i.key === current ? ' aria-current="page"' : '';
-    return `    <a href="${rel}${slugOf(i.key)}/"${cls}${cur}>${esc(i.label)}</a>`;
+    return `    <a href="${rel}${slugOf(i.key)}/"${cls}${cur}>${esc(isEn() && i.labelEn ? i.labelEn : i.label)}</a>`;
   }).join('\n');
   return `<div class="frosted${always ? ' is-static' : ''}" aria-hidden="${always ? 'false' : 'true'}"${always ? ' data-always="1"' : ''}>
   <a href="${rel || './'}" class="brand">Jerrythepopper</a>
   <nav aria-label="Sticky">
 ${items}
   </nav>
+  ${langToggle(lhref)}
   ${themeToggle()}
 </div>`;
 }
 
 function footer(rel) {
+  // 英文頁的系列清單去中文副標（含果菜市場那條特例，英文只留 Taipei Wholesale Market）
   const series = SECTIONS.map((s) =>
-    `      <li><a href="${rel}${slugOf(s.id)}/">${esc(s.en === 'Taipei Wholesale Market' ? '果菜市場 輪轉' : enZh(s))}</a></li>`
+    `      <li><a href="${rel}${slugOf(s.id)}/">${esc(isEn() ? s.en : (s.en === 'Taipei Wholesale Market' ? '果菜市場 輪轉' : enZh(s)))}</a></li>`
   ).join('\n');
   return `<footer class="foot">
   <div class="foot-inner">
@@ -487,8 +539,8 @@ ${series}
     <div>
       <h4>Office</h4>
       <ul>
-        <li><a href="${rel}work/">Work 工作</a></li>
-        <li><a href="${rel}about/">About 關於我</a></li>
+        <li><a href="${rel}work/">${isEn() ? 'Work' : 'Work 工作'}</a></li>
+        <li><a href="${rel}about/">${isEn() ? 'About' : 'About 關於我'}</a></li>
       </ul>
     </div>
     <div>
@@ -512,8 +564,12 @@ function tail(rel) {
 `;
 }
 
+/* o.rel＝assetRel（styles.css / site.js / favicon 等站根資產）
+   o.linkRel＝同語言的頁面互連（沒給就等於 o.rel，中文版正是這個情形＝零回歸）
+   o.langHref＝語言切換鈕的目的地 */
 function shell(o) {
-  return head(o) + '\n' + frosted(o.rel, o.current) + '\n' + o.main + '\n' + footer(o.rel) + '\n' + tail(o.rel);
+  const lr = o.linkRel != null ? o.linkRel : o.rel;
+  return head(o) + '\n' + frosted(lr, o.current, o.langHref) + '\n' + o.main + '\n' + footer(lr) + '\n' + tail(o.rel);
 }
 
 // ---------- 首頁 ----------
@@ -551,7 +607,14 @@ function heroPosterVars(base) {
 function heroHead(rel) {
   // data.js 沒有 HERO_VIDEOS 就整段不出：hero 退成純黑底＋壓暗漸層，build 不會炸
   if (!HERO_VIDEOS.length) { console.warn('! data.js 沒有 HERO_VIDEOS —— hero 不會有海報也不會有影片'); return ''; }
-  const vids = JSON.stringify(HERO_VIDEOS).replace(/</g, '\\u003c');
+  /* 影片路徑要吃 rel：site.js 是直接 v.src = item.mp4（相對於「當前頁網址」解析），
+     英文首頁在 /en/ 底下，不補 ../ 的話會去抓 /en/video/cloud-1.mp4 → 404、hero 停在海報。
+     海報那組走下面腳本裡的 R+poster，已經是 rel 前綴，這裡補的是影片這一半。
+     中文版 rel='' ＝ 字串完全不變（Object.assign 保留原鍵序）→ 逐位元組零回歸。 */
+  const vids = JSON.stringify(HERO_VIDEOS.map((v) => Object.assign({}, v, {
+    mp4: rel + v.mp4,
+    mp4_720: v.mp4_720 ? rel + v.mp4_720 : v.mp4_720,
+  }))).replace(/</g, '\\u003c');
   return `<style>:root{${heroPosterVars(rel + HERO_VIDEOS[0].poster)}}</style>
 <script>
 window.__HERO_VIDEOS=${vids};
@@ -572,7 +635,7 @@ document.head.appendChild(l);})();
 `;
 }
 
-function heroBlock() {
+function heroBlock(lhref) {
   const chars = [...'Jerrythepopper'].map((ch, i) =>
     `<span class="ch" style="animation-delay:${600 + i * 50}ms">${ch === ' ' ? '&nbsp;' : esc(ch)}</span>`
   ).join('');
@@ -592,6 +655,7 @@ function heroBlock() {
       <span class="sep">|</span>
       <a href="about/">Contact</a>
     </div>
+    ${langToggle(lhref)}
     ${themeToggle()}
   </div>
 
@@ -610,7 +674,10 @@ function heroBlock() {
 </section>`;
 }
 
-function categorySection(s, index) {
+/* rel＝assetRel（照片在站根 photos\）。中文首頁是 ''、英文首頁在 /en/ 底下要 '../'
+   ——漏了這一手，英文首頁九張封面全部去抓 /en/photos/… 而 404（2026-08-09 實測抓到）。
+   連結（href="hasselblad/"）走的是 linkRel，兩語版都是 ''，所以那半邊不必動。 */
+function categorySection(s, index, rel) {
   const alt = index % 2 === 1;
   const cover = photosFor(s.id)[s.coverIdx];
   // meta 可為空陣列（文案未定的系列）：空的就整塊不渲染，不留 <div class="meta"></div> 空殼
@@ -621,7 +688,7 @@ function categorySection(s, index) {
   <div class="fade-up section-inner${alt ? ' _reverse' : ''}" style="transition-delay:0ms">
     <a href="${slugOf(s.id)}/" class="sec-media" aria-label="${esc(s.en)}" style="${lqipBg(cover)}">
       <span class="sec-num">No. ${esc(s.number)}</span>
-      ${pictureTag(cover, '', { alt: altOf(cover, s.en), sizes: SIZES.section })}
+      ${pictureTag(cover, rel, { alt: altOf(cover, s.en), sizes: SIZES.section })}
     </a>
     <div class="sec-body">
       <div class="eyebrow">
@@ -629,8 +696,8 @@ function categorySection(s, index) {
         <span class="flow-line in" style="width:40px"></span>
         <span>${esc(s.eyebrow)}</span>
       </div>
-      <h2>${esc(s.en)}${zhSpan(s)}</h2>
-      <p class="lede">${segmentZh(s.lede)}</p>
+      <h2>${esc(s.en)}${zhTag(s)}</h2>
+      <p class="lede">${seg(isEn() ? EN.sections[s.id].lede : s.lede)}</p>
 ${metaBlock}      <a href="${slugOf(s.id)}/" class="cta">View series <span class="arr">→</span></a>
     </div>
   </div>
@@ -638,12 +705,13 @@ ${metaBlock}      <a href="${slugOf(s.id)}/" class="cta">View series <span class
 }
 
 function teaser(o) {
-  // o: {label, cls, reverse, href, num, cover, alt, eyebrow, h2en, h2zh, lede, metas, cta}
+  // o: {label, cls, reverse, href, num, cover, alt, eyebrow, h2en, h2zh, lede, metas, cta, rel}
+  // o.rel＝assetRel（照片路徑用），理由同 categorySection
   return `<section class="section${o.cls}" data-screen-label="${esc(o.label)}">
   <div class="fade-up section-inner${o.reverse ? ' _reverse' : ''}" style="transition-delay:0ms">
     <a href="${o.href}" class="sec-media" style="${lqipBg(o.cover)}">
       <span class="sec-num">No. ${o.num}</span>
-      ${pictureTag(o.cover, '', { alt: altOf(o.cover, o.alt), sizes: SIZES.section })}
+      ${pictureTag(o.cover, o.rel, { alt: altOf(o.cover, o.alt), sizes: SIZES.section })}
     </a>
     <div class="sec-body">
       <div class="eyebrow">
@@ -651,8 +719,8 @@ function teaser(o) {
         <span class="flow-line in" style="width:40px"></span>
         <span>${esc(o.eyebrow)}</span>
       </div>
-      <h2>${esc(o.h2en)}<span class="jp">${esc(o.h2zh)}</span></h2>
-      <p class="lede">${segmentZh(o.lede)}</p>
+      <h2>${esc(o.h2en)}${isEn() ? '' : `<span class="jp">${esc(o.h2zh)}</span>`}</h2>
+      <p class="lede">${seg(o.lede)}</p>
       <div class="meta">${o.metas.map((m) => `<span>${esc(m)}</span>`).join('')}</div>
       <a href="${o.href}" class="cta">${esc(o.cta)} <span class="arr">→</span></a>
     </div>
@@ -661,40 +729,47 @@ function teaser(o) {
 }
 
 function homePage() {
+  const rel = assetRel('');                 // 中文首頁 ''、英文首頁 '../'（資產都在站根）
+  const lhref = langHref(rel, '');
+  const lede1 = isEn() ? EN.home.introLede[0] : '以影像捕捉人文、街頭與空間的情緒。';
+  const lede2 = isEn() ? EN.home.introLede[1] : '在孤寂感與時間流動中，找到我的樣貌。';
   const intro = `<section class="intro">
   <div class="fade-up intro-inner" style="transition-delay:0ms">
     <div class="eyebrow">Selected · 2018 — 2026</div>
-    <p class="intro-lede">${segmentZh('以影像捕捉人文、街頭與空間的情緒。')}<br>${segmentZh('在孤寂感與時間流動中，找到我的樣貌。')}</p>
+    <p class="intro-lede">${seg(lede1)}<br>${seg(lede2)}</p>
     <p>Photographer · 3D Creator · Based in Taipei. Brand collaborations with Hasselblad, Leica, Sony, Oppo, Giant, and more.</p>
   </div>
 </section>`;
 
   const main = `<main data-screen-label="01 Home">
-${heroBlock()}
+${heroBlock(lhref)}
 ${intro}
-${SECTIONS.map(categorySection).join('\n')}
+${SECTIONS.map((s, i) => categorySection(s, i, rel)).join('\n')}
 ${teaser({
-    label: '08 Work', cls: ' _alt', reverse: false, href: 'work/', num: '08',
+    label: '08 Work', cls: ' _alt', reverse: false, href: 'work/', num: '08', rel,
     cover: PHOTOS.hasselblad[7], alt: 'Work', eyebrow: 'Selected · 2023 — 2026',
     h2en: 'Work', h2zh: '工作',
-    lede: '品牌合作與商業工作精選。',
+    lede: isEn() ? EN.home.workLede : '品牌合作與商業工作精選。',
     metas: ['Hasselblad', 'Leica', 'Sony', 'Oppo', 'Goopi', 'Reto'], cta: 'View work',
   })}
 ${teaser({
-    label: '09 About', cls: '', reverse: true, href: 'about/', num: '09',
+    label: '09 About', cls: '', reverse: true, href: 'about/', num: '09', rel,
     cover: ABOUT_PORTRAIT, alt: 'About', eyebrow: 'Photographer · 3D Creator',
     h2en: 'About', h2zh: '關於我',
-    lede: 'Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者。',
+    lede: isEn() ? EN.home.aboutLede : 'Jerrythepopper 洪立楷，1996年生於台北。攝影師、3D創作者。',
     metas: ['Based in Taipei', 'SEVEN / Asia-Pacific'], cta: 'Read more',
   })}
 </main>`;
 
   return shell({
-    rel: '', current: 'home', main,
-    headExtra: heroHead(''),
-    title: 'Jerrythepopper 洪立楷｜台北攝影師・3D 創作者｜人像・底片攝影・3D創作作品集',
-    desc: '台北攝影師、3D 創作者洪立楷（Jerrythepopper）的個人作品集——人像、街拍、底片、自然攝影與 3D 視覺創作，曾與 Hasselblad、Leica、Sony 等品牌合作。以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。',
-    canonicalPath: '/',
+    rel, linkRel: '', langHref: lhref, current: 'home', main,
+    headExtra: heroHead(rel),
+    title: isEn() ? EN.meta.homeTitle
+      : 'Jerrythepopper 洪立楷｜台北攝影師・3D 創作者｜人像・底片攝影・3D創作作品集',
+    desc: isEn() ? EN.meta.homeDesc
+      : '台北攝影師、3D 創作者洪立楷（Jerrythepopper）的個人作品集——人像、街拍、底片、自然攝影與 3D 視覺創作，曾與 Hasselblad、Leica、Sony 等品牌合作。以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。',
+    canonicalPath: isEn() ? '/en/' : '/',
+    alt: { zh: '/', en: '/en/' },
     ogImage: HERO_SLIDES[0],
     ogPage: 'home',
     jsonld: PERSON_LD,
@@ -713,16 +788,19 @@ function nextSeriesBlock(s) {
       <span>Next Series</span>
       <span class="n">${esc(nx.number)}</span>
     </span>
-    <span class="next-title">${esc(nx.en)}${zhSpan(nx)}<span class="arr" aria-hidden="true">→</span></span>
+    <span class="next-title">${esc(nx.en)}${zhTag(nx)}<span class="arr" aria-hidden="true">→</span></span>
   </a>
 </section>`;
 }
 
 function categoryPage(s, screenLabel) {
   const photos = photosFor(s.id);
+  const rel = assetRel('../');              // 中文 '../'、英文 '../../'
+  const lhref = langHref(rel, slugOf(s.id) + '/');
+  const subText = isEn() ? EN.sections[s.id].subtitle : s.subtitle;
   // subtitle / meta 皆可留空（文案未定的系列）：空的就不渲染該塊，不留空殼 DOM
-  const subtitle = s.subtitle
-    ? `    <p class="subtitle">${segmentZh(s.subtitle)}</p>\n`
+  const subtitle = subText
+    ? `    <p class="subtitle">${seg(subText)}</p>\n`
     : '';
   const metaBlock = s.meta.length
     ? `    <div class="meta">${s.meta.map((m) => `<span>${esc(m)}</span>`).join('')}</div>\n`
@@ -733,7 +811,7 @@ function categoryPage(s, screenLabel) {
   /* 角標本身只寫「Deep Zoom」，沒說可以點；站主真機回報看不懂那是入口。這行話擺在
      版頭尾巴（subtitle/meta 之後、gallery 之前），有掛切片的系列才出現。 */
   const dzNote = dzList.length
-    ? `    <p class="dz-note">帶有 DEEP ZOOM 標記的作品，可點入以原始尺寸細看。</p>\n`
+    ? `    <p class="dz-note">${isEn() ? esc(EN.dzNote) : '帶有 DEEP ZOOM 標記的作品，可點入以原始尺寸細看。'}</p>\n`
     : '';
 
   const wide = s.layout === 'single';
@@ -741,17 +819,17 @@ function categoryPage(s, screenLabel) {
     const dz = dzFor(i);
     const a = altOf(src, s.en + ' ' + (i + 1));
     const dzAttr = dz
-      ? ` data-dzi="../${esc(dz.dzi)}" data-dz-label="${esc(dz.label || '')}"` +
-        ` data-osd="../vendor/openseadragon.min.js"` +
-        ` aria-label="${esc(a + '，開啟 Deep Zoom 檢視器')}"`
+      ? ` data-dzi="${esc(rel + dz.dzi)}" data-dz-label="${esc(dz.label || '')}"` +
+        ` data-osd="${esc(rel + 'vendor/openseadragon.min.js')}"` +
+        ` aria-label="${esc(isEn() ? a + ' — open Deep Zoom viewer' : a + '，開啟 Deep Zoom 檢視器')}"`
       : '';
     const badge = dz ? `\n    <span class="dz-badge"><span class="dot" aria-hidden="true"></span>Deep Zoom</span>` : '';
     // --ar＝高/寬（manifest 查得到就用真尺寸）：masonry 版位的 grid row span 靠它算，
     // 讓 site.js 不必等圖載完就能定版（見 patch.css「masonry 閱讀順序」段）
     const e = mEntry(src);
     const ar = e && e.w && e.h ? `;--ar:${(e.h / e.w).toFixed(4)}` : '';
-    return `  <button type="button" class="gframe${dz ? ' has-dz' : ''}" style="${lqipBg(src)}${ar}"${fullAttrs(src, '../')}${dzAttr}>
-    ${pictureTag(src, '../', { alt: a, sizes: wide ? SIZES.single : SIZES.masonry })}${badge}
+    return `  <button type="button" class="gframe${dz ? ' has-dz' : ''}" style="${lqipBg(src)}${ar}"${fullAttrs(src, rel)}${dzAttr}>
+    ${pictureTag(src, rel, { alt: a, sizes: wide ? SIZES.single : SIZES.masonry })}${badge}
   </button>`;
   }).join('\n');
 
@@ -762,7 +840,7 @@ function categoryPage(s, screenLabel) {
       <span class="flow-line in" style="width:56px"></span>
       <span>${esc(s.eyebrow)}</span>
     </div>
-    <h1>${esc(s.en)}${zhSpan(s)}</h1>
+    <h1>${esc(s.en)}${zhTag(s)}</h1>
 ${subtitle}${metaBlock}${dzNote}  </div>
 
 <section class="gallery ${s.layout === 'single' ? 'single _wide' : 'masonry-2'}">
@@ -773,25 +851,33 @@ ${nextSeriesBlock(s)}
 </main>`;
 
   // nature 頁改用專屬 SEO description（英文開場句 + 定稿中文前 60 字），非套用預設 subtitle/lede 生成規則
-  const desc = s.id === 'nature'
+  // 英文版：3D 頁有站主指定的專屬 title/desc（文案檔 Meta 節），其餘照同一套 clip 規則走英文 subtitle
+  const desc = isEn()
+    ? (s.id === '3d' ? EN.meta.threeDDesc
+      : clip(oneLine(EN.sections[s.id].subtitle || EN.sections[s.id].lede), 155))
+    : s.id === 'nature'
     ? 'Tall clouds, open sea, old trees, mountains. I try to keep a record of how they look. ' + s.subtitle.slice(0, 60)
     : s.id === '3d'
     ? '攝影與 3D 的邊界實驗——台灣 3D 視覺創作、CGI 場景設計與虛實整合作品。'
     : clip(oneLine(s.subtitle || s.lede), 155);
-  const pageTitle = s.id === '3d' ? '3D 視覺創作 CGI｜Jerrythepopper' : `${enZh(s)}｜Jerrythepopper Photography`;
+  const pageTitle = isEn()
+    ? (s.id === '3d' ? EN.meta.threeDTitle : `${s.en} | ${EN.meta.siteSuffix}`)
+    : s.id === '3d' ? '3D 視覺創作 CGI｜Jerrythepopper' : `${enZh(s)}｜Jerrythepopper Photography`;
+  const zhPath = `/${slugOf(s.id)}/`;
   return shell({
-    rel: '../', current: s.id, main,
+    rel, linkRel: '../', langHref: lhref, current: s.id, main,
     title: pageTitle,
     desc,
-    canonicalPath: `/${slugOf(s.id)}/`,
+    canonicalPath: isEn() ? '/en' + zhPath : zhPath,
+    alt: { zh: zhPath, en: '/en' + zhPath },
     ogImage: photos[s.coverIdx],
     ogPage: slugOf(s.id),
     jsonld: {
       '@context': 'https://schema.org',
       '@type': 'ImageGallery',
-      name: `${enZh(s)}`,
+      name: `${secName(s)}`,
       description: desc,
-      url: `${SITE_ORIGIN}/${slugOf(s.id)}/`,
+      url: `${SITE_ORIGIN}${isEn() ? '/en' + zhPath : zhPath}`,
       author: PERSON_LD,
       numberOfItems: photos.length,
     },
@@ -831,20 +917,26 @@ function tileSrc(src) {
 }
 
 function workPage() {
+  const rel = assetRel('../');
+  const lhref = langHref(rel, 'work/');
+  // 磚的分類標籤走對照表（data-en.js）；查無對照就原樣輸出。磚的專案標題（w.t）不譯
+  // ——與「合作品牌名本身不譯」同一條裁示（_content-en-draft.md）。
+  const catOf = (c) => (isEn() ? (EN.work.cats[c] || c) : c);
   const tiles = WORK_TILES.map((w) => {
     const photoSrc = tileSrc(w.src);
     const linkLabel = w.url.includes('youtube.com') ? 'YouTube' : w.url.includes('yottau.com') ? 'YottaU' : 'Instagram';
     return `  <a href="${esc(w.url)}" target="_blank" rel="noopener noreferrer" class="work-tile">
-    <div class="ph" style="${bgImage(photoSrc, '../')}"></div>
+    <div class="ph" style="${bgImage(photoSrc, rel)}"></div>
     <div class="ig">${linkLabel} ↗</div>
     <div class="meta">
       <div class="t">${esc(w.t)}</div>
-      <div class="c">${esc(w.c)}</div>
+      <div class="c">${esc(catOf(w.c))}</div>
     </div>
   </a>`;
   }).join('\n');
 
-  const desc = clip(oneLine('Brand collaborations and editorial projects — 品牌合作與商業工作。Hasselblad、Leica、Sony、Oppo、Goopi、Reto，2020 — 2026。'), 155);
+  const desc = isEn() ? clip(oneLine(EN.meta.workDesc), 155)
+    : clip(oneLine('Brand collaborations and editorial projects — 品牌合作與商業工作。Hasselblad、Leica、Sony、Oppo、Goopi、Reto，2020 — 2026。'), 155);
 
   const main = `<main class="page" data-screen-label="09 Work">
   <div class="fade-up page-head" style="transition-delay:0ms">
@@ -853,20 +945,20 @@ function workPage() {
       <span class="flow-line in" style="width:56px"></span>
       <span>Selected · 2023 — 2026</span>
     </div>
-    <h1>Work<span class="jp">工作</span></h1>
-    <p class="subtitle">Brand collaborations and editorial projects. Click any tile to view the project.
-品牌合作與商業工作。點擊任一方塊查看專案。</p>
+    <h1>Work${isEn() ? '' : '<span class="jp">工作</span>'}</h1>
+    <p class="subtitle">${isEn() ? esc(EN.work.subtitle) : `Brand collaborations and editorial projects. Click any tile to view the project.
+品牌合作與商業工作。點擊任一方塊查看專案。`}</p>
     <div class="meta"><span>HASSELBLAD</span><span>LEICA</span><span>SONY</span><span>OPPO</span><span>GOOPI</span><span>RETO</span><span>2020 — 2026</span></div>
   </div>
 
-<section class="fade-up work-featured" style="transition-delay:0ms;${bgVars(1, 'photos/work/featured-1.webp', '../')};${bgVars(2, 'photos/work/featured-2.webp', '../')}">
+<section class="fade-up work-featured" style="transition-delay:0ms;${bgVars(1, 'photos/work/featured-1.webp', rel)};${bgVars(2, 'photos/work/featured-2.webp', rel)}">
   <a href="https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDY2OTM1Njg3MTE5MjI3?igsh=MTVqaG9kcG8waDNzMQ==" target="_blank" rel="noopener noreferrer">
     <div class="ft-title">Selected Works Vol.1</div>
-    <div class="ft-sub">品牌合作與創作精選</div>
+    <div class="ft-sub">${isEn() ? esc(EN.work.featuredSub) : '品牌合作與創作精選'}</div>
   </a>
   <a href="https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?igsh=MXhhZnRoamoxc2QxZw==" target="_blank" rel="noopener noreferrer">
     <div class="ft-title">Selected Works Vol.2</div>
-    <div class="ft-sub">品牌合作與創作精選</div>
+    <div class="ft-sub">${isEn() ? esc(EN.work.featuredSub) : '品牌合作與創作精選'}</div>
   </a>
 </section>
 
@@ -875,25 +967,26 @@ ${tiles}
   <div class="work-tile nophoto">
     <div>
       <div class="t">Leica</div>
-      <div class="c">攝影教學講師</div>
+      <div class="c">${esc(catOf('攝影教學講師'))}</div>
     </div>
   </div>
 </section>
 </main>`;
 
   return shell({
-    rel: '../', current: 'work', main,
-    title: 'Work 工作｜Jerrythepopper Photography',
+    rel, linkRel: '../', langHref: lhref, current: 'work', main,
+    title: isEn() ? `Work | ${EN.meta.siteSuffix}` : 'Work 工作｜Jerrythepopper Photography',
     desc,
-    canonicalPath: '/work/',
+    canonicalPath: isEn() ? '/en/work/' : '/work/',
+    alt: { zh: '/work/', en: '/en/work/' },
     ogImage: PHOTOS.hasselblad[0],
     ogPage: 'work',
     jsonld: {
       '@context': 'https://schema.org',
       '@type': 'CollectionPage',
-      name: 'Work 工作',
+      name: isEn() ? 'Work' : 'Work 工作',
       description: desc,
-      url: `${SITE_ORIGIN}/work/`,
+      url: `${SITE_ORIGIN}${isEn() ? '/en/work/' : '/work/'}`,
       author: PERSON_LD,
     },
   });
@@ -904,7 +997,43 @@ ${tiles}
 const ABOUT_PORTRAIT = 'photos/about-portrait.webp';
 
 function aboutPage() {
-  const desc = clip(oneLine('Jerrythepopper 洪立楷，台北攝影師、3D創作者，1996年生於台北。以影像捕捉人文、街頭與空間的情緒，以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。'), 155);
+  const rel = assetRel('../');
+  const lhref = langHref(rel, 'about/');
+  const desc = isEn()
+    ? clip(oneLine(EN.about.paras[0] + ' ' + EN.about.paras[1]), 155)
+    : clip(oneLine('Jerrythepopper 洪立楷，台北攝影師、3D創作者，1996年生於台北。以影像捕捉人文、街頭與空間的情緒，以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。'), 155);
+  // 內文四段：中文版順序寫在下面的 zhParas；英文版照 _content-en-draft.md 的作者順序
+  const zhParas = [
+    '1996年生於台北。攝影師、3D創作者。',
+    '以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。',
+    '以影像捕捉人文、街頭與空間的情緒，擅長在孤寂感與時間流動中找到自身的模樣。除了攝影，也持續探索3D視覺與虛實場景的交錯，嘗試讓靜態影像走向更立體的敘事。',
+    '曾與 Hasselblad、Leica、Sony、Oppo、Giant、新光攝影展、朱銘美術館、蝦皮等品牌合作，執行形象拍攝、教學內容與創意企劃。紀實計畫《輪轉》記錄台北第一果菜批發市場的人與故事，歷時一年多，最終透過募資出版攝影集。',
+  ];
+  const paras = (isEn() ? EN.about.paras : zhParas)
+    .map((p) => `    <p>${seg(p)}</p>`).join('\n');
+  // 「可以一起做的事」與「展覽・出版・課程」兩份清單
+  const zhTogether = [
+    '攝影｜品牌形象・人像・街拍・空間・活動紀錄・人文紀實',
+    '3D創作｜場景設計・視覺概念・虛實結合',
+    '創意企劃｜影像敘事・品牌合作・空間裝置',
+    '影像教育｜攝影教學・課程製作',
+  ];
+  const zhExhibits = [
+    '《輪轉》攝影集出版與攝影展（台北第一果菜市場紀實計畫）',
+    '底片攝影線上課程（與線上課程平台合作）',
+    'Sony × Jerrythepopper 教學影片（YouTube 街拍教學）',
+  ];
+  const li = (arr) => arr.map((x) => `      <li>${esc(x)}</li>`).join('\n');
+  /* 合作品牌：群組標籤照譯，品牌名本身不譯（_content-en-draft.md 第 68 行明寫）
+     ——所以英文頁的「名發建設／朱銘美術館」這類中文品牌名是刻意保留，不是漏譯。 */
+  const brandRows = [
+    { k: '相機品牌', v: 'Hasselblad、Leica Camera Taiwan、Sony、Oppo、Reto' },
+    { k: '建築 / 商業', v: '名發建設、三發建設、晶悅建設、臺北農產運銷公司、捷安特' },
+    { k: '文化 / 藝術', v: '朱銘美術館、孤僻Goopi' },
+    { k: '商業平台', v: '蝦皮' },
+  ].map((r) =>
+    `      <p><b>${esc(isEn() ? (EN.about.brandLabels[r.k] || r.k) : r.k)}</b><span class="bd">${seg(r.v)}</span></p>`
+  ).join('\n');
   const main = `<main class="page" data-screen-label="10 About">
   <div class="fade-up page-head" style="transition-delay:0ms">
     <div class="eyebrow">
@@ -912,41 +1041,30 @@ function aboutPage() {
       <span class="flow-line in" style="width:56px"></span>
       <span>Photographer · 3D Creator</span>
     </div>
-    <h1>About<span class="jp">關於我</span></h1>
+    <h1>About${isEn() ? '' : '<span class="jp">關於我</span>'}</h1>
   </div>
 
 <section class="fade-up about-wrap" style="transition-delay:0ms">
-  <div class="about-portrait" style="${bgImage(ABOUT_PORTRAIT, '../')}"></div>
+  <div class="about-portrait" style="${bgImage(ABOUT_PORTRAIT, rel)}"></div>
   <div class="about-body">
     <h2>Jerrythepopper 洪立楷</h2>
     <div class="role">Photographer · 3D Creator · Based in Taipei</div>
 
-    <p>${segmentZh('1996年生於台北。攝影師、3D創作者。')}</p>
-    <p>${segmentZh('以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。')}</p>
-    <p>${segmentZh('以影像捕捉人文、街頭與空間的情緒，擅長在孤寂感與時間流動中找到自身的模樣。除了攝影，也持續探索3D視覺與虛實場景的交錯，嘗試讓靜態影像走向更立體的敘事。')}</p>
-    <p>${segmentZh('曾與 Hasselblad、Leica、Sony、Oppo、Giant、新光攝影展、朱銘美術館、蝦皮等品牌合作，執行形象拍攝、教學內容與創意企劃。紀實計畫《輪轉》記錄台北第一果菜批發市場的人與故事，歷時一年多，最終透過募資出版攝影集。')}</p>
+${paras}
 
-    <h3>可以一起做的事</h3>
+    <h3>${esc(isEn() ? EN.about.togetherHead : '可以一起做的事')}</h3>
     <ul>
-      <li>攝影｜品牌形象・人像・街拍・空間・活動紀錄・人文紀實</li>
-      <li>3D創作｜場景設計・視覺概念・虛實結合</li>
-      <li>創意企劃｜影像敘事・品牌合作・空間裝置</li>
-      <li>影像教育｜攝影教學・課程製作</li>
+${li(isEn() ? EN.about.together : zhTogether)}
     </ul>
 
-    <h3>合作品牌</h3>
+    <h3>${esc(isEn() ? EN.about.brandsHead : '合作品牌')}</h3>
     <div class="brands">
-      <p><b>相機品牌</b><span class="bd">${segmentZh('Hasselblad、Leica Camera Taiwan、Sony、Oppo、Reto')}</span></p>
-      <p><b>建築 / 商業</b><span class="bd">${segmentZh('名發建設、三發建設、晶悅建設、臺北農產運銷公司、捷安特')}</span></p>
-      <p><b>文化 / 藝術</b><span class="bd">${segmentZh('朱銘美術館、孤僻Goopi')}</span></p>
-      <p><b>商業平台</b><span class="bd">${segmentZh('蝦皮')}</span></p>
+${brandRows}
     </div>
 
-    <h3>展覽・出版・課程</h3>
+    <h3>${esc(isEn() ? EN.about.exhibitsHead : '展覽・出版・課程')}</h3>
     <ul>
-      <li>《輪轉》攝影集出版與攝影展（台北第一果菜市場紀實計畫）</li>
-      <li>底片攝影線上課程（與線上課程平台合作）</li>
-      <li>Sony × Jerrythepopper 教學影片（YouTube 街拍教學）</li>
+${li(isEn() ? EN.about.exhibits : zhExhibits)}
     </ul>
 
     <div class="stats">
@@ -965,10 +1083,11 @@ function aboutPage() {
 </main>`;
 
   return shell({
-    rel: '../', current: 'about', main,
-    title: 'About 關於我｜Jerrythepopper Photography',
+    rel, linkRel: '../', langHref: lhref, current: 'about', main,
+    title: isEn() ? `About | ${EN.meta.siteSuffix}` : 'About 關於我｜Jerrythepopper Photography',
     desc,
-    canonicalPath: '/about/',
+    canonicalPath: isEn() ? '/en/about/' : '/about/',
+    alt: { zh: '/about/', en: '/en/about/' },
     ogImage: ABOUT_PORTRAIT,
     ogPage: 'about',
     jsonld: PERSON_LD,
@@ -986,7 +1105,11 @@ function cloudIcon() {
 }
 
 function notFoundPage() {
-  const desc = '沒有這個頁面。回首頁看看更多攝影作品。';
+  /* 語言切換鈕在 404 上的兩端：中文版 /404.html ↔ 英文版 /en/404.html。
+     GitHub Pages 只會送站根那一份 404.html，/en/404.html 是為了「切換鈕不會斷」
+     與直接開網址時仍有英文版而產出，成本一頁。hreflang 不掛（noindex 頁不進索引網）。 */
+  const desc = isEn() ? EN.meta.notFoundDesc : '沒有這個頁面。回首頁看看更多攝影作品。';
+  const nf = EN.notFound;
   const main = `<main class="page notfound-page" data-screen-label="404 Not Found">
   <div class="fade-up notfound-wrap" style="transition-delay:0ms">
     <div class="notfound-eyebrow">
@@ -994,9 +1117,9 @@ function notFoundPage() {
       <span>404</span>
     </div>
     <div class="notfound-icon">${cloudIcon()}</div>
-    <h1>哇你怎麼跑到這裡？！</h1>
-    <p>沒有這頁面餒。</p>
-    <a href="/" class="cta">回首頁 <span class="arr">→</span></a>
+    <h1>${isEn() ? esc(nf.h1) : '哇你怎麼跑到這裡？！'}</h1>
+    <p>${isEn() ? esc(nf.p) : '沒有這頁面餒。'}</p>
+    <a href="${isEn() ? '/en/' : '/'}" class="cta">${isEn() ? esc(nf.cta) : '回首頁'} <span class="arr">→</span></a>
   </div>
 </main>`;
 
@@ -1005,10 +1128,11 @@ function notFoundPage() {
      解析成 /不存在的/路徑/styles.css → 整頁裸奔沒有樣式（深色模式當然也不會生效）。
      只有站台掛在網域根目錄時這樣寫才對——本站正是（見 SITE_ORIGIN）。 */
   return shell({
-    rel: '/', current: '404', main,
-    title: '404 找不到頁面｜Jerrythepopper Photography',
+    rel: '/', linkRel: isEn() ? '/en/' : '/', langHref: isEn() ? '/404.html' : '/en/404.html',
+    current: '404', main,
+    title: isEn() ? `404 Not Found | ${EN.meta.siteSuffix}` : '404 找不到頁面｜Jerrythepopper Photography',
     desc,
-    canonicalPath: '/404.html',
+    canonicalPath: isEn() ? '/en/404.html' : '/404.html',
     ogImage: HERO_SLIDES[0],
     ogPage: 'home',   // 沿用首頁方形封面（404 不在十頁清單內，沒有專屬 og-404.jpg）
     robots: true,
@@ -1018,11 +1142,14 @@ function notFoundPage() {
 
 // ---------- 附屬檔 ----------
 const PAGE_URLS = ['/', ...SECTIONS.map((s) => `/${slugOf(s.id)}/`), '/work/', '/about/'];
+// 英文版十頁全數進 sitemap（S29）：優先權比照中文對應頁再降一階（/en/ 給 0.9、其餘 0.7），
+// 表達「中文是原生語版」——與 hreflang 的 x-default 指中文版同一個訊號。
+const PAGE_URLS_EN = PAGE_URLS.map((u) => '/en' + u);
 
 function sitemapXml() {
   const today = new Date().toISOString().slice(0, 10);
-  const urls = PAGE_URLS.map((u) =>
-    `  <url>\n    <loc>${SITE_ORIGIN}${u}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${u === '/' ? '1.0' : '0.8'}</priority>\n  </url>`
+  const urls = [...PAGE_URLS, ...PAGE_URLS_EN].map((u) =>
+    `  <url>\n    <loc>${SITE_ORIGIN}${u}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${u === '/' ? '1.0' : u === '/en/' ? '0.9' : u.startsWith('/en/') ? '0.7' : '0.8'}</priority>\n  </url>`
   ).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
@@ -1047,6 +1174,15 @@ function llmsTxt() {
 ${lines.join('\n')}
 - [Work 工作](${SITE_ORIGIN}/work/)：品牌合作與商業專案。
 - [About 關於我](${SITE_ORIGIN}/about/)：簡介、合作品牌、展覽出版與聯絡方式。
+
+## English (/en/)
+
+> Taipei photographer and 3D artist, born 1996 in Taipei. Every page has an English counterpart under /en/; the Chinese version is the original (hreflang x-default).
+
+${SECTIONS.map((s) => `- [${s.en}](${SITE_ORIGIN}/en/${slugOf(s.id)}/): ${oneLine(EN.sections[s.id].lede)}`).join('\n')}
+- [Home](${SITE_ORIGIN}/en/): portfolio overview — seven series plus Work and About.
+- [Work](${SITE_ORIGIN}/en/work/): ${oneLine(EN.home.workLede)}
+- [About](${SITE_ORIGIN}/en/about/): biography, collaborations, exhibitions and contact.
 
 ## Contact
 
@@ -1129,6 +1265,22 @@ async function build() {
   written.push(write('work/index.html', workPage()));
   written.push(write('about/index.html', aboutPage()));
   written.push(write('404.html', notFoundPage()));
+
+  /* ---- 英文版（S29 2026-08-09）：同一組模板翻牌成 LANG='en' 再跑一遍 ----------
+     產出全數落在 dist\en\，中文版那十一份檔案在這行之前就已寫完 ＝ 英文純增量。
+     翻牌完記得翻回來（下面 finally 那行），免得之後有人在 build() 尾巴加中文產物。 */
+  LANG = 'en';
+  try {
+    written.push(write('en/index.html', homePage()));
+    for (const s of SECTIONS) {
+      written.push(write(`en/${slugOf(s.id)}/index.html`, categoryPage(s, labels[s.id])));
+    }
+    written.push(write('en/work/index.html', workPage()));
+    written.push(write('en/about/index.html', aboutPage()));
+    written.push(write('en/404.html', notFoundPage()));
+  } finally {
+    LANG = 'zh';
+  }
 
   // styles.css = 既有檔原樣 + build 補丁段（不改既有規則）
   const css = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8') +

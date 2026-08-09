@@ -15,6 +15,21 @@
 - [Work 工作](https://www.jerrythepopper.com/work/)：品牌合作與商業專案。
 - [About 關於我](https://www.jerrythepopper.com/about/)：簡介、合作品牌、展覽出版與聯絡方式。
 
+## English (/en/)
+
+> Taipei photographer and 3D artist, born 1996 in Taipei. Every page has an English counterpart under /en/; the Chinese version is the original (hreflang x-default).
+
+- [Hasselblad](https://www.jerrythepopper.com/en/hasselblad/): For my two collaborations with Hasselblad, I wanted to push what the camera could do.
+- [Portraits](https://www.jerrythepopper.com/en/portraits/): Pictures of my friends, and the people who matter, the way they are.
+- [Street](https://www.jerrythepopper.com/en/street/): Street photography is how I read a city.
+- [Nature](https://www.jerrythepopper.com/en/nature/): Nature keeps stunning me, so I do my best to keep a record of them.
+- [3D](https://www.jerrythepopper.com/en/3d/): Exploring the edge between photography and 3D.
+- [Film](https://www.jerrythepopper.com/en/film/): The surprise of film is that I often forget the frame by the time it comes back.
+- [Taipei Wholesale Market](https://www.jerrythepopper.com/en/market/): Lian-tng, the turning of wheels: a documentary project inside the Taipei First Wholesale Fruit and Vegetable Market.
+- [Home](https://www.jerrythepopper.com/en/): portfolio overview — seven series plus Work and About.
+- [Work](https://www.jerrythepopper.com/en/work/): Selected brand collaborations and commissioned work.
+- [About](https://www.jerrythepopper.com/en/about/): biography, collaborations, exhibitions and contact.
+
 ## Contact
 
 - Email: jerrythepopper@gmail.com

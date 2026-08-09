@@ -872,3 +872,66 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
   opacity: 0.85;
 }
 .hero-chrome > .theme-toggle:hover { opacity: 0.6; }
+
+/* =============================================================================
+   S29 語言切換鈕（2026-08-09）——中文頁一顆「EN」、英文頁一顆「中」，兩處出現：
+   frosted nav 最右端（主題鈕左邊）、hero 右上角（主題鈕左邊）。
+   -----------------------------------------------------------------------------
+   為什麼是 <a> 不是 <button>：它是一條真的連結（可 Cmd+點開新分頁、爬蟲跟得動、
+   hreflang 掛得上去），鍵盤可達靠原生 Tab 序，不必補 tabindex 或 keydown。
+   外觀刻意貼齊 nav 項目（同字級、同 tracking、同 uppercase），不做成第二顆圖示鈕
+   ——版頭右上已經有一顆圖示（主題鈕），再加一顆會變成「兩個看不懂的符號」。
+   ============================================================================= */
+.lang-toggle {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 34px; height: 28px;
+  padding: 0 2px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: opacity var(--dur-fast) var(--ease-out), scale 140ms var(--ease-out);
+}
+.lang-toggle:hover { opacity: 0.6; }
+.lang-toggle:active { scale: 0.96; }
+.lang-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .lang-toggle { transition: none; } }
+/* 與主題鈕同一條紀律：首頁 hero 未捲動時整條 frosted 不可見，鈕也要退出 Tab 序 */
+.frosted:not(.is-static):not(.visible) .lang-toggle { visibility: hidden; }
+/* 手機熱區補到 44 高（與 nav 項目 min-height 同值，整條不會因此長高） */
+@media (max-width: 880px) {
+  .lang-toggle { min-width: 44px; height: 44px; }
+}
+/* hero 右上那顆：站在主題鈕左邊。主題鈕佔 [右緣 R, R+44]，所以這顆的 right 至少
+   要 R+44 才不重疊；取 R+46 留 2px 呼吸。寬度收到 36（文字只有兩字元）——390px
+   窄機上左邊還有 .hero-wordmark 那條長字串，太寬會撞上去。 */
+.hero-chrome > .lang-toggle {
+  position: absolute;
+  top: calc(clamp(24px, 4vw, 48px) + 7px);
+  right: calc(clamp(20px, 4vw, 48px) + 46px);
+  transform: translateY(-50%);
+  min-width: 36px; height: 44px;
+  color: var(--color-white);
+  opacity: 0.85;
+}
+.hero-chrome > .lang-toggle:hover { opacity: 0.6; }
+
+/* =============================================================================
+   S29 英文頁排版：不吃中文那套兩端對齊
+   -----------------------------------------------------------------------------
+   上面 S25 (B) 段給 .about-body > p 與 .page-head .subtitle 掛了 justify —— 那是
+   為中文寫的（等寬方塊字撐得開，右緣切齊才好看）。英文若照套，因為沒有 <span class="nb">
+   逐詞鎖定、單字又長短不一，會拉出整排「河流」白洞。英文回到自然的 ragged-right。
+   line-break:strict 是 CJK 禁則，對英文無意義，一併關掉。text-wrap:pretty 兩邊都留
+   （它處理的是末行落單，跟語言無關）。
+   ============================================================================= */
+html[lang="en"] .about-body > p,
+html[lang="en"] .page-head .subtitle {
+  text-align: start;
+  line-break: auto;
+}
