@@ -465,6 +465,7 @@ ${ogDims}<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="${o.rel}favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="${o.rel}styles.css">
 <noscript><style>.fade-up{opacity:1;transform:none}.hero-title .ch{opacity:1;transform:none;animation:none}</style></noscript>
 <script type="application/ld+json">
@@ -1282,9 +1283,15 @@ async function build() {
     LANG = 'zh';
   }
 
-  // styles.css = 既有檔原樣 + build 補丁段（不改既有規則）
-  const css = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8') +
-    '\n' + fs.readFileSync(path.join(SRC, 'patch.css'), 'utf8');
+  // styles.css = 既有檔原樣（剝除 @import，字型改由 head() 的 preconnect+<link>
+  // 並行載入，見 S30 字型鏈優化；源檔 styles.css 本身零觸及，轉換只發生在 build）
+  // + build 補丁段（不改既有規則）
+  const rawCss = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8');
+  const cssNoImport = rawCss.replace(
+    /@import url\('https:\/\/fonts\.googleapis\.com\/css2\?[^']*'\);\n\n?/,
+    ''
+  );
+  const css = cssNoImport + '\n' + fs.readFileSync(path.join(SRC, 'patch.css'), 'utf8');
   written.push(write('styles.css', css));
 
   // site.js

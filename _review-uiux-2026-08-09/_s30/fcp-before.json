@@ -1,0 +1,16 @@
+[
+  {
+    "page": "home",
+    "url": "http://localhost:8146/",
+    "loadMs": 14203,
+    "fcp": 1740,
+    "screenshot": "C:\\Users\\User\\AppData\\Local\\Temp\\claude\\E--HUD-project\\cd6ecf46-e396-4713-98d2-2cab7559cdbe\\scratchpad\\shots\\before-home.png"
+  },
+  {
+    "page": "hasselblad",
+    "url": "http://localhost:8146/hasselblad/",
+    "loadMs": 6408,
+    "fcp": 996,
+    "screenshot": "C:\\Users\\User\\AppData\\Local\\Temp\\claude\\E--HUD-project\\cd6ecf46-e396-4713-98d2-2cab7559cdbe\\scratchpad\\shots\\before-hasselblad.png"
+  }
+]
