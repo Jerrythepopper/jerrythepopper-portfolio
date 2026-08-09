@@ -404,7 +404,7 @@ ${teaser({
     label: '08 Work', cls: ' _alt', reverse: false, href: 'work/', num: '08',
     cover: PHOTOS.hasselblad[7], alt: 'Work', eyebrow: 'Selected · 2023 — 2026',
     h2en: 'Work', h2zh: '工作',
-    lede: 'Brand collaborations and editorial projects. Click any tile to view the project on Instagram.',
+    lede: 'Brand collaborations and editorial projects. Click any tile to view the project.',
     metas: ['Hasselblad', 'Leica', 'Sony', 'Oppo', 'Goopi', 'Reto'], cta: 'View work',
   })}
 ${teaser({
@@ -516,11 +516,12 @@ const WORK_TILES = [
   { url: 'https://www.instagram.com/reel/DCB6M24IH6T/?igsh=MW11YTU4eGk5b2p2dA==', t: 'Goopi 2024', c: '品牌形象動畫', src: 'pt_6' },
   { url: 'https://www.instagram.com/p/DTurh4DkX3V/?igsh=MXY2MDFqNGY3YW1nbQ==', t: 'GIANT', c: '品牌形象動畫', src: 'hb_3' },
   { url: 'https://www.instagram.com/p/CygDcVGSBuS/?igsh=bThtcnozbnFmeTMw', t: 'Goopi 2023', c: '品牌形象合作', src: 'pt_8' },
-  { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDY2OTM1Njg3MTE5MjI3?story_media_id=3854643749046163614&igsh=MTVqaG9kcG8waDNzMQ==', t: 'Giant Liv', c: '品牌形象動畫', src: 'st_1' },
-  { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDY2OTM1Njg3MTE5MjI3?story_media_id=3828514764847548116&igsh=MTVqaG9kcG8waDNzMQ==', t: '新光攝影展講座', c: '攝影展覽講座', src: 'st_4' },
+  { url: 'https://www.instagram.com/p/DVhoPFdmned/', t: 'Giant Liv', c: '品牌形象動畫', src: 'st_1' },
+  { url: 'https://www.instagram.com/p/DWoPExxmdXd/?img_index=2', t: '新光攝影展講座', c: '攝影展覽講座', src: 'st_4' },
+  { url: 'https://www.instagram.com/p/CjK7UdTJl36/?img_index=1', t: 'Rolls-Royce', c: '品牌形象拍攝', src: 'st_10' },
   { url: 'https://www.instagram.com/reel/DJ6w-6ah0QN/?igsh=ZGs3MjFnM3o5NTdz', t: 'Reto 相機', c: '產品動畫製作', src: 'td_0' },
   { url: 'https://www.instagram.com/p/Cl3lNf9h8cm/?igsh=MTlqcXhudWUyZHBvag==', t: 'TEDxChungChengU', c: '品牌演講活動', src: 'pt_2' },
-  { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?story_media_id=3542991936099659472&igsh=MXhhZnRoamoxc2QxZw==', t: 'Sony YouTube', c: '品牌影片內容', src: 'st_7' },
+  { url: 'https://www.youtube.com/watch?v=S7ng0s7i1FE', t: 'Sony YouTube', c: '品牌影片內容', src: 'st_7' },
   { url: 'https://www.yottau.com.tw/course/intro/1421#intro', t: 'Yotta 底片課程', c: '線上攝影課程', src: 'fm_2' },
   { url: 'https://www.instagram.com/p/C1GslZYBrSX/?img_index=1&igsh=MXdoNmE0eGNmNWo1cA==', t: '晶悅建設', c: '品牌形象拍攝', src: 'hb_7' },
   { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?story_media_id=3239957459305757128&igsh=MXhhZnRoamoxc2QxZw==', t: '仁發建設', c: '品牌形象拍攝', src: 'hb_10' },
@@ -532,9 +533,10 @@ function workPage() {
   const tiles = WORK_TILES.map((w) => {
     const [p, n] = w.src.split('_');
     const photoSrc = PHOTOS[PREFIX2CAT[p] || 'market'][parseInt(n, 10)];
+    const linkLabel = w.url.includes('youtube.com') ? 'YouTube' : w.url.includes('yottau.com') ? 'YottaU' : 'Instagram';
     return `  <a href="${esc(w.url)}" target="_blank" rel="noopener noreferrer" class="work-tile">
     <div class="ph" style="${bgImage(photoSrc, '../')}"></div>
-    <div class="ig">Instagram ↗</div>
+    <div class="ig">${linkLabel} ↗</div>
     <div class="meta">
       <div class="t">${esc(w.t)}</div>
       <div class="c">${esc(w.c)}</div>
@@ -552,8 +554,8 @@ function workPage() {
       <span>Selected · 2023 — 2026</span>
     </div>
     <h1>Work<span class="jp">工作</span></h1>
-    <p class="subtitle">Brand collaborations and editorial projects. Click any tile to view the project on Instagram.
-品牌合作與商業工作。點擊任一方塊在 Instagram 上查看專案。</p>
+    <p class="subtitle">Brand collaborations and editorial projects. Click any tile to view the project.
+品牌合作與商業工作。點擊任一方塊查看專案。</p>
     <div class="meta"><span>HASSELBLAD</span><span>LEICA</span><span>SONY</span><span>OPPO</span><span>GOOPI</span><span>RETO</span><span>2020 — 2026</span></div>
   </div>
 
