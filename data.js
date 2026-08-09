@@ -50,20 +50,30 @@
   // idx = 該系列 PHOTOS 陣列的索引；dzi = photos\dz\ 下的 .dzi 路徑（相對站根）
   // 2026-08-09 起是真原檔：哈蘇 48 張裡長邊最大者（一億畫素機身，42 張長邊 ≥8000）。
   // 初版三張（idx 1/4/6）之後同日站主親選再加六張擴編到九張（idx 3/10/13/23/34/36），
-  // 現役三張不動、新增沿用同套規格（512px tile / overlap 1）。
+  // 再擴編十張到二十張（idx 0/8/14/15/17/18/20/24/38/43，站主逐張親審定案）。
   // 切片名 hbNN 的 NN 就是 idx，日後要加片只要照這個對應加就好。
   window.DEEPZOOM = {
     hasselblad: [
+      { idx: 0, dzi: 'photos/dz/hb00.dzi', label: 'Deep Zoom · 8686 × 11581' },
       { idx: 1, dzi: 'photos/dz/hb01.dzi', label: 'Deep Zoom · 8619 × 19242' },
       { idx: 3, dzi: 'photos/dz/hb03.dzi', label: 'Deep Zoom · 7850 × 10467' },
       { idx: 4, dzi: 'photos/dz/hb04.dzi', label: 'Deep Zoom · 8742 × 11656' },
       { idx: 6, dzi: 'photos/dz/hb06.dzi', label: 'Deep Zoom · 11656 × 8742' },
+      { idx: 8, dzi: 'photos/dz/hb08.dzi', label: 'Deep Zoom · 10945 × 4041' },
       { idx: 10, dzi: 'photos/dz/hb10.dzi', label: 'Deep Zoom · 8742 × 11656' },
       { idx: 13, dzi: 'photos/dz/hb13.dzi', label: 'Deep Zoom · 8742 × 11656' },
+      { idx: 14, dzi: 'photos/dz/hb14.dzi', label: 'Deep Zoom · 8742 × 11656' },
+      { idx: 15, dzi: 'photos/dz/hb15.dzi', label: 'Deep Zoom · 8742 × 11656' },
+      { idx: 17, dzi: 'photos/dz/hb17.dzi', label: 'Deep Zoom · 11656 × 8742' },
+      { idx: 18, dzi: 'photos/dz/hb18.dzi', label: 'Deep Zoom · 8742 × 11656' },
+      { idx: 20, dzi: 'photos/dz/hb20.dzi', label: 'Deep Zoom · 11656 × 8742' },
       { idx: 23, dzi: 'photos/dz/hb23.dzi', label: 'Deep Zoom · 8742 × 11656' },
+      { idx: 24, dzi: 'photos/dz/hb24.dzi', label: 'Deep Zoom · 8742 × 11656' },
       { idx: 29, dzi: 'photos/dz/hb29.dzi', label: 'Deep Zoom · 10302 × 7727' },
       { idx: 34, dzi: 'photos/dz/hb34.dzi', label: 'Deep Zoom · 9907 × 7430' },
       { idx: 36, dzi: 'photos/dz/hb36.dzi', label: 'Deep Zoom · 11656 × 8742' },
+      { idx: 38, dzi: 'photos/dz/hb38.dzi', label: 'Deep Zoom · 11656 × 4304' },
+      { idx: 43, dzi: 'photos/dz/hb43.dzi', label: 'Deep Zoom · 8742 × 11656' },
     ],
   };
 
