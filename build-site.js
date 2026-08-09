@@ -244,7 +244,7 @@ function footer(rel) {
     <div>
       <div class="foot-brand">
         <span class="en">Jerrythepopper</span>
-        <span class="zh">洪立楷 · Photography</span>
+        <span class="zh">洪立楷 · Photography / 3D</span>
       </div>
     </div>
     <div>
@@ -269,7 +269,7 @@ ${series}
     </div>
   </div>
   <div class="foot-hire">Available for commissions · <a href="mailto:jerrythepopper@gmail.com">jerrythepopper@gmail.com</a></div>
-  <small>© 2026 Jerrythepopper · Photography Portfolio</small>
+  <small>© 2026 Jerrythepopper · Photography & 3D Portfolio</small>
 </footer>`;
 }
 
@@ -309,7 +309,7 @@ ${slides}
 
   <div class="hero-chrome">
     <a href="./" class="hero-wordmark">
-      <span class="en">Jerrythepopper · Photography</span>
+      <span class="en">Jerrythepopper · Photography / 3D</span>
     </a>
     <div class="hero-topnav">
       <a href="work/">Work</a>
@@ -320,10 +320,10 @@ ${slides}
 
   <div class="hero-title-wrap">
     <div class="hero-eyebrow">
-      <span class="h-line"></span><span>Photography portfolio</span><span class="h-line"></span>
+      <span class="h-line"></span><span>Photography · 3D</span><span class="h-line"></span>
     </div>
     <h1 class="hero-title">${chars}</h1>
-    <div class="hero-sub">洪 立 楷 ／ 攝 影 作 品</div>
+    <div class="hero-sub">洪 立 楷 ／ 影 像 作 品</div>
   </div>
 
   <div class="hero-dots">
@@ -418,7 +418,7 @@ ${teaser({
 
   return shell({
     rel: '', current: 'home', main,
-    title: 'Jerrythepopper 洪立楷｜攝影作品集 Photography Portfolio',
+    title: 'Jerrythepopper 洪立楷｜攝影 × 3D 作品集 Photography & 3D Portfolio',
     desc: clip(oneLine('以影像捕捉人文、街頭與空間的情緒。攝影師、3D 創作者，Based in Taipei。曾與 Hasselblad、Leica、Sony、Oppo、Giant 等品牌合作。'), 155),
     canonicalPath: '/',
     ogImage: HERO_SLIDES[0],
@@ -726,7 +726,7 @@ function llmsTxt() {
   const lines = SECTIONS.map((s) =>
     `- [${s.en} ${s.zh}](${SITE_ORIGIN}/${slugOf(s.id)}/)：${oneLine(s.lede)}`
   );
-  return `# Jerrythepopper 洪立楷 — Photography Portfolio
+  return `# Jerrythepopper 洪立楷 — Photography & 3D Portfolio
 
 > 攝影師、3D 創作者，1996 年生於台北。以影像捕捉人文、街頭與空間的情緒；曾與 Hasselblad、Leica、Sony、Oppo、Giant 等品牌合作。紀實計畫《輪轉》記錄台北第一果菜批發市場。
 
