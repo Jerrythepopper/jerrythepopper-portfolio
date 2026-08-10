@@ -1217,7 +1217,7 @@ const OG_META = {};   // page key → { rel, w, h }，generateOgImages() 於 bui
 
 function ogSpecs() {
   return [
-    { page: 'home', src: HERO_SLIDES[0] },
+    { page: 'home', src: PHOTOS.three_d[0] },   // 站主 08-10 裁：搜尋/分享門面改 3D 系列首圖
     ...SECTIONS.map((s) => ({ page: slugOf(s.id), src: photosFor(s.id)[s.coverIdx] })),
     { page: 'work', src: PHOTOS.hasselblad[0] },
     { page: 'about', src: ABOUT_PORTRAIT },
