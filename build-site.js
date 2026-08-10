@@ -722,6 +722,13 @@ ${metaBlock}      <a href="${slugOf(s.id)}/" class="cta">View series <span class
 </section>`;
 }
 
+// 生長細線（flow-rule）：首頁區塊交界＋系列頁 gallery 後、Next Series 前，共用同一份
+// 標記。掛 class="fade-up flow-rule"——借既有 fade-up 的 IntersectionObserver 基建
+// 觸發生長動畫，樣式與明暗配色見 patch.css「生長細線」區塊；純裝飾故 aria-hidden。
+function flowRuleHTML() {
+  return `<div class="fade-up flow-rule" aria-hidden="true"></div>`;
+}
+
 function teaser(o) {
   // o: {label, cls, reverse, href, num, cover, alt, eyebrow, h2en, h2zh, lede, metas, cta, rel}
   // o.rel＝assetRel（照片路徑用），理由同 categorySection
@@ -759,10 +766,15 @@ function homePage() {
   </div>
 </section>`;
 
+  // 生長細線：各系列區塊交界＋work/about teaser 之間（同一套 .section 節奏，站主
+  // 核准的判斷=teaser 與系列區塊視覺同族，一併含入，讓首頁下半段裝飾節奏連貫不斷；
+  // intro→第一個系列區塊之間、hero 底部不放——hero 已有 SCROLL 線、intro 非「系列區塊」）
+  const rule = flowRuleHTML();
   const main = `<main data-screen-label="01 Home">
 ${heroBlock(lhref)}
 ${intro}
-${SECTIONS.map((s, i) => categorySection(s, i, rel)).join('\n')}
+${SECTIONS.map((s, i) => categorySection(s, i, rel)).join('\n' + rule + '\n')}
+${rule}
 ${teaser({
     label: '08 Work', cls: ' _alt', reverse: false, href: 'work/', num: '08', rel,
     cover: PHOTOS.hasselblad[7], alt: 'Work', eyebrow: 'Selected · 2023 — 2026',
@@ -770,6 +782,7 @@ ${teaser({
     lede: isEn() ? EN.home.workLede : '品牌合作與商業工作精選。',
     metas: ['Hasselblad', 'Leica', 'Sony', 'Oppo', 'Goopi', 'Reto'], cta: 'View work',
   })}
+${rule}
 ${teaser({
     label: '09 About', cls: '', reverse: true, href: 'about/', num: '09', rel,
     cover: ABOUT_PORTRAIT, alt: 'About', eyebrow: 'Photographer · 3D Creator',
@@ -865,6 +878,7 @@ ${subtitle}${metaBlock}${dzNote}  </div>
 ${frames}
 </section>
 
+${flowRuleHTML()}
 ${nextSeriesBlock(s)}
 </main>`;
 

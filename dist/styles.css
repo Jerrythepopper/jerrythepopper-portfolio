@@ -1013,6 +1013,36 @@ button { font: inherit; letter-spacing: inherit; }
 .lb-prev { left: max(24px, env(safe-area-inset-left, 0px)); }
 .lb-next { right: max(24px, env(safe-area-inset-right, 0px)); }
 
+/* =============================================================================
+   生長細線（flow-rule）——首頁各系列區塊交界＋系列頁 gallery 後、Next Series 前，
+   靈感=貴船神社參考站節奏語彙。純裝飾 aria-hidden，寬 1px／高 56px／垂直置中線，
+   進入視窗由上往下生長（scaleY 0→1，transform-origin:top，避免動畫期間觸發 reflow）。
+   -----------------------------------------------------------------------------
+   掛在既有 .fade-up 上（沿用它的 IntersectionObserver 基建，不重複造觀察器）——
+   class="fade-up flow-rule"：.flow-rule 蓋掉 .fade-up 的預設 opacity/transform/
+   transition（同層級單一 class 選擇器，源碼序後者勝），減少動態時走
+   .fade-up 既有的 reduced-motion 覆寫（transform:none/transition:none），
+   不必另開規則。
+   版面零位移手法：兩側各給負 margin（-28px）內縮進相鄰 section 既有的大留白
+   （clamp 96-192px padding），56px 高度扣掉左右各 28px 淨增量趨近 0，吸收既有
+   留白而非增高頁面。
+   顏色：亮場＝--color-text 40%；暗場沿用深色 hairline 家族同套路（以 --dk-text
+   為底配一個固定 alpha，同 --dk-line-faint/--dk-line 的作法），走既有
+   ①字面值 ②可切換槽 ③規則 ④啟用指派 架構（見下方深色模式區塊）。
+   ============================================================================= */
+.flow-rule {
+  display: block;
+  width: 1px;
+  height: 56px;
+  margin: -28px auto;
+  opacity: 1;
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 600ms var(--ease-out);
+}
+.flow-rule.in { transform: scaleY(1); }
+/* 背景色（--c-flow-rule 明暗切換槽）走「③ 吃槽的規則」共用區塊，見下方深色模式段 */
+
 /* ---- 系列頁尾「下一個系列」導流（低調，沿用 eyebrow / jp / arr 的字級與字距） ---- */
 .next-series {
   max-width: var(--container-max);
@@ -1704,6 +1734,7 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
   --dk-text-faint: #67635d;   /* 系列序號等純裝飾數字；2.82:1 */
   --dk-line: rgba(233, 229, 222, 0.55);       /* CTA 邊框／flow-line 蓄勢那一畫；4.95:1 */
   --dk-line-faint: rgba(233, 229, 222, 0.14); /* hairline：暖白 14%，暗場比亮場再吃重才不消失 */
+  --dk-flow-rule: rgba(233, 229, 222, 0.4);   /* 生長細線：暖白 40%，同 hairline 家族「固定 alpha 疊 --dk-text」套路 */
   /* 毛玻璃 0.78 是實算下限——捲過一張全白照片時導覽文字對玻璃仍有 6.52:1（0.72 只剩 5.30） */
   --dk-frosted: rgba(31, 29, 26, 0.78);
   --dk-hero: #141210;         /* 影片載入前的底：由冷黑改暖墨，與整面牆同色溫 */
@@ -1724,6 +1755,7 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
   --c-lb-bar: linear-gradient(180deg, rgba(20, 22, 28, 0) 0%, rgba(20, 22, 28, 0.52) 72%);
   --c-dzv-bg: #0d0e12;
   --c-dzv-bar: linear-gradient(180deg, rgba(13, 14, 18, 0) 0%, rgba(13, 14, 18, 0.62) 76%);
+  --c-flow-rule: rgba(17, 17, 18, 0.4);   /* 生長細線：亮場 --color-text(#111112) 40% */
   /* 切換鈕的日／月交叉淡出（1 = 該顆出場）。亮場出月亮＝點了會變暗 */
   --tt-sun: 0;
   --tt-moon: 1;
@@ -1742,6 +1774,7 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
 .lb-bar { background: var(--c-lb-bar); }
 .dzv { background: var(--c-dzv-bg); }
 .dzv-bar { background: var(--c-dzv-bar); }
+.flow-rule { background: var(--c-flow-rule); }
 
 /* ---- ④ 啟用深色：系統偏好（未手動指定時）＋ 手動指定，兩者只做指派 ---- */
 @media (prefers-color-scheme: dark) {
@@ -1764,6 +1797,7 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
     --c-lb-bar: var(--dk-lb-bar);
     --c-dzv-bg: var(--dk-dzv);
     --c-dzv-bar: var(--dk-dzv-bar);
+    --c-flow-rule: var(--dk-flow-rule);
     --tt-sun: 1;
     --tt-moon: 0;
   }
@@ -1787,6 +1821,7 @@ html.js .hero-video { transition: opacity 900ms var(--ease-out); }
   --c-lb-bar: var(--dk-lb-bar);
   --c-dzv-bg: var(--dk-dzv);
   --c-dzv-bar: var(--dk-dzv-bar);
+  --c-flow-rule: var(--dk-flow-rule);
   --tt-sun: 1;
   --tt-moon: 0;
 }
