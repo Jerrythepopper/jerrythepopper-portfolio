@@ -1031,16 +1031,19 @@ button { font: inherit; letter-spacing: inherit; }
    ①字面值 ②可切換槽 ③規則 ④啟用指派 架構（見下方深色模式區塊）。
    ============================================================================= */
 .flow-rule {
+  /* 線長單一變數控全局（高/負margin/動畫行程共用,零位移數學自動成立）。
+     08-10 站主真機複裁：手機頂部留白淺,72px 存在感過重→分尺寸給長度 */
+  --flow-len: 72px;
   display: block;
   position: relative;
   width: 1px;
-  height: 72px;
+  height: var(--flow-len);
   /* 08-10 站主二次複裁：整條線垂進下一格頂端＝線頂貼兩區塊接縫、不跨底色接縫,
-     像鉛垂線直指新章節標題——上方不留探出量(0)、下方全部垂下(-72);
-     總和仍 -72 抵銷 72px 高=頁高仍零位移 */
-  margin: 0 auto -72px;
+     像鉛垂線直指新章節標題——上方不留探出量(0)、下方全部垂下(-線長);
+     總和 -線長 抵銷線高=頁高仍零位移 */
+  margin: 0 auto calc(-1 * var(--flow-len));
   overflow: hidden;
-  /* 兩側 section 皆 position:relative＋不透明底,DOM 在後者會把探進門廊的下 60px
+  /* 兩側 section 皆 position:relative＋不透明底,DOM 在後者會把探進門廊的下段
      蓋掉只剩縫隙一小截（08-10 站主截圖實錄）——抬 z-index 讓 1px 線浮到區塊背景上 */
   z-index: 1;
   /* 中和 .fade-up 的進場預設（此元素不走淡入,常駐顯示,動態由 ::after 掃落負責） */
@@ -1048,20 +1051,24 @@ button { font: inherit; letter-spacing: inherit; }
   transform: none;
   transition: none;
 }
+@media (max-width: 720px) {
+  .flow-rule { --flow-len: 48px; }
+}
 /* 亮光掃落——與 hero SCROLL 線同一套呼吸（站主 08-10 裁:要會動,沿用 hint-line 配方,
    週期放慢一階=2600ms 讓多條同屏時不像跑馬燈） */
 .flow-rule::after {
   content: '';
   position: absolute;
-  top: -72px; left: 0;
-  width: 1px; height: 72px;
+  top: calc(-1 * var(--flow-len)); left: 0;
+  width: 1px; height: var(--flow-len);
   background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, var(--c-flow-rule) 100%);
   animation: flow-rule-sweep 2600ms cubic-bezier(0.6, 0.05, 0.4, 0.95) infinite;
 }
+/* var() 在 keyframes 內按套用元素解析——手機/桌機各吃自己的 --flow-len */
 @keyframes flow-rule-sweep {
-  0% { top: -72px; }
-  60% { top: 72px; }
-  100% { top: 72px; }
+  0% { top: calc(-1 * var(--flow-len)); }
+  60% { top: var(--flow-len); }
+  100% { top: var(--flow-len); }
 }
 @media (prefers-reduced-motion: reduce) {
   .flow-rule::after { animation: none; top: 0; }
