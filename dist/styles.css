@@ -1039,8 +1039,10 @@ button { font: inherit; letter-spacing: inherit; }
      非懸在空白正中——上方留大空(-12)、下方吃緊(-60);總和 -72 抵銷 72px 高=頁高仍零位移 */
   margin: -12px auto -60px;
   overflow: hidden;
+  /* 兩側 section 皆 position:relative＋不透明底,DOM 在後者會把探進門廊的下 60px
+     蓋掉只剩縫隙一小截（08-10 站主截圖實錄）——抬 z-index 讓 1px 線浮到區塊背景上 */
+  z-index: 1;
   /* 中和 .fade-up 的進場預設（此元素不走淡入,常駐顯示,動態由 ::after 掃落負責） */
-  opacity: 1;
   opacity: 1;
   transform: none;
   transition: none;
