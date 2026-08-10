@@ -11,6 +11,50 @@
   var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
+  /* ---------- ⓪a 微文案在地化（2026-08-11） --------------------------------
+     燈箱／Deep Zoom 檢視器的操作提示與 aria-label 原本是寫死的中文字面值，
+     所以 /en/ 底下的頁面點開燈箱，跳出來的還是中文。
+
+     語言判定吃 <html lang>：build-site.js 的 head() 已經寫死
+     lang="en" / lang="zh-Hant"（見該檔 458 行），不必再發明 data 屬性。
+
+     用法 T('key', '中文原字')——中文原字留在呼叫點當第二引數，有兩個好處：
+       ① 中文頁永遠回傳第二引數，逐字元與改版前相同＝零回歸是結構保證的，
+          不是靠我把字典抄對。
+       ② 英文表漏了某個 key 也只會退回中文，不會變成空字串或 undefined。
+     新增可見字串時請照這個形狀走，別再寫裸中文字面值。 ---------------------- */
+  var isEn = (document.documentElement.getAttribute('lang') || '')
+    .toLowerCase().indexOf('en') === 0;
+  var EN_STR = {
+    // Deep Zoom 檢視器
+    dzViewer:    'Deep Zoom viewer',
+    dzPrev:      'Previous Deep Zoom image',
+    dzNext:      'Next Deep Zoom image',
+    dzHintTouch: 'Pinch to zoom · Drag to pan · Double-tap to zoom',
+    dzHintMouse: 'Scroll / double-click to zoom · Drag to pan',
+    dzSwitchTouch: ' · ‹ › switch',
+    dzSwitchKey:   ' · ←→ switch',
+    dzKeys:        ' · + − 0 · ESC to close',
+    // 燈箱
+    lbViewer:    'Image viewer',
+    lbPrev:      'Previous image',
+    lbNext:      'Next image',
+    lbZoomIn:    'Zoom image to full resolution',
+    lbZoomOut:   'Reset zoom',
+    lbHintTouchZoomed: 'Drag to pan · Double-tap to reset · Pinch to zoom',
+    lbHintTouch:       'Double-tap to zoom · Pinch to zoom · Tap background to close',
+    lbHintZoomed:      'Drag to pan · Click to reset · ESC to close',
+    lbHint:            'Click to zoom · ESC to close',
+    // 計數器分隔：中文版用全形斜線（配中文字面寬度），英文版用半形
+    lbCountSep:  ' / ',
+    // 兩處共用
+    close:       'Close',
+  };
+  function T(key, zh) {
+    var s = isEn ? EN_STR[key] : null;
+    return s == null ? zh : s;
+  }
+
   /* ---------- ⓪ 深淺色切換（S24） ------------------------------------------
      三態語意只有兩顆按鈕：沒點過＝跟系統走（<html> 上沒有 data-theme），點一下＝
      釘死到另一邊並寫進 localStorage，再點一次＝釘到回來。要回到「跟系統」請清
@@ -572,22 +616,22 @@
       box.className = 'dzv';
       box.setAttribute('role', 'dialog');
       box.setAttribute('aria-modal', 'true');
-      box.setAttribute('aria-label', 'Deep Zoom 檢視器');
+      box.setAttribute('aria-label', T('dzViewer', 'Deep Zoom 檢視器'));
       var multi = items.length > 1;
       box.innerHTML =
         '<div class="dzv-loading">Loading tiles…</div>' +
         '<div class="dzv-canvas"></div>' +
-        '<button class="lb-btn dzv-close" type="button" aria-label="關閉">✕</button>' +
+        '<button class="lb-btn dzv-close" type="button" aria-label="' + T('close', '關閉') + '">✕</button>' +
         (multi
-          ? '<button class="lb-btn dzv-prev" type="button" aria-label="上一件 Deep Zoom 作品">‹</button>' +
-            '<button class="lb-btn dzv-next" type="button" aria-label="下一件 Deep Zoom 作品">›</button>'
+          ? '<button class="lb-btn dzv-prev" type="button" aria-label="' + T('dzPrev', '上一件 Deep Zoom 作品') + '">‹</button>' +
+            '<button class="lb-btn dzv-next" type="button" aria-label="' + T('dzNext', '下一件 Deep Zoom 作品') + '">›</button>'
           : '') +
         '<div class="dzv-bar"><span class="dzv-label"></span><span class="dzv-hint"></span></div>' +
         '<div class="dzv-zoom">—</div>';
       box.querySelector('.dzv-label').textContent = label || 'Deep Zoom';
       box.querySelector('.dzv-hint').textContent = coarse
-        ? '雙指縮放 · 拖曳平移 · 雙擊放大' + (multi ? ' · ‹ › 切換作品' : '')
-        : '滾輪／雙擊縮放 · 拖曳平移' + (multi ? ' · ←→ 切換作品' : '') + ' · ＋ − 0 · ESC 關閉';
+        ? T('dzHintTouch', '雙指縮放 · 拖曳平移 · 雙擊放大') + (multi ? T('dzSwitchTouch', ' · ‹ › 切換作品') : '')
+        : T('dzHintMouse', '滾輪／雙擊縮放 · 拖曳平移') + (multi ? T('dzSwitchKey', ' · ←→ 切換作品') : '') + T('dzKeys', ' · ＋ − 0 · ESC 關閉');
       zoomEl = box.querySelector('.dzv-zoom');
       box.querySelector('.dzv-close').addEventListener('click', close);
       if (multi) {
@@ -736,11 +780,11 @@
       lb.classList.toggle('is-zoomed', z);
       stage.setAttribute('aria-pressed', z ? 'true' : 'false');
       if (coarse) {
-        hint.textContent = z ? '單指拖曳平移 · 雙擊縮回 · 雙指縮放' : '雙擊放大 · 雙指縮放 · 點背景關閉';
+        hint.textContent = z ? T('lbHintTouchZoomed', '單指拖曳平移 · 雙擊縮回 · 雙指縮放') : T('lbHintTouch', '雙擊放大 · 雙指縮放 · 點背景關閉');
       } else {
-        hint.textContent = z ? '拖曳平移 · 點擊縮回 · ESC 關閉' : '點擊放大 · ESC 關閉';
+        hint.textContent = z ? T('lbHintZoomed', '拖曳平移 · 點擊縮回 · ESC 關閉') : T('lbHint', '點擊放大 · ESC 關閉');
       }
-      stage.setAttribute('aria-label', z ? '縮回原尺寸' : '放大圖片至原生解析度');
+      stage.setAttribute('aria-label', z ? T('lbZoomOut', '縮回原尺寸') : T('lbZoomIn', '放大圖片至原生解析度'));
     }
     function resetZoom() {
       scale = 1; tx = 0; ty = 0;
@@ -769,12 +813,12 @@
       lb.className = 'lb';
       lb.setAttribute('role', 'dialog');
       lb.setAttribute('aria-modal', 'true');
-      lb.setAttribute('aria-label', '圖片檢視');
+      lb.setAttribute('aria-label', T('lbViewer', '圖片檢視'));
       lb.innerHTML =
-        '<button class="lb-btn lb-close" type="button" aria-label="關閉">✕</button>' +
-        '<button class="lb-btn lb-prev" type="button" aria-label="上一張">‹</button>' +
-        '<button class="lb-btn lb-next" type="button" aria-label="下一張">›</button>' +
-        '<div class="lb-stage" tabindex="0" role="button" aria-pressed="false" aria-label="放大圖片至原生解析度"><picture class="lb-pic"><img alt=""></picture></div>' +
+        '<button class="lb-btn lb-close" type="button" aria-label="' + T('close', '關閉') + '">✕</button>' +
+        '<button class="lb-btn lb-prev" type="button" aria-label="' + T('lbPrev', '上一張') + '">‹</button>' +
+        '<button class="lb-btn lb-next" type="button" aria-label="' + T('lbNext', '下一張') + '">›</button>' +
+        '<div class="lb-stage" tabindex="0" role="button" aria-pressed="false" aria-label="' + T('lbZoomIn', '放大圖片至原生解析度') + '"><picture class="lb-pic"><img alt=""></picture></div>' +
         '<div class="lb-bar"><div class="lb-count-row"><div class="lb-counter"></div>' +
         '<button class="lb-dz" type="button" hidden>Deep Zoom <span aria-hidden="true">↗</span></button></div>' +
         '<div class="lb-hint"></div></div>';
@@ -940,7 +984,7 @@
       pic = np;
       stageImg = pic.querySelector('img');
       stageImg.addEventListener('load', function () { measure(); clampPan(); applyTransform(); });
-      counter.textContent = pad2(index + 1) + ' ／ ' + pad2(srcs.length);
+      counter.textContent = pad2(index + 1) + T('lbCountSep', ' ／ ') + pad2(srcs.length);
       // 這張掛得起切片才亮轉乘鈕；翻到沒切片的就收起來（hidden 也一併退出 Tab 序）
       var hasDz = !!(frames[index] && frames[index].getAttribute('data-dzi'));
       dzBtn.hidden = !hasDz;

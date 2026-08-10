@@ -570,7 +570,9 @@ ${series}
       </ul>
     </div>
   </div>
-  <div class="foot-hire">Available for commissions · <a href="mailto:jerrythepopper@gmail.com">jerrythepopper@gmail.com</a></div>
+  <div class="foot-hire">${isEn()
+    ? 'Open for commissions — photography &amp; 3D projects: '
+    : 'Open for commissions — 攝影・3D 委託合作：'}<a href="mailto:jerrythepopper@gmail.com">jerrythepopper@gmail.com</a></div>
   <small>© 2026 Jerrythepopper · Photography & 3D Portfolio</small>
 </footer>`;
 }
@@ -940,6 +942,21 @@ const WORK_TILES = [
   { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?story_media_id=3239957459305757128&igsh=MXhhZnRoamoxc2QxZw==', t: '仁發建設', c: '品牌形象拍攝', src: 'work/renfa' },
 ];
 
+/* Work 磚牆後的「找我合作」出口（站主 2026-08-11 核准）。頁尾那條 .foot-hire 是
+   全站主力，這塊是 Work 頁的輔助——看完商業案例的人正好在這個位置想找聯絡方式。
+   刻意不做底色塊 / 不做表單：沿用 next-series 的「細線＋次級標題」語彙，維持
+   「作品說話」的調性。英文文案住 data-en.js 的 EN.work.ctaTitle / ctaLead。 */
+const HIRE_EMAIL = 'jerrythepopper@gmail.com';
+
+function workCtaBlock() {
+  const title = isEn() ? EN.work.ctaTitle : '有案子想聊？';
+  const lead = isEn() ? EN.work.ctaLead : '歡迎來信';
+  return `<section class="fade-up work-cta" style="transition-delay:0ms">
+  <h2 class="work-cta-title">${esc(title)}</h2>
+  <p class="work-cta-line">${esc(lead)} — <a href="mailto:${HIRE_EMAIL}">${HIRE_EMAIL}</a></p>
+</section>`;
+}
+
 const PREFIX2CAT = { pt: 'portraits', hb: 'hasselblad', st: 'street', na: 'nature', td: 'three_d', fm: 'film', mk: 'market' };
 
 // WORK_TILES.src → 站根相對圖片路徑
@@ -1004,6 +1021,8 @@ ${tiles}
     </div>
   </div>
 </section>
+
+${workCtaBlock()}
 </main>`;
 
   return shell({
@@ -1057,15 +1076,20 @@ function aboutPage() {
     'Sony × Jerrythepopper 教學影片（YouTube 街拍教學）',
   ];
   const li = (arr) => arr.map((x) => `      <li>${esc(x)}</li>`).join('\n');
-  /* 合作品牌：群組標籤照譯，品牌名本身不譯（_content-en-draft.md 第 68 行明寫）
-     ——所以英文頁的「名發建設／朱銘美術館」這類中文品牌名是刻意保留，不是漏譯。 */
+  /* 合作品牌：群組標籤照譯。品牌名 08-11 起英文頁改放「查證過的官方英名」——
+     只收官方一手來源（官網/政府登記）自稱的英文名（研究 agent 逐一附來源查證）；
+     名發/三發/晶悅三家建設公司查無官方英名＝保留中文，寧可留白不猜譯（站主裁示）。
+     中文頁（v 欄）逐字不動。 */
   const brandRows = [
-    { k: '相機品牌', v: 'Hasselblad、Leica Camera Taiwan、Sony、Oppo、Reto' },
-    { k: '建築 / 商業', v: '名發建設、三發建設、晶悅建設、臺北農產運銷公司、捷安特' },
-    { k: '文化 / 藝術', v: '朱銘美術館、孤僻Goopi' },
-    { k: '商業平台', v: '蝦皮' },
+    { k: '相機品牌', v: 'Hasselblad、Leica Camera Taiwan、Sony、Oppo、Reto',
+      vEn: 'Hasselblad, Leica Camera Taiwan, Sony, Oppo, Reto' },
+    { k: '建築 / 商業', v: '名發建設、三發建設、晶悅建設、臺北農產運銷公司、捷安特',
+      vEn: '名發建設, 三發建設, 晶悅建設, Taipei Agricultural Products Marketing Corporation, Giant' },
+    { k: '文化 / 藝術', v: '朱銘美術館、孤僻Goopi',
+      vEn: 'Juming Museum, GOOPiMADE' },
+    { k: '商業平台', v: '蝦皮', vEn: 'Shopee' },
   ].map((r) =>
-    `      <p><b>${esc(isEn() ? (EN.about.brandLabels[r.k] || r.k) : r.k)}</b><span class="bd">${seg(r.v)}</span></p>`
+    `      <p><b>${esc(isEn() ? (EN.about.brandLabels[r.k] || r.k) : r.k)}</b><span class="bd">${isEn() ? esc(r.vEn) : seg(r.v)}</span></p>`
   ).join('\n');
   const main = `<main class="page" data-screen-label="10 About">
   <div class="fade-up page-head" style="transition-delay:0ms">

@@ -73,6 +73,13 @@
       // 中文版 subtitle 是「英文一行＋中文一行」，英文版只留英文那行
       subtitle: 'Brand collaborations and editorial projects. Click any tile to view the project.',
       featuredSub: 'Selected collaborations and personal work',
+      /* 磚牆後的「找我合作」出口（站主 2026-08-11 核准新增）。
+         這兩句是本次新寫的 CTA 文案，不是 _content-en-draft.md 的既有句
+         ——本檔「逐字照抄文案檔」的紀律在此開一個記錄有案的例外，
+         等文案檔補上同一段之後，兩邊即回到一致。
+         email 本身不進表：mailto 連結由 build-site.js 組，中英共用同一個地址。 */
+      ctaTitle: 'Have a project in mind?',
+      ctaLead: 'Get in touch',
       // 磚的分類標籤（中文 → 英文）；查無對照就原樣輸出，不會漏字
       cats: {
         '品牌形象拍攝': 'Brand photography',

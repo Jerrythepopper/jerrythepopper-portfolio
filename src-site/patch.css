@@ -1192,3 +1192,49 @@ html, body {
 .foot-hire a {
   overflow-wrap: anywhere;
 }
+
+/* =============================================================================
+   Work 頁尾「找我合作」出口（2026-08-11）
+   -----------------------------------------------------------------------------
+   看完商業案例的人正好在這個位置想找聯絡方式。刻意不做底色塊、不做表單——沿用
+   系列頁 .next-series 的「細線＋次級標題」語彙，維持「作品說話」的調性。
+   容器三件（max-width / margin / padding）對齊上方 .work-grid，左緣才切齊磚牆。
+   顏色全部走既有可切換槽（--color-text / --color-text-muted / --color-line-faint，
+   三者在下方深色模式兩個啟用塊裡都已改寫），所以明暗兩態自動成立，不新增 token。
+   ============================================================================= */
+.work-cta {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--container-pad) clamp(88px, 12vw, 140px);
+}
+.work-cta-title {
+  margin: 0;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-line-faint);
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(22px, 3vw, 32px);
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+.work-cta-line {
+  margin: 14px 0 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--color-text-muted);
+}
+/* 連結平時與內文同色（低調），hover 才浮出下底線 */
+.work-cta-line a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  overflow-wrap: anywhere;
+  transition: color var(--dur-fast) var(--ease-out),
+              border-bottom-color var(--dur-fast) var(--ease-out);
+}
+.work-cta-line a:hover {
+  color: var(--color-text);
+  border-bottom-color: currentColor;
+}
