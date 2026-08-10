@@ -17,7 +17,7 @@
 
 ## English (/en/)
 
-> Taipei photographer and 3D artist, born 1996 in Taipei. Every page has an English counterpart under /en/; the Chinese version is the original (hreflang x-default).
+> Taipei photographer and 3D artist, born 1996 in Taipei. Every page has an English counterpart under /en/; the Chinese text is the original, and x-default points international visitors to the English pages.
 
 - [Hasselblad](https://www.jerrythepopper.com/en/hasselblad/): For my two collaborations with Hasselblad, I wanted to push what the camera could do.
 - [Portraits](https://www.jerrythepopper.com/en/portraits/): Pictures of my friends, and the people who matter, the way they are.

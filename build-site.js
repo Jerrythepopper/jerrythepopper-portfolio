@@ -443,12 +443,15 @@ function head(o) {
   const ogDims = ogEntry
     ? `<meta property="og:image:width" content="${ogEntry.w}">\n<meta property="og:image:height" content="${ogEntry.h}">\n`
     : '';
-  /* hreflang 三件套（S29）：中英互指成對 ＋ x-default 指中文版（原生語版）。
-     只有「有對應語版」的頁面才掛（o.alt）——404 是 noindex，不進這個網。 */
+  /* hreflang 三件套（S29）：中英互指成對 ＋ x-default 指英文版。
+     x-default 08-10 站主裁定改指英文——「中文使用者→中文、英文使用者→英文」由前兩條
+     精準比對處理,x-default 只服務「兩者皆非」的第三語言訪客（日/法/韓…）,對他們英文
+     遠比中文可讀=國際門用英文開。只有「有對應語版」的頁面才掛（o.alt）——404 是
+     noindex，不進這個網。 */
   const altLinks = o.alt
     ? `<link rel="alternate" hreflang="zh-Hant" href="${esc(SITE_ORIGIN + o.alt.zh)}">\n` +
       `<link rel="alternate" hreflang="en" href="${esc(SITE_ORIGIN + o.alt.en)}">\n` +
-      `<link rel="alternate" hreflang="x-default" href="${esc(SITE_ORIGIN + o.alt.zh)}">\n`
+      `<link rel="alternate" hreflang="x-default" href="${esc(SITE_ORIGIN + o.alt.en)}">\n`
     : '';
   return `<!DOCTYPE html>
 <html lang="${isEn() ? 'en' : 'zh-Hant'}">
@@ -1192,7 +1195,7 @@ ${lines.join('\n')}
 
 ## English (/en/)
 
-> Taipei photographer and 3D artist, born 1996 in Taipei. Every page has an English counterpart under /en/; the Chinese version is the original (hreflang x-default).
+> Taipei photographer and 3D artist, born 1996 in Taipei. Every page has an English counterpart under /en/; the Chinese text is the original, and x-default points international visitors to the English pages.
 
 ${SECTIONS.map((s) => `- [${s.en}](${SITE_ORIGIN}/en/${slugOf(s.id)}/): ${oneLine(EN.sections[s.id].lede)}`).join('\n')}
 - [Home](${SITE_ORIGIN}/en/): portfolio overview — seven series plus Work and About.
