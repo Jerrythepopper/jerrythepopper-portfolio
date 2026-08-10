@@ -402,11 +402,12 @@ function bgVars(n, src, rel) {
 
 // 導覽列（frosted 與 footer 共用）
 const NAV = [
+  /* 順序跟著 SECTIONS 走（08-10 站主裁:3D 前移到人像後——首頁區塊與導覽列同序） */
   { key: 'hasselblad', label: 'Hasselblad' },
   { key: 'portraits', label: 'Portraits' },
+  { key: '3d', label: '3D' },
   { key: 'street', label: 'Street' },
   { key: 'nature', label: 'Nature' },
-  { key: '3d', label: '3D' },
   { key: 'film', label: 'Film' },
   { key: 'market', label: '果菜市場', labelEn: 'Market' },   // 唯一需要換字的項目（其餘本來就是英文）
   { key: 'work', label: 'Work' },

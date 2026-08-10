@@ -7,9 +7,9 @@
 - [首頁 Home](https://www.jerrythepopper.com/)：作品集總覽，七個系列與工作、關於。
 - [Hasselblad 哈蘇](https://www.jerrythepopper.com/hasselblad/)：這兩次與哈蘇合作，我想挑戰更多可能。
 - [Portraits 人像](https://www.jerrythepopper.com/portraits/)：喜歡幫朋友們，還有重要的人，記錄他們的樣子。
+- [3D](https://www.jerrythepopper.com/3d/)：探索攝影與 3D 領域的邊界。
 - [Street 街拍](https://www.jerrythepopper.com/street/)：街拍，就是我解讀各座城市的方式。
 - [Nature 自然](https://www.jerrythepopper.com/nature/)：我時常被大自然震懾，所以努力記下他們的樣貌。
-- [3D](https://www.jerrythepopper.com/3d/)：探索攝影與 3D 領域的邊界。
 - [Film 底片](https://www.jerrythepopper.com/film/)：底片的驚喜，在於拍完時常會忘記當下的畫面。
 - [Taipei Wholesale Market 果菜市場](https://www.jerrythepopper.com/market/)：輪轉（liàn-tńg）— 台北第一果菜批發市場紀實計畫。
 - [Work 工作](https://www.jerrythepopper.com/work/)：品牌合作與商業專案。
@@ -21,9 +21,9 @@
 
 - [Hasselblad](https://www.jerrythepopper.com/en/hasselblad/): For my two collaborations with Hasselblad, I wanted to push what the camera could do.
 - [Portraits](https://www.jerrythepopper.com/en/portraits/): Pictures of my friends, and the people who matter, the way they are.
+- [3D](https://www.jerrythepopper.com/en/3d/): Exploring the edge between photography and 3D.
 - [Street](https://www.jerrythepopper.com/en/street/): Street photography is how I read a city.
 - [Nature](https://www.jerrythepopper.com/en/nature/): Nature keeps stunning me, so I do my best to keep a record of them.
-- [3D](https://www.jerrythepopper.com/en/3d/): Exploring the edge between photography and 3D.
 - [Film](https://www.jerrythepopper.com/en/film/): The surprise of film is that I often forget the frame by the time it comes back.
 - [Taipei Wholesale Market](https://www.jerrythepopper.com/en/market/): Lian-tng, the turning of wheels: a documentary project inside the Taipei First Wholesale Fruit and Vegetable Market.
 - [Home](https://www.jerrythepopper.com/en/): portfolio overview — seven series plus Work and About.
