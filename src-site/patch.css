@@ -88,19 +88,38 @@
 .flow-rule::after {
   content: '';
   position: absolute;
-  top: calc(-1 * var(--flow-len)); left: 0;
+  top: 0; left: 0;
   width: 1px; height: var(--flow-len);
   background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, var(--c-flow-rule) 100%);
+  /* 08-11 效能修正（站主 Mac DZ lag 回報）：掃落改動 transform 不動 top——
+     top 是版面屬性,每格逼主執行緒重算 layout,背景無限循環會抽走 DZ 縮放的主執行緒;
+     translateY 走合成器零版面稅。-100%/100% 以 ::after 自身高解析=正好等於舊 top 行程,
+     順帶不再需要 keyframes 內的 var()。 */
+  transform: translateY(-100%);
   animation: flow-rule-sweep 2600ms cubic-bezier(0.6, 0.05, 0.4, 0.95) infinite;
 }
-/* var() 在 keyframes 內按套用元素解析——手機/桌機各吃自己的 --flow-len */
 @keyframes flow-rule-sweep {
-  0% { top: calc(-1 * var(--flow-len)); }
-  60% { top: var(--flow-len); }
-  100% { top: var(--flow-len); }
+  0% { transform: translateY(-100%); }
+  60% { transform: translateY(100%); }
+  100% { transform: translateY(100%); }
+}
+/* hero SCROLL 線同罪同修（styles.css:276 原版 hint-line 動 top）——styles.css 凍結,
+   在此覆寫:定位歸零改由 transform 跑同一行程（-44→44 = ::after 自高的 ±100%）。
+   後載入的同名 keyframes 覆蓋前者=原 animation 宣告不用動。 */
+.hero-hint .line::after {
+  top: 0;
+  transform: translateY(-100%);
+}
+@keyframes hint-line {
+  0% { transform: translateY(-100%); }
+  60% { transform: translateY(100%); }
+  100% { transform: translateY(100%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .flow-rule::after { animation: none; top: 0; }
+  .hero-hint .line::after { animation: none; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow-rule::after { animation: none; transform: none; }
 }
 /* 軌道底色（--c-flow-track）與亮光色（--c-flow-rule）明暗切換槽,見下方深色模式段 */
 

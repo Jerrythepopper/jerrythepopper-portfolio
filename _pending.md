@@ -115,4 +115,6 @@ Mac 觸控板捏合+平滑縮放 ✓／Safari 手勢 ✓／Android 360 重疊修
 | S38 | 3D 前移到人像後（首頁區塊+NAV+導流鏈同步,重編號 3D→03/街拍→04/自然→05;網址不動 SEO 零影響） | 站主裁:標題寫 3D 創作者,內容第三格就要兌現 | **已完成**（3079b6d）:中英首頁實渲染序+系列頁導流鏈逐頁核對 |
 | S39 | CTA+EN 小收尾三件套：①foot-hire 改雙語版（中文頁講中文,Open for commissions—攝影・3D 委託合作）②Work 頁尾新 CTA 塊（有案子想聊？/Have a project in mind?）③site.js 燈箱/DZ 提示 21 條 T() 字典在地化（zh 零回歸=結構保證:T 第二引數即中文原字）④About 品牌英文頁改官方英名（Juming Museum/GOOPiMADE/Shopee/Giant/TAPMC=研究員逐一附一手來源;名發/三發/晶悅查無官方英名→保留中文寧可留白不猜譯） | 站主 08-11 核准（品牌名「怕錯」→只收官方自稱） | **已完成**:fresh verifier 八項全 PASS（含 vm 實跑 T() 雙分支+dist diff 對帳） |
 
+| S40 | Mac DZ lag 修正：呼吸線動畫 top→transform（top=版面屬性,8+1 條無限循環每格逼主執行緒重算 layout;Safari+觸控板高頻 wheel 雙重夾擊先跪,Chrome/手機扛得住=只 Mac 卡的解釋）——flow-rule 與 hero hint-line 同罪同修,translateY ±100% 自高解析=行程逐像素同舊版,keyframes 不再需要 var() | 站主 08-11 Mac 實測回報 | **已完成**:9 條動畫 running+top 固定 0 實證;待站主 Mac 回測確認 lag 消失 |
+
 **S39 待辦尾巴**：①`_content-en-draft.md` 未同步 Work CTA 兩句新英文（data-en.js 已加註解記錄例外,回頭補檔保持「兩邊一致」紀律）②淺色模式 muted 小字對比 2.73:1（站上既有特性非本次引入;若要改建議只把 CTA email 的 <a> 提到 --color-text）③repo 根目錄 01.pdf（7MB,08-09 SEOptimer 報告誤留）未追蹤未進版控,問站主要不要刪。
