@@ -119,4 +119,6 @@ Mac 觸控板捏合+平滑縮放 ✓／Safari 手勢 ✓／Android 360 重疊修
 
 | S41 | 深色白線+預設淺色（站主 08-11 iPhone 回報+裁定）：①白線元兇=LQIP 佔位圖鋪容器背景,高 DPR 次像素縫透出亮邊,深色底現形→照片載完拆背景圖（只拆有 img 子元素的盒,work-tile .ph 背景本體自然跳過;載入失敗留殘影）②預設主題改淺色不跟系統（防閃腳本一律蓋 data-theme,無存偏好=light;theme-color meta 去 media 隨主題動態設） | 站主：淺色是本站的臉 | **已完成**:預設 light/theme-color/切換往返/LQIP 載完拆除四路實證;待站主 iPhone 深色回測白線消失 |
 
+| S42 | 深色換膚：暖墨→鉄御納戸 #15161D（站主看四案日本傳統色仿真比較頁後裁定案2「美到不行」;砂鼠 #28292D 夾層/冷紙白 #E4E6EA/muted 4.90:1 faint 2.79:1 忠實對映舊層級,燈箱/DZ/frosted/hero 全家族同步轉冷;theme-color 兩處 #15161d）；字面值只住 patch.css 一區塊=換膚只動 17 行+2 hex | 站主 08-11 案2 定案 | **已完成**:preview 切深色實測牆/alt/文字/CTA 四值逐一命中;比較頁 dark-variants.html 留 scratchpad |
+
 **S39 待辦尾巴**：①`_content-en-draft.md` 未同步 Work CTA 兩句新英文（data-en.js 已加註解記錄例外,回頭補檔保持「兩邊一致」紀律）②淺色模式 muted 小字對比 2.73:1（站上既有特性非本次引入;若要改建議只把 CTA email 的 <a> 提到 --color-text）③repo 根目錄 01.pdf（7MB,08-09 SEOptimer 報告誤留）未追蹤未進版控,問站主要不要刪。

@@ -117,7 +117,7 @@
       try { localStorage.setItem(KEY, next); } catch (err) {}
       // 手機瀏覽器的網址列底色跟著走（<head> 那條 theme-color 只認系統偏好）
       var m = document.querySelector('meta[name="theme-color"]');
-      if (m) { m.removeAttribute('media'); m.setAttribute('content', next === 'dark' ? '#1f1d1a' : '#f7f7f7'); }
+      if (m) { m.removeAttribute('media'); m.setAttribute('content', next === 'dark' ? '#15161d' : '#f7f7f7'); }
     });
   })();
 
