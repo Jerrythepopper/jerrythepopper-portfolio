@@ -717,22 +717,14 @@
         showNavigationControl: false,
         showNavigator: false,
         showSequenceControl: false,
-        /* tile 層兩顆旋鈕（2026-08-12 S41 續刀，站主 Mac 回測「一般縮放已順、放大比較大時仍卡」
-           ＝rAF 合流把事件流的稅清掉之後，剩下的是每幀重繪的稅，Retina dPR 2 ＝ 4 倍像素）：
-           ① immediateRender true —— 深放大時先拿手上最好的（較低解析）tile 立刻畫，不再空等
-              目標層下載完才更新畫面；代價是「先糊一下再變清楚」，已向站主說明並接受。
-           ② blendTime 0 —— 每張新進場的 tile 原本要跑 0.25s 的 alpha 淡入，深放大時同時進場的
-              tile 最多，等於每幀多一輪合成。歸零後 vendor 的 _blendTile 直接給 opacity 1
-              （算式 h = a ? min(1,l/a) : 1，a=0 走右branch，沒有除零），並回報「不需再重繪」。
-              reduce（prefers-reduced-motion）分支本來就是 0，這下兩邊統一。
-           兩顆都只影響繪圖層（TiledImage/Drawer），與 viewport spring 那一整套
-           （applyConstraints / snapBack / goHome / flick 慣性）無耦合——資料流是繪圖端單向讀取
-           _scaleSpring.current.value，沒有反向寫入。旁證：OSD 自己的 navigator 子檢視器內建
-           就是 immediateRender:!0 + blendTime:0 這組。 */
-        immediateRender: true,
+        /* tile 層兩顆旋鈕（immediateRender true + blendTime 0）2026-08-12 試過並退回：
+           站主三裝置實測——Mac 深放大卡頓「差不多」＝瓶頸不在混合層；且淡入歸零讓
+           tile 到貨變成「一格一格」裸露（各裝置皆見,視感否決）。淡入其實是在幫忙遮
+           tile 到貨的參差,是功臣不是稅。深放大殘卡的下一層診斷卡見 _pending.md S43。 */
+        immediateRender: false,
         animationTime: reduce ? 0 : 0.9,
         springStiffness: 7,
-        blendTime: 0,
+        blendTime: reduce ? 0 : 0.25,
         maxZoomPixelRatio: 2,
         minZoomImageRatio: 0.85,
         /* 平移約束（S24 手機真機回報「照片可以拖到幾乎出畫」）：
