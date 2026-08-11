@@ -121,4 +121,6 @@ Mac 觸控板捏合+平滑縮放 ✓／Safari 手勢 ✓／Android 360 重疊修
 
 | S42 | 深色換膚：暖墨→鉄御納戸 #15161D（站主看四案日本傳統色仿真比較頁後裁定案2「美到不行」;砂鼠 #28292D 夾層/冷紙白 #E4E6EA/muted 4.90:1 faint 2.79:1 忠實對映舊層級,燈箱/DZ/frosted/hero 全家族同步轉冷;theme-color 兩處 #15161d）；字面值只住 patch.css 一區塊=換膚只動 17 行+2 hex | 站主 08-11 案2 定案 | **已完成**:preview 切深色實測牆/alt/文字/CTA 四值逐一命中;比較頁 dark-variants.html 留 scratchpad |
 
+| S43 | Mac DZ 縮放卡頓三刀（站主分兩輪回報:一般縮放卡→修後只剩深放大卡）：①wheel/捏合 rAF 合流（每秒近百發逐發 zoom→每幀至多一次,20:1 實測,倍率 ulp 級等價）②blendTime 0.25→0（tile 淡入混合每幀成本歸零）③immediateRender true（深放大先用低解析撐畫面,不再等高解析=停滯感來源;OSD navigator 內建就是這組合）;spring 0.9/7 經論證守住站主手感不動 | 站主 Mac 實測回報+核准 tile 級旋鈕（知情「先糊再清」代價） | **二刀已完成待 Mac 回測**;若仍卡→下下層診斷卡:先查 drawer 型別（OSD 6.1 auto 預設優先 WebGL）,canvas→smoothTileEdgesMinZoom:Infinity（觸發條件正好=「放大較大時」）,webgl→maxZoomPixelRatio 2→1/minPixelRatio 0.8/maxTilesPerFrame 調大（分開試）;fmtZoom 每幀 DOM 寫入可加「值沒變不寫」零風險順手刀 |
+
 **S39 待辦尾巴**：①`_content-en-draft.md` 未同步 Work CTA 兩句新英文（data-en.js 已加註解記錄例外,回頭補檔保持「兩邊一致」紀律）②淺色模式 muted 小字對比 2.73:1（站上既有特性非本次引入;若要改建議只把 CTA email 的 <a> 提到 --color-text）③repo 根目錄 01.pdf（7MB,08-09 SEOptimer 報告誤留）未追蹤未進版控,問站主要不要刪。
