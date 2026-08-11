@@ -4,8 +4,8 @@
 
 ## 首頁
 
-**Intro 宣言**
-> I photograph the emotions of people, streets and spaces. In solitude and the flow of time, I find my own likeness.
+**Intro 宣言**（08-12 隨站主中文自改重譯：除矯情+「影像的各種可能」涵蓋 3D）
+> I love capturing people, streets and spaces through images. And I love searching the many possibilities of the image for the look I love.
 
 **Work 區塊 lede**
 > Selected brand collaborations and commissioned work.

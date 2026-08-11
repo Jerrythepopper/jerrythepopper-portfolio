@@ -18,9 +18,10 @@
     // ---------- 首頁 ----------
     home: {
       // intro 宣言：中文版是兩行（<br> 分隔），英文照同一個節奏拆兩句
+      /* 08-12 隨中文版重譯（站主自改宣言:除矯情+涵蓋 3D——喜歡×2 的句式照搬） */
       introLede: [
-        'I photograph the emotions of people, streets and spaces.',
-        'In solitude and the flow of time, I find my own likeness.',
+        'I love capturing people, streets and spaces through images.',
+        'And I love searching the many possibilities of the image for the look I love.',
       ],
       // Work 區塊 lede（首頁 08 那塊）
       workLede: 'Selected brand collaborations and commissioned work.',

@@ -759,8 +759,9 @@ function teaser(o) {
 function homePage() {
   const rel = assetRel('');                 // 中文首頁 ''、英文首頁 '../'（資產都在站根）
   const lhref = langHref(rel, '');
-  const lede1 = isEn() ? EN.home.introLede[0] : '以影像捕捉人文、街頭與空間的情緒。';
-  const lede2 = isEn() ? EN.home.introLede[1] : '在孤寂感與時間流動中，找到我的樣貌。';
+  /* 08-12 站主自改定稿（除矯情+涵蓋 3D）：「影像的各種可能」把攝影與 3D 一起收進宣言 */
+  const lede1 = isEn() ? EN.home.introLede[0] : '我喜歡用影像捕捉人文、街頭，還有空間。';
+  const lede2 = isEn() ? EN.home.introLede[1] : '也喜歡在影像的各種可能裡，找到自己喜愛的樣貌。';
   const intro = `<section class="intro">
   <div class="fade-up intro-inner" style="transition-delay:0ms">
     <div class="eyebrow">Selected · 2018 — 2026</div>
