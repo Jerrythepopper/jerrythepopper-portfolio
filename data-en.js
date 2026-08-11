@@ -100,7 +100,7 @@
     about: {
       paras: [
         'Born in Taipei in 1996. Photographer and 3D artist.',
-        'I photograph the emotions of people, streets and spaces, and I am drawn to what solitude and the flow of time do to a picture. Alongside photography, I keep exploring where 3D visuals and real scenes cross over, trying to push still images toward a more dimensional kind of storytelling.',
+        'I love capturing people, streets and spaces through images, and I love searching the many possibilities of the image for the look I love. Alongside photography, I keep exploring where 3D visuals and real scenes cross over, pushing still images toward a more dimensional kind of storytelling.',
         'I have worked with Hasselblad, Leica, Sony, Oppo, Giant, the Shin Kong Photography Exhibition, the Juming Museum, Shopee and others, on brand photography, teaching and creative projects. My documentary project Lian-tng followed the people and stories of the Taipei First Wholesale Fruit and Vegetable Market for over a year, and was published as a photobook through crowdfunding.',
         'Based in Taipei. Available for photography and 3D commissions in Taiwan and worldwide.',
       ],

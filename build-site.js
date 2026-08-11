@@ -1054,12 +1054,12 @@ function aboutPage() {
   const lhref = langHref(rel, 'about/');
   const desc = isEn()
     ? clip(oneLine(EN.about.paras[0] + ' ' + EN.about.paras[1]), 155)
-    : clip(oneLine('Jerrythepopper 洪立楷，台北攝影師、3D創作者，1996年生於台北。以影像捕捉人文、街頭與空間的情緒，以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。'), 155);
+    : clip(oneLine('Jerrythepopper 洪立楷，台北攝影師、3D創作者，1996年生於台北。用影像捕捉人文、街頭與空間，以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。'), 155);
   // 內文四段：中文版順序寫在下面的 zhParas；英文版照 _content-en-draft.md 的作者順序
   const zhParas = [
     '1996年生於台北。攝影師、3D創作者。',
     '以台北為基地，接受台灣與世界各地的攝影與 3D 視覺委託。',
-    '以影像捕捉人文、街頭與空間的情緒，擅長在孤寂感與時間流動中找到自身的模樣。除了攝影，也持續探索3D視覺與虛實場景的交錯，嘗試讓靜態影像走向更立體的敘事。',
+    '我喜歡用影像捕捉人文、街頭，還有空間，也喜歡在影像的各種可能裡，找到自己喜愛的樣貌。除了攝影，我也持續探索 3D 視覺與虛實場景的交錯，讓靜態影像走向更立體的敘事。',
     '曾與 Hasselblad、Leica、Sony、Oppo、Giant、新光攝影展、朱銘美術館、蝦皮等品牌合作，執行形象拍攝、教學內容與創意企劃。紀實計畫《輪轉》記錄台北第一果菜批發市場的人與故事，歷時一年多，最終透過募資出版攝影集。',
   ];
   const paras = (isEn() ? EN.about.paras : zhParas)
@@ -1224,7 +1224,7 @@ function llmsTxt() {
   );
   return `# Jerrythepopper 洪立楷 — Photography & 3D Portfolio
 
-> 台北攝影師・3D 創作者，1996 年生於台北。以影像捕捉人文、街頭與空間的情緒；曾與 Hasselblad、Leica、Sony、Oppo、Giant 等品牌合作。紀實計畫《輪轉》記錄台北第一果菜批發市場。
+> 台北攝影師・3D 創作者，1996 年生於台北。用影像捕捉人文、街頭與空間；曾與 Hasselblad、Leica、Sony、Oppo、Giant 等品牌合作。紀實計畫《輪轉》記錄台北第一果菜批發市場。
 
 ## Pages
 
