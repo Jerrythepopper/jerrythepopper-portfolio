@@ -580,23 +580,66 @@
       else if (e.deltaMode === 2) dy *= (box.clientHeight || window.innerHeight); // 罕見的整頁模式，保底
       return Math.pow(e.ctrlKey ? 1.008 : 1.0022, -dy);
     }
-    function dzViewportPoint(e) {
-      var mouse = window.OpenSeadragon.getMousePosition(e);
-      var off = window.OpenSeadragon.getElementOffset(viewer.canvas);
-      return viewer.viewport.pointFromPixel(mouse.minus(off), true);
+    /* 高頻縮放事件的 rAF 合流器（2026-08-12 S41，站主回報 Mac 上「zoom 一卡一卡、平移順」）
+       —— Mac 觸控板一秒可發近百個 wheel 事件，S32 版本是「每個事件各呼叫一次 zoomBy +
+       applyConstraints」＝每秒近百次 spring 重設、邊界運算與 zoom 事件廣播（後者還會帶著
+       fmtZoom 去寫 DOM），但螢幕一秒只畫 60 幀，多出來的都是白工，還把主執行緒的時間從
+       Retina（dPR 2＝4 倍像素）本來就吃緊的 tile 重繪那邊搶走。這裡把事件流合併成「每個
+       animation frame 至多做一次縮放」。
+
+       手感零改變的證明（兩層都是精確等價，不是近似）：
+       ① 倍率：vendor 的 zoomBy(f) ＝ zoomTo(zoomSpring.target.value * f)，乘的是 spring 的
+          「目標值」而非當下顯示值，所以連續 f₁…fₙ 得到 T·f₁·f₂…fₙ，與一次給 F = Πfᵢ 得到的
+          T·F 完全相同（且 fᵢ = k^(-dyᵢ) ⇒ Πfᵢ = k^(-Σdyᵢ)，等同 deltaY 先加總再算一次冪；
+          這裡採連乘，才容得下同一批事件裡 ctrlKey 混雜＝底數 k 不同的情形）。
+       ② 錨點：以定點 P 為中心的縮放對「連續施作」是可組合的（zoom(f₂,P)∘zoom(f₁,P) ＝
+          zoom(f₁f₂,P)），游標停著不動時（觸控板縮放的常態）逐一施作與合併施作結果相同；
+          游標同時移動時取最後一發事件的位置，誤差上限＝一幀內的滑鼠位移。
+       spring 本身不動（animationTime 0.9 / springStiffness 7）：vendor 的 update() 每幀補進
+       (1-e^(-s·n))/(1-e^(-s)) 比例的剩餘量、n＝本幀耗時/animationTime，s=7 且 60fps 時每幀約
+       追 12% 對數距離（時間常數 ~130ms）且隨掉幀自動加大步伐——它是個健康的一階平滑器，
+       正好用來吸收合流後每幀一次的階梯，調快只會讓卡頓更明顯。 */
+    function makeZoomFlow() {
+      var raf = 0, factor = 1, page = null;
+      function flush() {
+        raf = 0;
+        var f = factor, pg = page;
+        factor = 1; page = null;
+        if (!viewer || !viewer.viewport || !pg) return;
+        if (!isFinite(f) || f <= 0 || f === 1) return;
+        // 錨點在 flush 當下才換算：存的是頁面座標，spring 動畫中途的視野變化才不會讓它過期
+        var off = window.OpenSeadragon.getElementOffset(viewer.canvas);
+        viewer.viewport.zoomBy(f, viewer.viewport.pointFromPixel(pg.minus(off), true));
+        viewer.viewport.applyConstraints();
+      }
+      return {
+        push: function (f, e) {
+          if (!isFinite(f) || f <= 0) return;
+          factor *= f;
+          page = window.OpenSeadragon.getMousePosition(e);
+          if (!raf) raf = window.requestAnimationFrame(flush);
+        },
+        cancel: function () {
+          if (raf) { window.cancelAnimationFrame(raf); raf = 0; }
+          factor = 1; page = null;
+        }
+      };
     }
     function bindWheel(el) {
+      var flow = makeZoomFlow();
       function onWheel(e) {
         if (!viewer || !viewer.viewport) return;
         e.preventDefault();
         e.stopPropagation();                // 攔在 OSD 自己掛在 canvas 上的 wheel 處理前面
-        viewer.viewport.zoomBy(dzWheelFactor(e), dzViewportPoint(e));
-        viewer.viewport.applyConstraints();
+        flow.push(dzWheelFactor(e), e);     // 累積倍率，實際縮放交給下一個 animation frame
       }
       // capture：搶在 OSD 掛於 .dzv-canvas（box 的子節點）上的 bubble-phase 監聽器之前
       // 攔截；配合下方 OSD 初始化把 gestureSettingsMouse.scrollToZoom 關掉，雙保險。
       el.addEventListener('wheel', onWheel, { capture: true, passive: false });
-      return function () { el.removeEventListener('wheel', onWheel, { capture: true }); };
+      return function () {
+        flow.cancel();                      // 關檢視器時把還沒 flush 的那一幀丟掉（viewer 已 destroy）
+        el.removeEventListener('wheel', onWheel, { capture: true });
+      };
     }
 
     /* Safari 觸控板雙指捏合（2026-08-09 S32）：Mac 觸控板的捏合在 Safari 走
@@ -609,7 +652,7 @@
        真機（iPad/iPhone Safari）雙指仍走 Pointer Events 的多指分支（bindPointer 的
        touch 路徑／OSD 自己的 gestureSettingsTouch.pinchToZoom），跟這裡互不相干。 */
     function bindPinch(el) {
-      var active = false, prevScale = 1;
+      var active = false, prevScale = 1, flow = makeZoomFlow();
       function start(e) { e.preventDefault(); active = true; prevScale = 1; }
       function change(e) {
         e.preventDefault();
@@ -618,15 +661,18 @@
         var ratio = cur / (prevScale || 1);
         prevScale = cur;
         if (!isFinite(ratio) || ratio <= 0 || ratio === 1) return;
-        viewer.viewport.zoomBy(ratio, dzViewportPoint(e));
-        viewer.viewport.applyConstraints();
+        // 同樣走 rAF 合流（gesturechange 在觸控板上一樣是高頻連發）；相鄰比值連乘後
+        // ＝ 該幀首尾兩發 e.scale 的比值，與逐發施作的乘積恆等，prevScale 帳本照舊逐發更新
+        flow.push(ratio, e);
       }
+      // gestureend 不 cancel：手指離開時最後那一幀的累積量要照樣送出去，否則末尾會吃掉一小段
       function end(e) { e.preventDefault(); active = false; }
       var opt = { passive: false };
       el.addEventListener('gesturestart', start, opt);
       el.addEventListener('gesturechange', change, opt);
       el.addEventListener('gestureend', end, opt);
       return function () {
+        flow.cancel();                      // 同 bindWheel：關檢視器時丟掉未 flush 的那一幀
         el.removeEventListener('gesturestart', start, opt);
         el.removeEventListener('gesturechange', change, opt);
         el.removeEventListener('gestureend', end, opt);
