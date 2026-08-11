@@ -461,8 +461,8 @@ function head(o) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="google-site-verification" content="pEeokeSZ4f60CDCBeXLxxu_EAp34X4FzoMZ8OWKfGww">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#1f1d1a" media="(prefers-color-scheme: dark)">
-<script>document.documentElement.className+=' js';try{var t=localStorage.getItem('jtpTheme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<meta name="theme-color" content="#f7f7f7">
+<script>document.documentElement.className+=' js';var t='light';try{var s=localStorage.getItem('jtpTheme');if(s==='dark'||s==='light')t=s}catch(e){}document.documentElement.setAttribute('data-theme',t);if(t==='dark'){var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content','#1f1d1a')}</script>
 ${o.headExtra || ''}<title>${esc(o.title)}</title>
 <meta name="description" content="${esc(o.desc)}">
 ${o.robots ? `<meta name="robots" content="noindex">\n` : ''}

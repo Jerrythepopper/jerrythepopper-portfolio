@@ -55,8 +55,30 @@
     return s == null ? zh : s;
   }
 
+  /* ---------- LQIP 佔位背景拆除（S41 2026-08-11） ---------------------------
+     LQIP 模糊圖鋪在容器背景、真照片 <img> 疊上——高 DPR 螢幕的次像素縫會讓底層
+     LQIP 透出一條亮邊（站主 iPhone 深色模式回報「照片旁白線」：亮天空照片的 LQIP
+     邊緣是亮的，深色底上現形）。照片載入完成後 LQIP 已無存在必要 → 拆掉背景圖，
+     縫裡只剩容器底色（跟主題走）。只拆「有 <img> 子元素」的盒；work-tile .ph
+     這種以背景圖為本體的版位沒有 img、自然跳過。 */
+  (function () {
+    function arm(box) {
+      var bg = box.style && box.style.backgroundImage;
+      if (!bg || bg.indexOf('data:') === -1) return;
+      var img = box.querySelector('img');
+      if (!img) return;
+      var clear = function () { box.style.backgroundImage = 'none'; };
+      if (img.complete && img.naturalWidth > 0) clear();
+      else img.addEventListener('load', clear, { once: true });
+      /* 載入失敗不拆：LQIP 留著當殘影比純色洞好 */
+    }
+    var boxes = document.querySelectorAll('.sec-media, .gframe, .hero-slide');
+    for (var i = 0; i < boxes.length; i++) arm(boxes[i]);
+  })();
+
   /* ---------- ⓪ 深淺色切換（S24） ------------------------------------------
-     三態語意只有兩顆按鈕：沒點過＝跟系統走（<html> 上沒有 data-theme），點一下＝
+     三態語意只有兩顆按鈕：沒點過＝預設淺色（08-11 站主裁定:淺色是本站的臉,
+     不再跟系統走;防閃腳本一律先蓋 data-theme），點一下＝
      釘死到另一邊並寫進 localStorage，再點一次＝釘到回來。要回到「跟系統」請清
      站台資料——刻意不做三態鈕，兩態的心智模型才不會每次都要猜現在是第幾態。
 
