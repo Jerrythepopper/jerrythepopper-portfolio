@@ -71,6 +71,14 @@ const ALTS = (() => {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
   catch (e) { console.warn('! photo-alts.json 解析失敗：' + e.message); return {}; }
 })();
+// photo-alts-en.json（逐張英文替代文字，08-14 五隊看圖 agent 逐張看圖產出、非盲翻）：
+// 同鍵結構；英文頁優先查它，查無退回中文句再退系列名——v1「EN 沿用中文」取捨至此清償。
+const ALTS_EN = (() => {
+  const p = path.join(ROOT, 'photo-alts-en.json');
+  if (!fs.existsSync(p)) { console.warn('! 找不到 photo-alts-en.json，英文頁 alt 退回中文'); return {}; }
+  try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
+  catch (e) { console.warn('! photo-alts-en.json 解析失敗：' + e.message); return {}; }
+})();
 
 // ---------- 資產版本指紋（防「新 HTML＋舊 CSS/JS」快取時間差） ----------
 // styles.css/site.js 的連結帶 ?v=<內容雜湊>：內容一變網址就變，瀏覽器不可能拿舊檔配新頁。
@@ -314,8 +322,12 @@ const mKey = (src) => {
   return m ? m[1] : null;
 };
 const mEntry = (src) => { const k = mKey(src); return (k && MANIFEST[k]) || null; };
-// 逐張 alt：photo-alts.json 查得到就用那句，查不到退回呼叫端給的 fallback（系列名+編號）
-const altOf = (src, fallback) => { const k = mKey(src); return (k && ALTS[k]) || fallback; };
+// 逐張 alt：英文頁優先 photo-alts-en.json，退回中文句，再退呼叫端 fallback（系列名+編號）
+const altOf = (src, fallback) => {
+  const k = mKey(src);
+  if (!k) return fallback;
+  return (isEn() && ALTS_EN[k]) || ALTS[k] || fallback;
+};
 const srcsetOf = (e, fmt, rel) =>
   e.formats[fmt].map((x) => `${rel}photos/${x.f} ${x.w}w`).join(', ');
 
