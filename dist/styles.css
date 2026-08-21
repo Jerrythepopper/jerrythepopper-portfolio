@@ -2231,3 +2231,12 @@ html, body {
   color: var(--color-text);
   border-bottom-color: currentColor;
 }
+
+/* ---- S45（2026-08-21）亮場次要文對比：--color-text-muted #95979c → #6a6c74 ----------
+   舊值對 --color-bg #f7f7f7 只有 2.73:1（eyebrow 11px／meta 10px／intro p 14px 全是小字，
+   WCAG AA 門檻 4.5:1）。新值實算：#f7f7f7 4.89:1、_alt #f1f1ef 4.63:1、純白 5.24:1——
+   與暗場 --dk-text-muted 的 4.90:1 對稱。色相沿舊值（冷灰微藍）只降明度，層級不變：
+   主文 #111112 對 muted 仍保 3.60:1 的階差。faint（#c8c8cb 序號純裝飾）不動，與暗場同取捨。
+   寫在 patch.css 覆寫而非改 styles.css:12（源檔零觸及慣例）；暗場兩個啟用區塊的選擇器
+   （:root:not([data-theme=light]) / :root[data-theme=dark]）特異度更高，不受此處影響。 */
+:root { --color-text-muted: #6a6c74; }

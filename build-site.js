@@ -443,6 +443,81 @@ const PERSON_LD = {
 };
 
 // ---------- 共用片段 ----------
+/* ---- 字型連結子集化（S45 2026-08-21） -----------------------------------------------
+   問題：Noto Serif JP 走 Google 預設 unicode-range 切片（每字重 124 片、每片 ~45KB），頁面
+   文字散落在哪些片就整片拉——/street/ 線上實測 400/500 各 34 片＝3,048KB＋339KB 字型 CSS，
+   是全站第一大資源（比 hero 影片還重）。
+   作法：建置期收集 dist 全部 HTML＋site.js 實際出現的每一個字元（含 alt 等屬性與 JS 字串
+   ＝燈箱／T() 字典全涵蓋），用 css2 的 text= 只要這些字。2026-08-21 對 Google 實測的規則：
+     ① text= 只對「單一家族」的請求生效，多家族同一請求會被靜默忽略 → Noto 獨立 <link>；
+     ② text= 超過 **800 個字元**（解碼後算字，不是 URL 位元組：純 CJK 800 字＝7.3KB 生效、
+        815 字被忽略；ASCII+CJK 混合 795 字生效、815 字被忽略）也被靜默忽略 → 依字元數均分，
+        每段 ≤FONT_TEXT_MAX 字、URL ≤FONT_URL_MAX 位元組雙保險（超過＝build 直接失敗）；
+        同家族同字重多條 @font-face 靠回傳的 unicode-range 合併（與 Google 自家切片同機制）；
+     ③ 被忽略時 Google 回的是全量切片 CSS 而非錯誤——build 後要實抓一條連結確認 @font-face
+        數＝字重數（2）而不是 124×字重（驗證腳本：根目錄 verify-fonts.js，build 後 node 跑）。
+   全站中英共用同一組連結＝一次快取全站通用；~1,430 字元 → 兩字重合計 ~500KB、4 檔。
+   Jost／Lustria 仍走原切片（拉丁字面小，3 檔 ~50KB），並剝掉零使用的 Jost 300／Noto 600
+   （全站 font-weight 只有 400/500，<b> 皆顯式 500/400，線上實測兩者 loaded=0）。
+   head() 先放佔位符；build() 要等所有頁面寫完才算得出字元集，尾端回填（兩段式）。
+   漏字風險：任何沒進 dist HTML／site.js 的字（例如未來由 JS 拼出的新文案）會退到
+   --font-serif 的系統襯線（YuMincho／Hiragino／serif），是降級不是空白；改文案後重 build 即可。 */
+const FONT_LINKS_PLACEHOLDER = '<!--@@FONT_LINKS@@-->';
+const FONT_TEXT_MAX = 750;   // 實測門檻 800 字，留 50 字餘裕
+const FONT_URL_MAX = 7300;   // 實測 800 CJK 字＝7,286 bytes 仍生效；超過就是沒看過的領域
+const FONT_LATIN_HREF = 'https://fonts.googleapis.com/css2?family=Jost:wght@400;500&family=Lustria&display=swap';
+const FONT_NOTO_BASE = 'https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500&display=swap&text=';
+
+function addChars(set, text) {
+  for (const c of text) {           // for-of 走 code point，代理對不會被拆半
+    const k = c.codePointAt(0);
+    if (k >= 32 && k !== 0x7F && k !== 0xFEFF) set.add(c);
+  }
+}
+
+/* 字元分兩群（2026-08-21 實量：全站 1,430 字＝可見 600／僅屬性 830）：
+   visible＝HTML 去 script/style 後的文字節點＋site.js 字串字面值（UI 文案／T() 字典）
+            ＋CSS content: 字串（偽元素也畫字）——任何頁面一開就會畫到的字；
+   rest   ＝其餘（alt／JSON-LD／meta description 等只住在屬性或不渲染處的字）。
+   兩群各自分段、visible 在前：瀏覽器只下載「頁面上真的出現該段 unicode-range 裡的字」的檔，
+   所以 rest 段平時一個 byte 都不拉，只在（例如燈箱）真把那些字印出來時才按需載入。 */
+function collectCharGroups(htmls, siteJs, css) {
+  const all = new Set(), vis = new Set();
+  for (const h of htmls) {
+    addChars(all, h);
+    addChars(vis, h.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
+  }
+  addChars(all, siteJs);
+  for (const m of siteJs.matchAll(/(["'`])((?:\\.|(?!\1)[^\\])*)\1/g)) addChars(vis, m[2]);
+  for (const m of css.matchAll(/content:\s*(["'])((?:\\.|(?!\1)[^\\])*)\1/g)) { addChars(vis, m[2]); addChars(all, m[2]); }
+  const visible = [...vis].sort();
+  const rest = [...all].filter((c) => !vis.has(c)).sort();
+  return { visible, rest };
+}
+
+function chunkUrls(chars, label) {
+  const n = chars.length;
+  if (!n) return [];
+  const nChunks = Math.ceil(n / FONT_TEXT_MAX);
+  const per = Math.ceil(n / nChunks);          // 均分，不留尾巴小段
+  const urls = [];
+  for (let i = 0; i < n; i += per) {
+    const url = FONT_NOTO_BASE + encodeURIComponent(chars.slice(i, i + per).join(''));
+    if (url.length > FONT_URL_MAX) throw new Error(`字型連結 ${label} 第 ${urls.length + 1} 段 URL ${url.length} bytes > ${FONT_URL_MAX}——超出實測安全區，請調 FONT_TEXT_MAX`);
+    urls.push(url);
+  }
+  return urls;
+}
+
+function fontLinks(groups) {
+  const vis = chunkUrls(groups.visible, 'visible');
+  const rest = chunkUrls(groups.rest, 'rest');
+  const links = [`<link rel="stylesheet" href="${FONT_LATIN_HREF}">`];
+  for (const u of vis.concat(rest)) links.push(`<link rel="stylesheet" href="${u}">`);
+  return { html: links.join('\n'), visChunks: vis.length, restChunks: rest.length, visible: groups.visible.length, rest: groups.rest.length };
+}
+
 function head(o) {
   // o: {title, desc, canonicalPath, ogImage, ogPage, jsonld, rel}
   const canonical = SITE_ORIGIN + o.canonicalPath;
@@ -493,7 +568,7 @@ ${ogDims}<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="${o.rel}favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500;600&display=swap">
+${FONT_LINKS_PLACEHOLDER}
 <link rel="stylesheet" href="${o.rel}styles.css?v=${ASSET_V}">
 <noscript><style>.fade-up{opacity:1;transform:none}.hero-title .ch{opacity:1;transform:none;animation:none}</style></noscript>
 <script type="application/ld+json">
@@ -1351,6 +1426,18 @@ async function build() {
   } finally {
     LANG = 'zh';
   }
+
+  // 字型連結回填（兩段式第二段，見 fontLinks 註解）：字元集＝剛寫完的全部 HTML＋site.js
+  const htmlFiles = written.filter((f) => f.endsWith('.html'));
+  const siteJsSrc = fs.readFileSync(path.join(SRC, 'site.js'), 'utf8');
+  const cssSrc = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8') + fs.readFileSync(path.join(SRC, 'patch.css'), 'utf8');
+  const fl = fontLinks(collectCharGroups(htmlFiles.map((f) => fs.readFileSync(f, 'utf8')), siteJsSrc, cssSrc));
+  for (const f of htmlFiles) {
+    const h = fs.readFileSync(f, 'utf8');
+    if (!h.includes(FONT_LINKS_PLACEHOLDER)) throw new Error('字型連結佔位符不見了：' + f);
+    fs.writeFileSync(f, h.replace(FONT_LINKS_PLACEHOLDER, () => fl.html), 'utf8');
+  }
+  console.log(`字型子集：可見 ${fl.visible} 字 → Noto ${fl.visChunks} 條（首屏會拉）＋僅屬性 ${fl.rest} 字 → ${fl.restChunks} 條（按需）＋拉丁 1 條；每條 ≤${FONT_TEXT_MAX} 字／≤${FONT_URL_MAX} bytes；build 後跑 node verify-fonts.js 實抓確認`);
 
   // styles.css = 既有檔原樣（剝除 @import，字型改由 head() 的 preconnect+<link>
   // 並行載入，見 S30 字型鏈優化；源檔 styles.css 本身零觸及，轉換只發生在 build）
