@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function () {
+  try {
+    var root = document.documentElement;
+    var hash = window.location.hash;
+    if (hash === '#dark') {
+      root.setAttribute('data-theme', 'dark');
+    } else if (hash === '#light') {
+      root.setAttribute('data-theme', 'light');
+    } else {
+      var stored = localStorage.getItem('jtpTheme');
+      if (stored === 'dark' || stored === 'light') {
+        root.setAttribute('data-theme', stored);
+      }
+    }
+  } catch (e) {}
+})();
+</script>
+<title>Final Quality Pipeline — Manual</title>
+<meta name="description" content="Manual for the Final Quality Pipeline Blender add-on (Cycles denoise + temporal stabilization pipeline).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --bg: #f7f7f7;
+  --bg-alt: #f1f1ef;
+  --text: #111112;
+  --muted: #6a6c74;
+  --faint: #c8c8cb;
+  --line: #1d1d1f;
+  --line-faint: rgba(17, 17, 18, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15161d;
+    --bg-alt: #28292d;
+    --text: #e4e6ea;
+    --muted: #83858d;
+    --faint: #5c5e66;
+    --line: #e4e6ea;
+    --line-faint: rgba(228, 230, 234, .14);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15161d;
+  --bg-alt: #28292d;
+  --text: #e4e6ea;
+  --muted: #83858d;
+  --faint: #5c5e66;
+  --line: #e4e6ea;
+  --line-faint: rgba(228, 230, 234, .14);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-weight: 400;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line-faint);
+  text-underline-offset: 3px;
+  transition: color .15s ease;
+}
+a:hover { color: var(--muted); }
+
+.ui-label {
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400;
+  letter-spacing: .06em;
+}
+body.lang-zh .ui-label {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+}
+
+/* ---------------------------------------------------------------- header */
+.page-head {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 64px) clamp(20px, 4vw, 64px) clamp(40px, 6vw, 72px);
+  border-bottom: 1px solid var(--line-faint);
+}
+.page-head-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: clamp(24px, 4vw, 40px);
+}
+.eyebrow {
+  margin: 0;
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400;
+  font-size: .75rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+body.lang-zh .eyebrow {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .06em;
+  text-transform: none;
+}
+.head-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: .78rem;
+  letter-spacing: .06em;
+}
+body.lang-zh .head-controls {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+}
+.lang-switch { display: inline-flex; align-items: center; gap: 8px; }
+.lang-switch a { text-decoration: none; color: var(--muted); }
+.lang-switch a:hover { color: var(--text); }
+.lang-switch .is-current { color: var(--text); }
+.lang-switch .sep { color: var(--faint); }
+.theme-toggle {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--muted);
+}
+.theme-toggle .tt-light, .theme-toggle .tt-dark { color: var(--faint); }
+.theme-toggle .tt-sep { color: var(--faint); padding: 0 .35em; }
+:root:not([data-theme="dark"]) .theme-toggle .tt-light { color: var(--text); }
+:root[data-theme="dark"] .theme-toggle .tt-dark { color: var(--text); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .theme-toggle .tt-dark { color: var(--text); }
+  :root:not([data-theme]) .theme-toggle .tt-light { color: var(--faint); }
+}
+
+.page-title {
+  margin: 0 0 16px;
+  font-weight: 600;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1.2;
+  color: var(--text);
+}
+.page-subtitle {
+  margin: 0;
+  max-width: 680px;
+  font-weight: 400;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------- hero grid */
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line-faint);
+  max-width: 1280px;
+  margin: clamp(32px, 5vw, 56px) auto 0;
+}
+.hero-grid img { display: block; width: 100%; height: 100%; object-fit: cover; background: var(--bg-alt); }
+@media (max-width: 680px) {
+  .hero-grid { grid-template-columns: 1fr; }
+}
+
+/* ------------------------------------------------------------ toc + main */
+.content-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(48px, 8vw, 96px) clamp(20px, 4vw, 64px) clamp(64px, 10vw, 128px);
+}
+@media (min-width: 1024px) {
+  .content-shell {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 64px;
+    align-items: start;
+  }
+}
+
+.toc-label {
+  margin: 0 0 14px;
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400;
+  font-size: .7rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+body.lang-zh .toc-label {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .04em;
+  text-transform: none;
+}
+.toc {
+  border-top: 1px solid var(--line-faint);
+  padding-top: 20px;
+  margin-bottom: clamp(40px, 6vw, 64px);
+}
+.toc-list { list-style: none; margin: 0; padding: 0; }
+.toc-link { display: inline-flex; gap: 10px; align-items: baseline; text-decoration: none; }
+.toc-num {
+  font-family: Lustria, "Noto Serif JP", serif;
+  font-size: .8rem;
+  color: var(--faint);
+}
+.toc-text {
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: .82rem;
+  letter-spacing: .02em;
+  color: var(--text);
+}
+body.lang-zh .toc-text {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: .88rem;
+  letter-spacing: 0;
+}
+.toc-link:hover .toc-text { color: var(--muted); }
+@media (min-width: 1024px) {
+  .toc { position: sticky; top: clamp(20px, 4vw, 64px); margin-bottom: 0; }
+  .toc-list { display: flex; flex-direction: column; gap: 10px; }
+}
+@media (max-width: 1023px) {
+  .toc-list { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .toc-item { flex: 0 0 auto; }
+  .toc-link { padding: 6px 16px 6px 0; margin-right: 16px; border-right: 1px solid var(--line-faint); white-space: nowrap; }
+  .toc-item:last-child .toc-link { border-right: none; margin-right: 0; }
+}
+
+main { min-width: 0; max-width: 780px; }
+main h1, main h2, main h3 { scroll-margin-top: 24px; line-height: 1.35; font-weight: 600; color: var(--text); }
+main h2 {
+  margin-top: clamp(64px, 10vw, 128px);
+  padding-top: clamp(24px, 4vw, 40px);
+  border-top: 1px solid var(--line-faint);
+  font-size: 1.5rem;
+}
+main h2:first-child { margin-top: 0; }
+main h3 { margin-top: 2.2em; font-weight: 500; font-size: 1.15rem; }
+main p { margin: 0.9em 0; }
+main ul, main ol { padding-left: 1.4em; }
+main li { margin: 0.35em 0; }
+main blockquote {
+  margin: 1.6em 0;
+  padding: .2em 0 .2em 20px;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  font-style: italic;
+}
+main hr { border: none; border-top: 1px solid var(--line-faint); margin: 3em 0; }
+main a { color: var(--text); }
+
+code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  background: var(--bg-alt);
+  padding: 0.15em 0.4em;
+  font-size: 0.88em;
+  color: var(--text);
+}
+pre {
+  background: var(--bg-alt);
+  padding: 20px 24px;
+  overflow-x: auto;
+  margin: 1.6em 0;
+}
+pre code { background: none; padding: 0; font-size: 0.85em; line-height: 1.6; }
+
+.table-wrap { overflow-x: auto; margin: 2em 0; }
+table { border-collapse: collapse; width: 100%; min-width: 480px; }
+th, td {
+  text-align: left;
+  padding: 10px 20px 10px 0;
+  border-bottom: 1px solid var(--line-faint);
+  vertical-align: top;
+  font-size: .92rem;
+}
+th {
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 500;
+  font-size: .72rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+body.lang-zh th {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+  text-transform: none;
+}
+
+/* ------------------------------------------- panel screenshots (figures) */
+/* The picture is a dark Blender screenshot in both themes, so the dots use
+   fixed colours (yellow, dark digit, dark + light ring) and stay visible on
+   it whatever the page theme is.  Positions are percentages of the picture;
+   the dot size follows the picture's width (cqw), so on a narrow screen the
+   dots shrink with it instead of covering the neighbouring rows. */
+figure.shot { margin: 1.8em 0 2.4em; }
+.shot-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  container-type: inline-size;
+  line-height: 0;
+  background: #1d1d1d;
+  outline: 1px solid var(--line-faint);
+}
+.shot-frame a { display: block; }
+.shot-frame img { display: block; width: 100%; max-width: 100%; height: auto; }
+.shot-dot, .shot-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7em;
+  height: 1.7em;
+  border-radius: 50%;
+  background: #ffd23f;
+  color: #111112;
+  border: 1.5px solid #111112;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .9);
+  font-family: Jost, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.shot-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  font-size: clamp(6.5px, 1.45cqw, 12px);
+  pointer-events: none;
+}
+.shot-legend { list-style: none; margin: 1em 0 0; padding: 0; font-size: .92rem; line-height: 1.65; }
+.shot-legend li { display: flex; align-items: baseline; gap: .8em; margin: .45em 0; }
+.shot-num { flex: 0 0 auto; font-size: .72rem; box-shadow: 0 0 0 1px var(--line-faint); }
+.shot-text { min-width: 0; }
+.shot-label { font-weight: 600; margin-right: .35em; }
+
+footer.page-footer {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px clamp(20px, 4vw, 64px) 64px;
+  border-top: 1px solid var(--line-faint);
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: .75rem;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+body.lang-zh footer.page-footer {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+}
+
+@media (max-width: 600px) {
+  .page-head { padding-bottom: clamp(28px, 6vw, 48px); }
+}
+
+</style>
+</head>
+<body class="lang-en">
+<header class="page-head">
+  <div class="page-head-top">
+    <p class="eyebrow">MANUAL · v1.3.0</p>
+    <div class="head-controls">
+      <span class="lang-switch"><span class="is-current">EN</span><span class="sep">／</span><a href="zh.html">中文</a></span>
+      <button type="button" class="theme-toggle" id="jtpThemeToggle" aria-label="Toggle light or dark theme">
+        <span class="tt-light">Light</span><span class="tt-sep">／</span><span class="tt-dark">Dark</span>
+      </button>
+    </div>
+  </div>
+  <h1 class="page-title">Final Quality Pipeline — Manual</h1>
+  <p class="page-subtitle">Cycles denoise + temporal stabilization pipeline for Blender.</p>
+</header>
+
+<!-- HERO_IMAGES -->
+<!-- Drop 3-5 render screenshots into a seamless 3-column grid, e.g.:
+     <div class="hero-grid">
+       <img src="hero-1.jpg" alt="...">
+       <img src="hero-2.jpg" alt="...">
+       <img src="hero-3.jpg" alt="...">
+     </div>
+     .hero-grid already ships in the stylesheet (gap:1px, background:var(--line-faint),
+     collapses to a single column under 680px). Keep it above the TOC as a preview strip. -->
+
+<div class="content-shell">
+  <nav class="toc" aria-label="Contents">
+    <p class="toc-label">Contents</p>
+    <ol class="toc-list"><li class="toc-item"><a class="toc-link" href="#contents"><span class="toc-num">01</span><span class="toc-text">Contents</span></a></li><li class="toc-item"><a class="toc-link" href="#1-install"><span class="toc-num">02</span><span class="toc-text">1. Install</span></a></li><li class="toc-item"><a class="toc-link" href="#2-language"><span class="toc-num">03</span><span class="toc-text">2. Language</span></a></li><li class="toc-item"><a class="toc-link" href="#3-three-minute-version"><span class="toc-num">04</span><span class="toc-text">3. Three-minute version</span></a></li><li class="toc-item"><a class="toc-link" href="#4-what-it-actually-does"><span class="toc-num">05</span><span class="toc-text">4. What it actually does</span></a></li><li class="toc-item"><a class="toc-link" href="#5-panel-reference"><span class="toc-num">06</span><span class="toc-text">5. Panel reference</span></a></li><li class="toc-item"><a class="toc-link" href="#6-health-check"><span class="toc-num">07</span><span class="toc-text">6. Health Check</span></a></li><li class="toc-item"><a class="toc-link" href="#7-the-two-analyzers"><span class="toc-num">08</span><span class="toc-text">7. The two analyzers</span></a></li><li class="toc-item"><a class="toc-link" href="#8-background-rendering"><span class="toc-num">09</span><span class="toc-text">8. Background rendering</span></a></li><li class="toc-item"><a class="toc-link" href="#9-animation-start-to-finish"><span class="toc-num">10</span><span class="toc-text">9. Animation, start to finish</span></a></li><li class="toc-item"><a class="toc-link" href="#10-faq"><span class="toc-num">11</span><span class="toc-text">10. FAQ</span></a></li><li class="toc-item"><a class="toc-link" href="#11-platform-notes"><span class="toc-num">12</span><span class="toc-text">11. Platform notes</span></a></li><li class="toc-item"><a class="toc-link" href="#12-known-limits"><span class="toc-num">13</span><span class="toc-text">12. Known limits</span></a></li><li class="toc-item"><a class="toc-link" href="#13-troubleshooting"><span class="toc-num">14</span><span class="toc-text">13. Troubleshooting</span></a></li><li class="toc-item"><a class="toc-link" href="#14-living-with-other-denoise-add-ons"><span class="toc-num">15</span><span class="toc-text">14. Living with other denoise add-ons</span></a></li><li class="toc-item"><a class="toc-link" href="#15-uninstall"><span class="toc-num">16</span><span class="toc-text">15. Uninstall</span></a></li></ol>
+  </nav>
+
+  <main>
+<h1 id="final-quality-pipeline-manual">Final Quality Pipeline — Manual</h1>
+<blockquote><p>Version 1.3.0 · Blender 5.1 / 5.2 · <strong>Cycles only</strong> · Online, with screenshots: <a href="https://www.jerrythepopper.com/3daddon/fqp/">jerrythepopper.com/3daddon/fqp</a></p></blockquote>
+<p>A finishing-quality denoise pipeline for Cycles. It splits the render into its light components, multiplies each light pass by its surface colour and then denoises it on its own in full HDR, guided by the albedo and normal passes, and hands you a slider per component so <em>you</em> decide how much micro-detail survives. For animation it adds a cross-frame pass that removes denoiser flicker and paints motion blur back on at the end.</p>
+<p>Two measuring instruments come with it: one works out how many light bounces your scene actually needs, the other works out how tight your noise threshold has to be — which is the same question as how many seconds each frame costs.</p>
+<hr>
+<h2 id="contents">Contents</h2>
+<ol><li><a href="#1-install">Install</a></li><li><a href="#2-language">Language</a></li><li><a href="#3-three-minute-version">Three-minute version</a></li><li><a href="#4-what-it-actually-does">What it actually does</a></li><li><a href="#5-panel-reference">Panel reference</a></li><li><a href="#6-health-check">Health Check</a></li><li><a href="#7-the-two-analyzers">The two analyzers</a></li><li><a href="#8-background-rendering">Background rendering</a></li><li><a href="#9-animation-start-to-finish">Animation, start to finish</a></li><li><a href="#10-faq">FAQ</a></li><li><a href="#11-platform-notes">Platform notes</a></li><li><a href="#12-known-limits">Known limits</a></li><li><a href="#13-troubleshooting">Troubleshooting</a></li><li><a href="#14-living-with-other-denoise-add-ons">Living with other denoise add-ons</a></li><li><a href="#15-uninstall">Uninstall</a></li></ol>
+<hr>
+<h2 id="1-install">1. Install</h2>
+<p>The .zip installs as an extension. There are two ways in, and both end up in the same place.</p>
+<ul><li>Drag the .zip onto the Blender window, or go to Edit &gt; Preferences &gt; Get Extensions, open the drop-down at the top right and choose <strong>Install from Disk</strong>.</li><li>Or go to Edit &gt; Preferences &gt; Add-ons, open the drop-down at the top right, choose <strong>Install from Disk</strong> and pick the .zip.</li></ul>
+<p>Keep only one copy installed — a second one, such as an older copy left in your <code>scripts/addons</code> folder, would fight over the same panel. In the add-on list it is called <strong>Who Needs Another Render Setup? (Final Quality Pipeline)</strong>; searching for either name finds it. The panel is titled Final Quality Pipeline and appears at the very top of Properties &gt; Render, right under the render engine selector.</p>
+<p>Requirements: Blender 5.1 or 5.2, and the <strong>Cycles</strong> render engine. Cycles is not a preference here — the whole pipeline runs on per-pass and denoising data that only Cycles produces. EEVEE cannot supply it.</p>
+<hr>
+<h2 id="2-language">2. Language</h2>
+<figure class="shot" id="shot-language_switch"><div class="shot-frame" style="max-width:871px"><a href="img/en/language_switch.png"><img src="img/en/language_switch.png" width="871" height="88" alt="Top of the Final Quality Pipeline panel: the Language switch above the Health Check button" loading="lazy"></a><span class="shot-dot" style="left:30.08%;top:51.14%" aria-hidden="true">1</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">Language</strong> The add-on speaks English and Traditional Chinese, and the switch is its own: it sits at the top of the panel with three settings.</span></li></ol></figure>
+<p>The add-on speaks English and Traditional Chinese, and the switch is its own: it sits at the top of the panel (and in the add-on's own preferences, under Edit &gt; Preferences &gt; Add-ons) with three settings.</p>
+<div class="table-wrap"><table><thead><tr><th>Setting</th><th>Meaning</th></tr></thead><tbody><tr><td><strong>Auto</strong></td><td>Follow what Blender shows: Chinese when Blender's interface is set to a Chinese language <strong>and</strong> Blender actually translates it (Preferences &gt; Interface &gt; Translation &gt; Interface), English otherwise</td></tr><tr><td><strong>English</strong></td><td>Always English, whatever Blender is set to — including words Blender has its own translation for, such as Diffuse or Shutter</td></tr><tr><td><strong>Chinese</strong></td><td>Always Traditional Chinese, whatever Blender is set to (shown as 中文 once the panel is in Chinese)</td></tr></tbody></table></div>
+<p>Because it is independent of Blender's interface language you can keep Blender in English and read this add-on in Chinese, or the reverse. The choice is remembered between sessions and applies to every file.</p>
+<p>Auto makes its choice when you pick it and when Blender starts. If you change Blender's language or its translation switch while Blender is open, pick the add-on's language again (or restart Blender) to follow.</p>
+<p>Switching takes effect immediately — panel text, button labels and tooltips all change on the spot, and nothing you have set moves. Reports written by the two analyzers and the progress lines in the background-render window follow the same setting.</p>
+<hr>
+<h2 id="3-three-minute-version">3. Three-minute version</h2>
+<h3 id="a-still-frame">A still frame</h3>
+<ol><li>Properties &gt; Render &gt; <strong>Final Quality Pipeline</strong></li><li><strong>Build Pipeline</strong></li><li><strong>Apply Final Sampling</strong></li><li><strong>Set 32-bit EXR Output</strong></li><li>Render with F12</li><li>Afterwards, drag the <strong>Glossy</strong> slider (0.7–1.0) until the highlights look right. It is live — no re-render needed. By default it only acts where the picture is very bright (<strong>Remix Highlights Only</strong>), so in an evenly lit scene you may see no change at all — that is normal.</li></ol>
+<h3 id="an-animation-with-flicker-removal">An animation, with flicker removal</h3>
+<ol><li>Steps 1–4 above, and save the file</li><li>Switch <strong>Motion Blur off</strong> (Render Properties &gt; Motion Blur). This is not optional — see the FAQ.</li><li><strong>Prepare Animation Output</strong>, then render the animation as usual</li><li><strong>Build Temporal</strong>, then <strong>Run Temporal</strong></li><li>The finished frames land in <code>//fqp_final/&lt;blend&gt;_&lt;scene&gt;/</code> as <code>stabilized####.exr</code>. The first and last few frames of the range are missing on purpose: they have no neighbours to blend with.</li></ol>
+<h3 id="before-you-ship">Before you ship</h3>
+<p>Press <strong>Health Check</strong>. It changes nothing and tells you, one line each, whether this scene is clear of nine things that are known to go wrong — plus a few more lines that only show up when they apply.</p>
+<hr>
+<h2 id="4-what-it-actually-does">4. What it actually does</h2>
+<p>Cycles can output its light as separate passes: diffuse, glossy, transmission, emission, volume — the first three split into "how much light arrived" and "what colour the surface is". A normal denoise runs once over the finished picture, with every kind of light already mixed together, so one pass has to suit rough metal, glass and matte surfaces alike.</p>
+<p>This pipeline works pass by pass instead. Each light pass is first multiplied by its surface colour and then denoised on its own, in full HDR with nothing clipped at white, so the material texture goes through the denoiser together with the light, guided by the albedo and normal passes. Emission and Volume Direct/Indirect have no colour pass of their own, so they are denoised straight and added back without the multiply.</p>
+<p>Each component then gets a mix slider between "raw" and "fully denoised". Reflections are where denoisers do the most damage — they iron a rough metal highlight into plastic — so Glossy defaults below 1. By default the raw side only comes back where the picture is very bright (<strong>Remix Highlights Only</strong>): highlights keep their grain and texture, everything else stays clean. So in a scene with nothing very bright, dragging a slider can show no difference at all; that is normal, not a fault. If you want the sliders to act on the whole picture, for example to get grain everywhere, switch <strong>Remix Highlights Only</strong> off and press Rebuild Pipeline. The Volume slider is not affected by it: it always acts on the whole picture.</p>
+<p>For animation there is a second stage. Denoising each frame independently makes the result shimmer, because the denoiser makes slightly different guesses on every frame. The temporal pass takes each frame's neighbours, moves them into place using the motion vectors Cycles renders, throws away pixels whose depth does not match (and the pixels right next to them), and blends what is left. Cycles' own motion blur has to be off for that, because a blurred frame produces no usable motion vectors — the blur is painted back on at the very end instead. It works best on locked-off or slow camera moves. On a fast dolly or pan, the outline of an object moving across the background can come out slightly worse than without the temporal pass (see Known limits).</p>
+<hr>
+<h2 id="5-panel-reference">5. Panel reference</h2>
+<h3 id="main-section">Main section</h3>
+<figure class="shot" id="shot-main_start"><div class="shot-frame" style="max-width:871px"><a href="img/en/main_start.png"><img src="img/en/main_start.png" width="871" height="130" alt="Main section before the pipeline is built: Health Check and Build Pipeline" loading="lazy"></a><span class="shot-dot" style="left:44.20%;top:55.38%" aria-hidden="true">1</span><span class="shot-dot" style="left:44.09%;top:86.92%" aria-hidden="true">2</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">Health Check</strong> Nine checks, plus a few that only appear when they apply. No changes.</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">Build Pipeline</strong> Enables the passes it needs and wires up the node group, placed next to your Render Layers node. Safe to press again at any time.</span></li></ol></figure>
+<figure class="shot" id="shot-main_built"><div class="shot-frame" style="max-width:871px"><a href="img/en/main_built.png"><img src="img/en/main_built.png" width="871" height="625" alt="Main section with the pipeline built: Rebuild Pipeline and Remove, the five sliders, the firefly filter, the Rebuild to apply box, the EXR output button and the final sampling row" loading="lazy"></a><span class="shot-dot" style="left:19.06%;top:18.08%" aria-hidden="true">1</span><span class="shot-dot" style="left:70.03%;top:18.08%" aria-hidden="true">2</span><span class="shot-dot" style="left:16.07%;top:26.56%" aria-hidden="true">3</span><span class="shot-dot" style="left:48.22%;top:33.76%" aria-hidden="true">4</span><span class="shot-dot" style="left:51.66%;top:36.80%" aria-hidden="true">5</span><span class="shot-dot" style="left:48.22%;top:40.00%" aria-hidden="true">6</span><span class="shot-dot" style="left:51.66%;top:43.20%" aria-hidden="true">7</span><span class="shot-dot" style="left:48.22%;top:46.40%" aria-hidden="true">8</span><span class="shot-dot" style="left:21.35%;top:50.56%" aria-hidden="true">9</span><span class="shot-dot" style="left:49.94%;top:53.76%" aria-hidden="true">10</span><span class="shot-dot" style="left:14.01%;top:58.56%" aria-hidden="true">11</span><span class="shot-dot" style="left:17.22%;top:63.04%" aria-hidden="true">12</span><span class="shot-dot" style="left:18.71%;top:67.52%" aria-hidden="true">13</span><span class="shot-dot" style="left:18.83%;top:72.00%" aria-hidden="true">14</span><span class="shot-dot" style="left:8.50%;top:76.48%" aria-hidden="true">15</span><span class="shot-dot" style="left:18.14%;top:80.96%" aria-hidden="true">16</span><span class="shot-dot" style="left:41.33%;top:87.52%" aria-hidden="true">17</span><span class="shot-dot" style="left:30.08%;top:93.28%" aria-hidden="true">18</span><span class="shot-dot" style="left:66.36%;top:93.28%" aria-hidden="true">19</span><span class="shot-dot" style="left:17.91%;top:97.28%" aria-hidden="true">20</span><span class="shot-dot" style="left:63.38%;top:97.28%" aria-hidden="true">21</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">Rebuild Pipeline</strong> Safe to press again at any time - it rebuilds in place and reconnects any filter chain you added afterwards.</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">Remove</strong> Asks first, then takes the group out, restores the wiring you had and switches off the passes Build turned on.</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">Write Noisy Image</strong> Also writes the raw, un-denoised frames as <code>noisy####.exr</code> under a <code>noisy image</code> folder in your output path, so one render gives you both.</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong class="shot-label">Diffuse</strong> Diffuse denoise blend. Default 1 (fully denoised); lower it when the diffuse lighting starts looking plastic, or to keep some grain on diffuse surfaces.</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">Glossy</strong> The one to reach for first. Lower it to put highlight grain back into brushed metal and rough reflections.</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">Transmission</strong> Glass and other see-through material.</span></li><li><span class="shot-num" aria-hidden="true">7</span><span class="shot-text"><strong class="shot-label">Emission</strong> Glowing surfaces — light strips, screens. Raise it if they flicker.</span></li><li><span class="shot-num" aria-hidden="true">8</span><span class="shot-text"><strong class="shot-label">Volume</strong> Fog, smoke, god rays. Volume noise is usually the heaviest in the frame, so this stays at 1.</span></li><li><span class="shot-num" aria-hidden="true">9</span><span class="shot-text"><strong class="shot-label">Filter Fireflies Before Remix</strong> Before the sliders above mix the noisy pass back in, lone bright and dark specks in it are pulled back into a sensible range around the denoised value.</span></li><li><span class="shot-num" aria-hidden="true">10</span><span class="shot-text"><strong class="shot-label">Grain to Keep</strong> How far the noisy pass may stray from the denoised one before it is pulled back.</span></li><li><span class="shot-num" aria-hidden="true">11</span><span class="shot-text"><strong class="shot-label">Rebuild to apply</strong> Everything in the "Rebuild to apply" box needs a Build Pipeline press to take effect, and so does a change to the render output path.</span></li><li><span class="shot-num" aria-hidden="true">12</span><span class="shot-text"><strong class="shot-label">Clean Guide Passes</strong> Cleans the two "map" images the denoiser navigates by before letting them steer.</span></li><li><span class="shot-num" aria-hidden="true">13</span><span class="shot-text"><strong class="shot-label">Remix Highlights Only</strong> The sliders above only act where the picture is very bright, so highlights keep their texture and everything else stays clean.</span></li><li><span class="shot-num" aria-hidden="true">14</span><span class="shot-text"><strong class="shot-label">Auto GPU Compositor</strong> Moves the compositor onto the GPU when you press Build Pipeline.</span></li><li><span class="shot-num" aria-hidden="true">15</span><span class="shot-text"><strong class="shot-label">Prefilter</strong> How carefully those guide images are cleaned.</span></li><li><span class="shot-num" aria-hidden="true">16</span><span class="shot-text"><strong class="shot-label">Include Environment</strong> Composites the world background back in.</span></li><li><span class="shot-num" aria-hidden="true">17</span><span class="shot-text"><strong class="shot-label">Set 32-bit EXR Output</strong> Single-layer 32-bit OpenEXR RGBA, ZIP.</span></li><li><span class="shot-num" aria-hidden="true">18</span><span class="shot-text"><strong class="shot-label">Final Max Samples</strong> The sample ceiling that 'Apply Final Sampling' writes into Cycles.</span></li><li><span class="shot-num" aria-hidden="true">19</span><span class="shot-text"><strong class="shot-label">Apply Final Sampling</strong> Asks first, then sets adaptive sampling on, noise threshold 0.01, max samples from the field beside it, plus blue noise and animated seed.</span></li><li><span class="shot-num" aria-hidden="true">20</span><span class="shot-text"><strong class="shot-label">Blue-Noise Sampling</strong> Spread the leftover noise into a fine, even grain instead of clumps. Applied by 'Apply Final Sampling'.</span></li><li><span class="shot-num" aria-hidden="true">21</span><span class="shot-text"><strong class="shot-label">Animated Seed</strong> Give every frame its own random seed so the noise pattern does not sit still across the sequence. Applied by 'Apply Final Sampling'.</span></li></ol></figure>
+<div class="table-wrap"><table><thead><tr><th>Control</th><th>What it does</th></tr></thead><tbody><tr><td><strong>Health Check</strong></td><td>Nine checks, plus a few that only appear when they apply. No changes. See below.</td></tr><tr><td><strong>Build Pipeline</strong></td><td>Enables the passes it needs and wires up the node group, placed next to your Render Layers node. Splices itself in <strong>front</strong> of any filter chain you already have, so denoising is always the first thing that happens. Anything else that read the raw render image — a second branch, a File Output — is moved onto the denoised image too; Viewer nodes stay on the raw one. With several view layers it reads the one you are on; if that layer is not rendered (Use for Rendering off), it builds on the first layer that is and warns, and if no layer is rendered it changes nothing and says so. With several Render Layers nodes it uses the one whose Image reaches the final output; with several Group Output nodes, the active one and its first input (the one Blender renders). Switches Compositing on if it was off. Safe to press again at any time.</td></tr><tr><td><strong>Remove</strong></td><td>Asks first, then takes the group out, restores the wiring you had and switches off the passes Build turned on. It also undoes the rest of what Build did: a compositor tree Build created is removed, Render Layers / Group Output nodes Build added are deleted if nothing was wired to them since, and Compositing and the compositor device go back to what they were — unless you changed them yourself after building. Your own nodes are untouched. A link you rewired yourself after building is left as you made it.</td></tr><tr><td><strong>Clean up leftovers</strong></td><td>Only shows up when the pipeline node was deleted by hand. Clears the wiring records it left behind in the scene. No node and no link is touched.</td></tr><tr><td><strong>Diffuse</strong> (1.0)</td><td>Diffuse denoise blend. Default 1 (fully denoised); lower it when the diffuse lighting starts looking plastic, or to keep some grain on diffuse surfaces.</td></tr><tr><td><strong>Glossy</strong> (0.85)</td><td>The one to reach for first. Lower it to put highlight grain back into brushed metal and rough reflections. 0.7–0.9 is the useful range. Like the other sliders, it only acts where the picture is very bright while Remix Highlights Only is on.</td></tr><tr><td><strong>Transmission</strong> (0.9)</td><td>Glass and other see-through material.</td></tr><tr><td><strong>Emission</strong> (0.5)</td><td>Glowing surfaces — light strips, screens. Raise it if they flicker.</td></tr><tr><td><strong>Volume</strong> (1.0)</td><td>Fog, smoke, god rays. Volume noise is usually the heaviest in the frame, so this stays at 1. Pull it back only if fine wisps start to smear.</td></tr><tr><td><strong>Filter Fireflies Before Remix</strong> (on)</td><td>Before the sliders above mix the noisy pass back in, lone bright and dark specks in it are pulled back into a sensible range around the denoised value. The grain stays; the fireflies don't come back with it. Off gives exactly the v1.0.1 result. See <a href="#filter-fireflies-before-remix">below</a>.</td></tr><tr><td><strong>Grain to Keep</strong> (0.75)</td><td>How far the noisy pass may stray from the denoised one before it is pulled back. Higher keeps more grain, and more specks. Greyed out while the filter is off.</td></tr><tr><td><strong>Clean Guide Passes</strong> (off)</td><td>Cleans the two "map" images the denoiser navigates by before letting them steer. Off by default; turn it on only for very dark or very noisy shots. It softens fine bumps and small surface detail.</td></tr><tr><td><strong>Remix Highlights Only</strong> (on)</td><td>The sliders above only act where the picture is very bright, so highlights keep their texture and everything else stays clean. If nothing in the picture is that bright, the sliders show no difference; that is normal. Turn it off to let them act on the whole picture (the old behaviour; use it when you want grain everywhere). The Volume slider always acts on the whole picture.</td></tr><tr><td><strong>Auto GPU Compositor</strong> (on)</td><td>Moves the compositor onto the GPU when you press Build Pipeline. This tree is full of denoise nodes, and the compositor runs slower on the CPU.</td></tr><tr><td><strong>Prefilter</strong> (Accurate)</td><td>How carefully those guide images are cleaned. Leave it on Accurate for a final frame.</td></tr><tr><td><strong>Include Environment</strong> (on)</td><td>Composites the world background back in. Skipped automatically while Transparent Film is on, so the HDRI cannot leak through the alpha.</td></tr><tr><td><strong>Apply Final Sampling</strong></td><td>Asks first, then sets adaptive sampling on, noise threshold 0.01, max samples from the field beside it, plus blue noise and animated seed. Press it before you run the Sampling Analyzer, and press <strong>Apply Suggested Threshold</strong> after it, not before: it always writes 0.01, so pressing it again later puts the threshold back to 0.01. The Max Samples it sets is also the ceiling the analysis measures against.</td></tr><tr><td><strong>Set 32-bit EXR Output</strong></td><td>Single-layer 32-bit OpenEXR RGBA, ZIP. Deliberately single-layer: After Effects reads a multilayer EXR as a black frame.</td></tr><tr><td><strong>Write Noisy Image</strong> (off)</td><td>Also writes the raw, un-denoised frames as <code>noisy####.exr</code> under a <code>noisy image</code> folder in your output path, so one render gives you both. Useful if you want to try a different denoiser later. The folder is stored relative to the .blend (<code>//&lt;output&gt;/noisy image/</code>), so Save As or moving the project keeps it with the file. Needs a saved file: on an unsaved file, or with an output path that has no drive letter, Build skips it and warns — save (or set the output path), then Rebuild. A scene built with v1.1.0 needs one Rebuild; Health Check reminds you.</td></tr></tbody></table></div>
+<p>The five sliders, <strong>Filter Fireflies Before Remix</strong> and <strong>Grain to Keep</strong> are <strong>live</strong>: moving one writes straight into the node tree, no rebuild. Everything in the "Rebuild to apply" box needs a Build Pipeline press to take effect, and so does a change to the render output path. If you switch Transparent Film on or off after building, the panel says so and asks for a Rebuild. None of the add-on's settings can be animated — see the <a href="#10-faq">FAQ</a>.</p>
+<p>Important messages from Build — a missing pass, a view layer it had to switch — come up as warnings, so they stay visible instead of scrolling past.</p>
+<p>A few things worth knowing about Build and Remove:</p>
+<ul><li>If a Reroute sits right after Render Layers (Blender's default tree when you press New), the Viewer hangs off that Reroute and shows the denoised picture after Build. Connect the Viewer to Render Layers directly to keep watching the raw render.</li><li>Muting the Final Quality Pipeline node does not bypass it: Blender passes its first input (Diffuse Direct) straight through, so the picture turns dark. To compare with and without, press Remove, or plug the Render Layers Image into the output for a moment.</li><li>If your output had nothing connected and Build wired the end of your chain to it, Remove keeps that link, so F12 still shows a picture.</li><li>Two scenes that use the very same compositor tree share the pipeline in it. Build warns about that, and Remove asks first, because it takes FQP out of every scene on that tree.</li><li>A scene built with v1.1.0 has no record of what Build changed besides the wiring and the passes, so Remove there works as it did in v1.1.0. Press Remove, then Build Pipeline once, and later Removes undo everything.</li><li>The pipeline only works in Cycles, and with Workbench selected it turns F12 black. Press <strong>Remove</strong> before you switch engines; the panel keeps the button (and says so) when another engine is selected.</li></ul>
+<h3 id="filter-fireflies-before-remix">Filter Fireflies Before Remix</h3>
+<p>The mix sliders work by blending some of the raw, noisy render back over the denoised one: that is where the natural grain comes from. The catch is that the raw render also carries fireflies, the lone pixels that came out far too bright, and a slider below 1 used to put a share of those back in as well.</p>
+<p>With <strong>Filter Fireflies Before Remix</strong> on (the default), each noisy pass is compared with its own denoised version before it is mixed back. Where the two are close, the noisy pixel goes back untouched, so the grain you chose stays. Where a pixel is far off (a lone bright speck, or a lone dark one), it is first pulled back to the edge of an allowed range around the denoised value. The range is <strong>Grain to Keep</strong> × the denoised brightness, plus a small fixed margin. It applies to Diffuse, Glossy, Transmission and Volume; Emission is mixed back as before.</p>
+<p>When to touch <strong>Grain to Keep</strong>:</p>
+<ul><li>Still seeing white specks where a slider is below 1? Lower it. Lower is cleaner, with less grain.</li><li>Grain looks too tame on brushed metal or rough reflections? Raise it. Higher keeps more grain, and more specks.</li><li>0.75 is a good start. It changes the image live, no rebuild.</li><li>A slider at 1.0 mixes nothing noisy back, so on that component the filter makes no visible difference.</li></ul>
+<p>A scene whose pipeline was built by an older version does not have the filter yet. The panel then shows "Press Rebuild Pipeline above to use this" under the checkbox: press <strong>Rebuild Pipeline</strong> once. With the filter off, the result is exactly the same as in v1.0.1.</p>
+<h3 id="temporal-section">Temporal section</h3>
+<figure class="shot" id="shot-temporal"><div class="shot-frame" style="max-width:871px"><a href="img/en/temporal.png"><img src="img/en/temporal.png" width="871" height="304" alt="The Temporal box of the panel, from Temporal Radius down to Build Temporal and Run Temporal" loading="lazy"></a><span class="shot-dot" style="left:14.35%;top:15.46%" aria-hidden="true">1</span><span class="shot-dot" style="left:48.22%;top:21.71%" aria-hidden="true">2</span><span class="shot-dot" style="left:51.66%;top:28.29%" aria-hidden="true">3</span><span class="shot-dot" style="left:16.65%;top:37.83%" aria-hidden="true">4</span><span class="shot-dot" style="left:73.48%;top:37.83%" aria-hidden="true">4</span><span class="shot-dot" style="left:10.56%;top:47.04%" aria-hidden="true">5</span><span class="shot-dot" style="left:13.55%;top:53.29%" aria-hidden="true">6</span><span class="shot-dot" style="left:36.28%;top:60.20%" aria-hidden="true">7</span><span class="shot-dot" style="left:12.63%;top:69.41%" aria-hidden="true">8</span><span class="shot-dot" style="left:40.41%;top:85.20%" aria-hidden="true">9</span><span class="shot-dot" style="left:19.52%;top:94.41%" aria-hidden="true">10</span><span class="shot-dot" style="left:68.31%;top:94.41%" aria-hidden="true">11</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">Temporal Radius</strong> How many neighbours on each side get blended in: ±1, ±2 or ±3.</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">Clip Gamma</strong> How much the neighbouring frames are trusted.</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">Depth Tolerance</strong> How far apart in depth a borrowed pixel may be before it is thrown away, as a fraction of its distance to the camera: 0.03 means 3%.</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong class="shot-label">Apply Motion Blur + Shutter</strong> Paints the blur back on at the end.</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">Frames Dir</strong> Where the four source sequences are written and read back.</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">Stabilized Dir</strong> Where the finished frames go, as <code>stabilized####.exr</code>.</span></li><li><span class="shot-num" aria-hidden="true">7</span><span class="shot-text">With the default folders, each .blend and scene gets its own subfolder. The panel shows the subfolder name.</span></li><li><span class="shot-num" aria-hidden="true">8</span><span class="shot-text"><strong class="shot-label">Beauty Source</strong> Which picture gets stabilized. <em>Final</em> is whatever is plugged into the Group Output, your own Glare and grading included.</span></li><li><span class="shot-num" aria-hidden="true">9</span><span class="shot-text"><strong class="shot-label">Prepare Animation Output</strong> Adds the File Output node that saves the four sequences, and notes which frame range it prepared.</span></li><li><span class="shot-num" aria-hidden="true">10</span><span class="shot-text"><strong class="shot-label">Build Temporal</strong> Creates the helper scene that does the work. Run Temporal builds it for you; this button is for when you want to look inside.</span></li><li><span class="shot-num" aria-hidden="true">11</span><span class="shot-text"><strong class="shot-label">Run Temporal</strong> Does the flicker removal and writes the finished frames.</span></li></ol></figure>
+<div class="table-wrap"><table><thead><tr><th>Control</th><th>What it does</th></tr></thead><tbody><tr><td><strong>Temporal Radius</strong> (±1, 3 frames in total)</td><td>How many neighbours on each side get blended in: ±1, ±2 or ±3. Wider is steadier, smears fast motion, and takes longer.</td></tr><tr><td><strong>Clip Gamma</strong> (1.0)</td><td>How much the neighbouring frames are trusted. Higher kills flicker harder but can drag ghosts behind moving objects; lower is stricter and cleaner on motion.</td></tr><tr><td><strong>Depth Tolerance</strong> (0.03)</td><td>How far apart in depth a borrowed pixel may be before it is thrown away, as a fraction of its distance to the camera: 0.03 means 3%. It works the same in a centimetre product shot and a kilometre landscape. This is the guard against pulling in background that was hidden a frame ago. Since 1.2.9 the pixels right next to a thrown-away one are left out too. Lowering it does not clean up the outline of an object moving across the background (see Known limits). Files saved with the old absolute setting (anything above 0.3) are reset to 0.03 automatically.</td></tr><tr><td><strong>Apply Motion Blur</strong> + <strong>Shutter</strong> (on, 0.5)</td><td>Paints the blur back on at the end. The shutter is taken from the scene's own motion blur shutter, so the result matches what Cycles would have produced.</td></tr><tr><td><strong>Frames Dir</strong></td><td>Where the four source sequences are written and read back. A relative folder such as <code>frames/</code> is read as <code>//frames/</code>, next to the .blend. A folder at the root of a disk without a drive letter (<code>\frames</code>) is refused. The same goes for Stabilized Dir.</td></tr><tr><td><strong>Stabilized Dir</strong></td><td>Where the finished frames go, as <code>stabilized####.exr</code>. This is the one you hand to your editor.</td></tr><tr><td><strong>Beauty Source</strong> (Final)</td><td>Which picture gets stabilized. <em>Final</em> is whatever is plugged into the Group Output, your own Glare and grading included. <em>FQP Output</em> is a clean plate with none of it. Either way it is a snapshot of the wiring — press Prepare again after rewiring.</td></tr><tr><td><strong>Prepare Animation Output</strong></td><td>Adds the File Output node that saves the four sequences, and notes which frame range it prepared so leftovers from an earlier render can be told apart later. Vector, Depth and Normal come from the same Render Layers node the pipeline reads, on that node's view layer. It first tries to write to the Frames and Stabilized folders, creating them: a disconnected drive, a missing network share, a path longer than 260 characters or a read-only folder stops it with the path and the reason. Refuses to run while motion blur is on, on a file that was never saved, when no view layer is rendered, when the Render Layers node reads a layer with Use for Rendering off, or when beauty, vector, depth or normal has no source — with a warning, and nothing changed.</td></tr><tr><td><strong>Prepare, keep existing frames</strong></td><td>Shows up under Prepare once the Frames folder holds an earlier Prepare of this scene for the same frame range. Switches the Animation Output back on without starting over, so you can render a few frames again. The frames already there are kept and <strong>not</strong> checked for being out of date. See <a href="#patching-a-few-frames">Patching a few frames</a>.</td></tr><tr><td><strong>Build Temporal</strong></td><td>Creates the helper scene that does the work. Run Temporal builds it for you; this button is for when you want to look inside.</td></tr><tr><td><strong>Run Temporal</strong></td><td>Does the flicker removal and writes the finished frames. It checks first: motion blur off, every frame has its beauty, vector and depth file (a 0-byte file counts as missing), all of them are the same size as the first beauty frame, none looks damaged (far smaller than the rest of its sequence and unreadable), the vectors are not empty, and no leftover frames from an earlier render are mixed in. Anything wrong stops the run with the frame numbers. Afterwards it mutes the Animation Output node, so a later F12 cannot overwrite your frames. Prepare switches it back on.</td></tr><tr><td><strong>Remove Animation Output</strong></td><td>Shows up once Prepare has added its node. Asks first, then deletes the node and switches off the Vector / Depth / Normal passes Prepare turned on. The denoise pipeline and the frames on disk are not touched.</td></tr></tbody></table></div>
+<p>With the default folders, each .blend and scene gets its own subfolder — <code>//fqp_frames/&lt;blend&gt;_&lt;scene&gt;/</code> and <code>//fqp_final/&lt;blend&gt;_&lt;scene&gt;/</code> — so two files in one folder never overwrite each other. The panel shows the subfolder name. A folder you type in yourself is used as it is. Folder names ignore upper and lower case (Windows does too), so two scenes whose names differ only in case — Shot and shot — would land in one folder; one of them gets a short suffix instead (for example <code>&lt;blend&gt;_shot_8faccb</code>), and the one whose frames are already in the plain folder keeps it. Every other scene keeps its plain name.</p>
+<p>Pressing <strong>Rebuild Pipeline</strong> after Prepare is safe: the Animation Output is reconnected to the rebuilt pipeline ("Animation output re-wired to the rebuilt pipeline"). If Run Temporal had muted it, it stays muted — press Prepare to write frames again. If the Rebuild moved to another view layer, a warning says the frames already rendered come from the old layer; render them again.</p>
+<p>Transparent Film is carried through: the finished frames keep their alpha.</p>
+<p>The temporal buttons are greyed out while you are inside the <code>FQP_Temporal</code> helper scene. Switch back to your own scene first.</p>
+<h3 id="analysis-section">Analysis section</h3>
+<figure class="shot" id="shot-analysis_lightpath"><div class="shot-frame" style="max-width:871px"><a href="img/en/analysis_lightpath.png"><img src="img/en/analysis_lightpath.png" width="871" height="198" alt="Analysis box, light path half, with a report: Analyze Light Paths and its status line, Apply Strict (116), Apply Visual (112) and Show Report" loading="lazy"></a><span class="shot-dot" style="left:49.94%;top:37.88%" aria-hidden="true">1</span><span class="shot-dot" style="left:53.39%;top:47.47%" aria-hidden="true">2</span><span class="shot-dot" style="left:18.14%;top:62.12%" aria-hidden="true">3</span><span class="shot-dot" style="left:67.74%;top:62.12%" aria-hidden="true">4</span><span class="shot-dot" style="left:18.83%;top:76.26%" aria-hidden="true">5</span><span class="shot-dot" style="left:66.93%;top:76.26%" aria-hidden="true">6</span><span class="shot-dot" style="left:44.55%;top:90.40%" aria-hidden="true">7</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">Analyze Res %</strong> How big the analyzer's test images are, as a percentage of your real output size.</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">Analyze Samples</strong> How finely each test image is rendered - more samples means less noise and more waiting.</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">Analyze Light Paths</strong> Renders a series of small test images, usually 15 to 45; the report says how many.</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text">A status line beside the analyzer buttons says whether the last analysis is <strong>running</strong>, finished <strong>OK</strong>, or <strong>failed</strong> — before you press anything.</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">Apply Strict</strong> Writes the Strict set into Render Properties &gt; Light Paths. The number in brackets on a button is the Max Bounces after applying.</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">Apply Visual</strong> Writes the Visual set. Both ask before they write.</span></li><li><span class="shot-num" aria-hidden="true">7</span><span class="shot-text"><strong class="shot-label">Show Report</strong> Gives you the short version in a popup: the values Apply writes (not the measured knees), the result of both set checks, and anything that needs attention.</span></li></ol></figure>
+<figure class="shot" id="shot-analysis_sampling"><div class="shot-frame" style="max-width:871px"><a href="img/en/analysis_sampling.png"><img src="img/en/analysis_sampling.png" width="871" height="174" alt="Analysis box, sampling half: the ceiling line, Analyze Frames, Analyze Sampling, Apply Suggested Threshold and Show Sampling Report" loading="lazy"></a><span class="shot-dot" style="left:30.20%;top:25.86%" aria-hidden="true">1</span><span class="shot-dot" style="left:13.78%;top:41.95%" aria-hidden="true">2</span><span class="shot-dot" style="left:98.51%;top:58.05%" aria-hidden="true">3</span><span class="shot-dot" style="left:18.71%;top:74.14%" aria-hidden="true">4</span><span class="shot-dot" style="left:15.73%;top:90.23%" aria-hidden="true">5</span><span class="shot-dot" style="left:65.67%;top:90.23%" aria-hidden="true">6</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">The Max Samples that <strong>Apply Final Sampling</strong> sets is also the ceiling the analysis measures against.</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">Analyze Frames</strong> Chooses what the analysis looks at. <strong>Current Frame</strong>, the default, analyses the frame the scene is on. <strong>First, Middle, Last</strong> analyses the first, middle and last frame of the frame range and uses the strictest pick of all of them.</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">Choose <strong>First, Middle, Last</strong> for an animation: a single frame can pick a looser rung than the rest of the shot needs. The panel says so next to the option.</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong class="shot-label">Analyze Sampling</strong> Renders one high-sample answer key with no threshold at all, then one image per threshold from loose to tight, timing each.</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">Apply Suggested Threshold</strong> Sets only <code>adaptive_threshold</code>. Max Samples is left alone deliberately: the scan used your current value as its ceiling.</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">Show Sampling Report</strong> Bring the last sampling analysis back up. A small popup gives you the short version - the recommended threshold and how each rung compares with the tightest one.</span></li></ol></figure>
+<p>A status line beside the analyzer buttons says whether the last analysis is <strong>running</strong>, finished <strong>OK</strong>, or <strong>failed</strong> — before you press anything. See <a href="#7-the-two-analyzers">The two analyzers</a>.</p>
+<hr>
+<h2 id="6-health-check">6. Health Check</h2>
+<figure class="shot" id="shot-health_check_popup"><div class="shot-frame" style="max-width:883px"><a href="img/en/health_check_popup.png"><img src="img/en/health_check_popup.png" width="883" height="382" alt="The Health Check popup: lines marked [OK] or [!], a how-to-fix line under each failing one, and the conclusion" loading="lazy"></a><span class="shot-dot" style="left:2.04%;top:10.99%" aria-hidden="true">1</span><span class="shot-dot" style="left:2.04%;top:21.47%" aria-hidden="true">1</span><span class="shot-dot" style="left:4.08%;top:26.70%" aria-hidden="true">2</span><span class="shot-dot" style="left:5.21%;top:31.94%" aria-hidden="true">3</span><span class="shot-dot" style="left:2.04%;top:96.60%" aria-hidden="true">4</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">Every line is <code>[OK]</code> or <code>[!]</code>.</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">Every failing line comes with a "how to fix it" underneath.</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">A line that is too long is folded onto several lines, and the continuation lines are indented a little further than the line they continue.</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text">A summary pops up on screen; the whole thing goes to the system console.</span></li></ol></figure>
+<p>One button, nine checks, no side effects — plus up to four more lines that only appear when they apply. Every line is <code>[OK]</code> or <code>[!]</code>, and every failing line comes with a "how to fix it" underneath. One line reads differently: the volume hint starts with <code>[OK]</code> and carries a piece of advice. It is not a problem; it is not counted among the lines that need attention, it is counted as passed. A summary pops up on screen; the whole thing goes to the system console.</p>
+<div class="table-wrap"><table><thead><tr><th>#</th><th>Check</th><th>Why it is there</th></tr></thead><tbody><tr><td>1</td><td>Render engine</td><td>Not Cycles means none of this works. With the pipeline already built, it tells you to press Remove before switching engines.</td></tr><tr><td>2</td><td>Saved state</td><td>Both analyzers and the background render read the .blend <strong>from disk</strong>. Unsaved edits are invisible to them.</td></tr><tr><td>3</td><td>Compositor device</td><td>The compositor runs slower on the CPU — the FQP tree is full of Denoise nodes.</td></tr><tr><td>4</td><td>Temporal prerequisites</td><td>Motion blur on, or Frame Step above 1, will stall the temporal flow. Harmless for stills.</td></tr><tr><td>5</td><td>Persistent Data</td><td>Off means every animation frame rebuilds its BVH. It also flags an add-on caught switching this off when a file is opened.</td></tr><tr><td>6</td><td>Python interpreter</td><td>Only affects the progress summary in the background-render window. The render itself is fine without one.</td></tr><tr><td>7</td><td>Output format</td><td>After Effects often reads a multilayer EXR as black.</td></tr><tr><td>8</td><td>Camera</td><td>No camera means the background render and both analyzers die the moment they start.</td></tr><tr><td>9</td><td>FQP pipeline</td><td>Not built, not connected, or Compositing switched off under Post Processing. Also built but not doing its job: bypassed (the output was rewired past it), muted, fed by red (invalid) links after a pass was switched off, fed by a Render Layers node that reads a view layer which is not rendered, overridden by Sequencer strips while Post Processing &gt; Sequencer is on — or sharing its compositor tree with another scene.</td></tr><tr><td>+</td><td>Write Noisy folder</td><td>Only with Write Noisy Image on. Flags a folder left over from v1.1.0 that would not follow the .blend, or one with no drive letter.</td></tr><tr><td>+</td><td>Shadow Catcher</td><td>Only when the render has a Shadow Catcher. With an opaque background its shadows are lost — see the <a href="#10-faq">FAQ</a>.</td></tr><tr><td>+</td><td>Keys on FQP settings</td><td>Only when an older file left keyframes or drivers on FQP settings. They do nothing; the line lists them.</td></tr><tr><td>+</td><td>Volume hint</td><td>Only when the render engine is Cycles, the scene has a volume, and Biased is off (the default since Blender 5.0; dense clouds or smoke can be slow). General advice, not measured by FQP: turning on Render &gt; Volumes &gt; Biased with a lower Max Steps (256, for example) is faster and a bit less exact; for thin haze it usually makes no difference to speak of. This line is <code>[OK]</code>; it is only a hint.</td></tr></tbody></table></div>
+<p>In background mode (<code>blender -b</code>) there is no window, so the popup degrades to console output rather than trying to draw one.</p>
+<hr>
+<h2 id="7-the-two-analyzers">7. The two analyzers</h2>
+<p>Both open their own console window, run in a separate headless Blender, and leave your Blender usable. Both read the file <strong>from disk</strong>, so an unsaved file is refused. Both analyze the scene you are looking at, on the same GPU device your Blender preferences name, and write that device into the report. Switch the viewport out of Rendered mode first; it holds VRAM the analysis wants.</p>
+<p><strong>Light Path Analyzer</strong> answers <em>how far each ray has to be followed</em>. <strong>Sampling Analyzer</strong> answers <em>how finely each pixel has to be computed</em> — which is to say, what each frame costs. Run the light path one first, apply it, then the sampling one.</p>
+<h3 id="files-it-writes">Files it writes</h3>
+<p>Reports go next to your .blend and carry its name, so two .blend files in one folder never share a report:</p>
+<div class="table-wrap"><table><thead><tr><th>File</th><th>What is in it</th></tr></thead><tbody><tr><td><code>&lt;blend&gt;.fqp_lightpath_report.txt</code> / <code>.json</code></td><td>Light path report, readable / for the Apply buttons</td></tr><tr><td><code>&lt;blend&gt;.fqp_sampling_report.txt</code> / <code>.json</code></td><td>Sampling report, same pair</td></tr><tr><td><code>&lt;report&gt;.log</code></td><td>Everything the analysis printed. The first thing to open when something went wrong.</td></tr><tr><td><code>&lt;report&gt;.status.json</code></td><td><code>running</code>, <code>ok</code> or <code>failed</code>. The panel status line reads it.</td></tr></tbody></table></div>
+<p>A second press of Analyze while one is still running is refused. So is Apply while the analysis is running, or after it failed — you never get last week's numbers by accident. Apply also checks the report was made for <strong>this</strong> .blend and <strong>this</strong> scene, refuses if not, and warns if the file was saved again after the report was written. Every Apply button (Apply Strict, Apply Visual, Apply Suggested Threshold) asks before it overwrites anything.</p>
+<h3 id="faster-with-a-render-border">Faster with a Render Border</h3>
+<p>If the scene has a Render Border set, both analyzers measure only what is inside it — typically 3–10× faster. Frame the noisiest part of the shot: the glossy highlight, the glass, the hair.</p>
+<p>The Light Path Analyzer's pass mark is measured against the whole frame's average brightness. A small object in front of a large bright background can pass while the object itself is noisier than the mark. For a small hero object — glass, jewellery — set a Render Border around it before you press Analyze.</p>
+<p>With a border, the Sampling Analyzer compares only what is inside the border, and the report says so.</p>
+<p>Once the first reference image is done, the console prints an estimate of the total time. Ctrl+C in that window stops the job.</p>
+<p>A reference render that comes back almost entirely black, or with invalid pixels, stops the analysis with a message, because a black reference would make every setting look "good enough". "Almost entirely black" means an average below 0.0001 with no pixel above 0.001 (linear values; about 3/255 on screen). The message lists the likely causes in order: lights (switched off, not rendered, or in an excluded collection), exposure or world strength, and only then the GPU. A very dark shot that does have lit objects in it — space, night — is analyzed normally.</p>
+<h3 id="clean-launch">Clean launch</h3>
+<p>The analyzers and the background renders start a second Blender. With <strong>Clean launch (factory startup)</strong> on — the default, in the add-on's preferences — that Blender does not load your other add-ons. It starts faster, shuts down cleanly, and cannot be tripped up by an add-on that throws errors on start-up.</p>
+<p>Turn it off if the scene <strong>needs</strong> a third-party add-on to render: custom nodes, a custom render engine, a driver that lives in an add-on. With it on, such a scene renders differently in the background, or not at all.</p>
+<p>Turning it off has one risk worth knowing. The background Blender then loads your other add-ons. If one of them registers a render handler (<code>render_init</code>, <code>render_pre</code>, <code>render_post</code>, <code>render_complete</code>) and the scene also overflows the graphics card's memory, the light path analysis can stall. What was measured: with such handlers and an overflow it stalled 3 times out of 3; without handlers and with an overflow, 0 times out of 5. That is a small sample; which handler it is and how it happens was not looked into, and the path with Clean launch off was itself not tested. When the analysis finds a render handler, the report's Notes get a paragraph about it. For a scene that does not need third-party add-ons, leave Clean launch on.</p>
+<h3 id="light-path-analyzer">Light Path Analyzer</h3>
+<figure class="shot" id="shot-analysis_no_visual"><div class="shot-frame" style="max-width:871px"><a href="img/en/analysis_no_visual.png"><img src="img/en/analysis_no_visual.png" width="871" height="226" alt="Analysis box with a report that has no Visual result: Apply Visual is greyed out and a line under the two buttons says so" loading="lazy"></a><span class="shot-dot" style="left:68.89%;top:66.81%" aria-hidden="true">1</span><span class="shot-dot" style="left:31.23%;top:79.20%" aria-hidden="true">2</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">When the report has no Visual result, <strong>Apply Visual</strong> cannot be pressed.</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">The panel says "No Visual result - run the analysis again".</span></li></ol></figure>
+<figure class="shot" id="shot-lightpath_report_popup"><div class="shot-frame" style="max-width:851px"><a href="img/en/lightpath_report_popup.png"><img src="img/en/lightpath_report_popup.png" width="851" height="456" alt="The Show Report popup of the Light Path Analyzer: the settings (Max Bounces 64 kept, Diffuse 3, Glossy 2, Transmission 4, Transparent 24), Strict joint check: ESCALATED, the Visual settings (Diffuse 1, Glossy 1, Transmission 2, Transparent 16), Visual set check: PASSED, and the path of the report file" loading="lazy"></a><span class="shot-dot" style="left:3.29%;top:13.60%" aria-hidden="true">1</span><span class="shot-dot" style="left:2.12%;top:44.30%" aria-hidden="true">2</span><span class="shot-dot" style="left:2.12%;top:70.61%" aria-hidden="true">2</span><span class="shot-dot" style="left:2.12%;top:96.93%" aria-hidden="true">3</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">The values Apply writes (not the measured knees).</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">The result of both set checks.</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">The rung-by-rung numbers go to the console and to <code>&lt;blend&gt;.fqp_lightpath_report.txt</code>.</span></li></ol></figure>
+<figure class="shot" id="shot-lightpath_report_popup_failed"><div class="shot-frame" style="max-width:851px"><a href="img/en/lightpath_report_popup_failed.png"><img src="img/en/lightpath_report_popup_failed.png" width="851" height="595" alt="The Show Report popup of a report whose Strict joint check is FAILED: the settings (Glossy 64, highest value measured, not settled), the line &#x27;raise these by hand: Glossy (Apply Strict writes 64)&#x27;, Visual set check: ESCALATED, the line &#x27;[!] Glossy: not settled&#x27; and the path of the report file" loading="lazy"></a><span class="shot-dot" style="left:2.12%;top:33.95%" aria-hidden="true">1</span><span class="shot-dot" style="left:5.64%;top:40.67%" aria-hidden="true">2</span><span class="shot-dot" style="left:2.12%;top:87.73%" aria-hidden="true">3</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">If it still fails, the result is FAILED: when the error (tm.RMSE) came down by less than 10% the step up is not kept and the report lists the first set.</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">The report then ends with a short section that lists the settings to raise by hand; each line gives the value Apply Strict writes.</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">Anything that needs attention.</span></li></ol></figure>
+<p>It renders one "everything cranked up" answer key, then turns one setting down at a time and compares. Because every image uses the same random seed, the noise pattern is identical in all of them and cancels out in the comparison — which is why the test images can be small and cheap. After you press <strong>Analyze Light Paths</strong> it renders a series of small test images, usually 15 to 45; the report says how many.</p>
+<p><strong>Why measure.</strong> Blender's factory values are Diffuse 4, Glossy 4, Transmission 12, Transparent 8 and Volume 0. Two measured examples follow; each stands for that one scene only, not for a rule. On a cloud scene, where the factory value of Volume is 0, the scene settled only at 48 — at rung 32 the colour difference against the reference was dE p99 4.075, at rung 48 it was 0.033 (limit 0.360). On a foliage scene, where the factory value of Transparent is 8, the measured Visual value was 16 (Strict 24).</p>
+<p>It finds two values for each light path (Diffuse, Glossy, Transmission, Transparent, Volume). The report holds one set of each, and the panel has one Apply button for each:</p>
+<ul><li><strong>Strict</strong>: the error of the un-denoised image against the reference (rel.RMSE and tm.RMSE). Both metrics must come in under the threshold, 0.0020 (0.20%). rel.RMSE is the raw error; tm.RMSE is the same after mimicking how sensitive the eye is in the shadows. Linear-space error is dominated by the bright parts of a frame, so a difference that appears only in the shadows is easily drowned out, which is why both metrics have to pass.</li><li><strong>Visual</strong>: how far the displayed colours of the image after OIDN denoise are from the reference (dE2000, after a 1 px blur). A value has to be under both limits: dE p99 0.360 and dE&gt;2 (the share of pixels) 0.100%. What that stands for: the difference is small, too small to matter when flipping against the reference.</li></ul>
+<p>They measure different things, so a set of values can pass one and not the other.</p>
+<p>The two Visual limits come from a calibration, and its conditions are stated here as they were: one trained observer, still images, flipping against the top setting, taking the step from which that observer judged the difference too small to matter (2026-10-04; the bounce count was in view while marking, so that part was not a blind test). The same observer did a blind test on the same day: 82 trials, 12 of them control trials showing two identical images, and none of the 12 was answered as "different". An animation was not part of that calibration: how the picture changes from one frame to the next was not measured. Those conditions are the reach of Visual: one observer, still images.</p>
+<p><strong>How it measures, and how far.</strong></p>
+<ul><li>It measures up from your own settings. When your scene uses a value above the top of a channel's ladder, the ladder is lengthened up to that value and measured against a reference of at least twice it (128 at most).</li><li>A channel that has not settled by the top of its ladder gets its reference doubled and rendered again and a few more rungs measured — for 2 rounds at most, and never past a reference of 128. A rung is never above half its reference (it would be measuring itself and the error would collapse to a false zero), so 64 is the highest value there is to measure. If it still has not settled, it is marked NOT converged.</li><li>For a channel that did not settle, the report says what can be done next (the wording depends on the case). When it was measured to less than 64 the action is the same every time: raise this channel in your scene and run the analysis again, and the analyzer measures up to your own setting, 64 at most (against a reference of 128). Judge anything above 64 by eye.</li><li>When two rungs in a row are within the threshold, the ladder stops there and the rest of it is not rendered; the report names the rungs that were left out.</li><li>A light path that is not used in this frame — the image at 0 bounces is within 1e-05 of the reference on both errors — gets only that one image. A scene with a volume first has Diffuse, Glossy, Transmission and Transparent checked together in one image.</li><li>When no volume is detected (no Volume input is connected on the world or on any material, and there is no Volume object either), the volume ladder is skipped and Volume is left as it was.</li><li>The small analysis images limit textures to 1K (1024 px). That is for the analysis only: nothing in your scene is changed, and a final render uses its textures as the scene has them. The panel has no switch for it.</li></ul>
+<p><strong>Both sets are checked again as a set.</strong> Each entry is measured on its own; whether they add up on top of each other is something only a joint render can tell you.</p>
+<ul><li><strong>Strict joint check</strong>: the Strict values are applied at once and really rendered. When that set is over the threshold, every channel that has a higher rung goes up one rung and the set is rendered again; if that set passes it is the one that is used (ESCALATED). If it still fails, the result is FAILED: when the error (tm.RMSE) came down by less than 10% the step up is not kept and the report lists the first set. The report names the ones that were already at their limit and could not go higher.</li><li><strong>Visual set check</strong>: every channel at its own Visual value, applied together and rendered, measured as the colour difference after denoise. When that set does not pass, every channel below its Strict value is raised one rung, all of them together, and the set is rendered again; if that does not pass either, the Visual values of this report are the Strict values. When the Visual settings are the same as the Strict settings, no separate set is rendered.</li></ul>
+<p>The "one rung up, all together" rule was compared with one observer's (the author's) judgement on five scene settings: four came out the same, on one (the bottle camera of the kitchen scene) the add-on went one rung higher than he did, and on none was it looser than he was.</p>
+<p><strong>When it is not sure, it does not lower your setting.</strong></p>
+<ul><li>A channel whose Strict ladder did not settle in the range measured (the report marks it "highest value measured, not settled"): your setting is kept when it is higher. Visual gives no value of its own there; it uses the Strict value.</li><li>A channel where only the top rung met Strict, with no confirming rung above it (the report marks it "met at the top rung only, unconfirmed"): Visual uses the Strict value there too.</li><li>A light path this frame does not use, and Volume when the analysis found no smoke or fog to measure, are left exactly as you had them and are not written.</li><li>Max Bounces is never lowered. It is changed only when the sum of the values written is above the Max Bounces your scene has at that moment, and then it becomes that sum.</li></ul>
+<p><strong>The two Apply buttons.</strong> <strong>Apply Strict</strong> writes the Strict set into Render Properties &gt; Light Paths; <strong>Apply Visual</strong> writes the Visual set. The number in brackets on a button is the Max Bounces after applying, for example "Apply Strict (116)"; the tooltip lists the value of every channel. Both ask before they write. When the report has no Visual result, <strong>Apply Visual</strong> cannot be pressed and the panel says "No Visual result - run the analysis again".</p>
+<p>A measured example (kitchen scene, bottle camera): the scene had Diffuse 32, Glossy 64, Transmission 32, Transparent 16 and Max Bounces 112. After Apply Strict it has 24, 64, 24, 4 and Max Bounces 116; after Apply Visual it has 12, 64, 24, 4 and Max Bounces 112.</p>
+<p><strong>Show Report</strong> gives you the short version in a popup: the values Apply writes (not the measured knees), the result of both set checks, and anything that needs attention. The rung-by-rung numbers go to the console and to <code>&lt;blend&gt;.fqp_lightpath_report.txt</code>.</p>
+<p><strong>Reading the report.</strong> Near the top of the report, under the lines that say "what the three numbers mean", a block headed "Strict and Visual:" says in a few lines what the two results measure and which limits each is held against. The excerpts below are from the report of that same kitchen scene. First, one channel's ladder:</p>
+<pre><code>TRANSPARENT   (scene.cycles.transparent_max_bounces, reference render used 32)
+   secs = seconds each test image took (25% size, measuring overhead
+   included); compare them only within this ladder
+   bounces |   rel.RMSE |    tm.RMSE |    p99(tm) |   secs | note
+   --------+------------+------------+------------+--------+-------------
+         0 |   1.209767 |   0.629958 |   2.065150 |    1.8 | 
+         4 |   0.001582 |   0.001808 |   0.000000 |    1.8 | &lt;== knee
+         8 |   0.000000 |   0.000000 |   0.000000 |    1.8 | 
+   stopped here: two rungs in a row are within the threshold, so the rest of the ladder (16, 24) was not rendered
+   verdict: converged (both metrics)
+   visual check (display values after OIDN denoise, dE2000 vs reference 32, blur 1 px)
+   bounces |   dE p99 |  dE&gt;2 % | note
+         0 |   45.980 |  93.199 | 
+         4 |    0.059 |   0.000 | &lt;== Visual: difference small from here
+         8 |    0.051 |   0.000 | </code></pre>
+<ul><li><code>secs</code> is the seconds each test image took; compare them only within this ladder. It is not the time of your final render.</li><li><code>&lt;== knee</code> marks the Strict knee; <code>&lt;== Visual: difference small from here</code> marks the Visual rung of this channel on its own.</li><li>The two columns of the Visual table are printed to three decimals; they are what the two limits (dE p99 0.360, dE&gt;2 0.100%) are held against.</li></ul>
+<p>Then the two sets of settings:</p>
+<pre><code> SUGGESTED LIGHT PATH SETTINGS
+   Max Bounces (Total)       : 116   &lt;- sum of the values below
+   Diffuse                   : 24   (your scene: 32)
+   Glossy                    : 64   (highest value measured, not settled; your scene: 64)
+   Transmission              : 24   (your scene: 32)
+   Transparent               : 4   (your scene: 16)
+   Volume                    : (not measured, your own setting is kept)
+   Time cost: in the 3 comparisons that could be made (the Strict value
+   against your setting: 2; the Visual value against the Strict value: 1)
+   a test image took about the same time either way. For 1 channel
+   (Transparent) the Strict value could not be compared with your setting:
+   the rung of your setting was not rendered there (the ladder stopped
+   early). This is a rough level worked out from the small test images,
+   not the time of your final render; if you know how long one of your
+   frames takes, you can scale it by the seconds in the tables yourself.
+
+ VISUAL SETTINGS
+   Max Bounces (Total)       : 112   &lt;- your setting, kept (sum of the values below is 104)
+   Diffuse                   : 12   (Strict 24; your scene: 32)
+   Glossy                    : 64   (same as Strict: highest value measured, not settled; your scene: 64)
+   Transmission              : 24   (same as Strict; your scene: 32)
+   Transparent               : 4   (same as Strict; your scene: 16)
+   Volume                    : (not measured, your own setting is kept)</code></pre>
+<ul><li>SUGGESTED LIGHT PATH SETTINGS is the Strict set and VISUAL SETTINGS is the Visual set. "your scene" on each line is the value the scene had when the analysis started.</li><li>"Time cost": when every comparison that could be made comes out "about the same", the report prints one summary sentence like this one, which says how many comparisons could be made and which channels could not be compared; as soon as one comparison is not, every channel gets its own line instead. Two test images count as about the same when their seconds differ by less than 10%, or by less than 0.5 seconds. No percentage is printed: it is a rough level worked out from the small test images.</li><li>"same as Strict": the Visual value of this channel is its Strict value.</li><li>"highest value measured, not settled": Strict did not settle in the range measured.</li><li>"met at the top rung only, unconfirmed": only the top rung met Strict, with no confirming rung above it.</li><li>"not used in this frame - your setting, kept; not in the sum": this light path is not written.</li><li>The Strict joint check table has a <code>total</code> column: the Max Bounces each image was rendered with — the values of its row plus what was not measured, at the value it had in that image. This report did not measure Volume (8 in that image), so <code>total</code> is 8 above the sum of the row's values; the Max Bounces line of SUGGESTED LIGHT PATH SETTINGS adds up only the values it lists, without that 8.</li><li>The result of the Visual set check is printed at the end of VISUAL SETTINGS, together with the limits and the calibration conditions.</li></ul>
+<p>If you read the <code>.json</code> from your own code: read the structured fields (values and states). The explanatory text in it (<code>visual_note</code>, <code>verification.note</code>, <code>verification.reference_note</code> and the like) changes with the wording and the language, and is not guaranteed to stay the same.</p>
+<p><strong>When the Strict joint check does not pass.</strong> The report then ends with a short section that lists the settings to raise by hand; each line gives the value Apply Strict writes. General experience, not measured in that run: this is common in scenes with a lot of glass, metal or mirrors — light bounces back and forth inside them many times before it is done. A rule of thumb, not a measurement: after raising them, look at the picture again, and when the things behind glass or in reflections no longer look darker, that is enough. 64 is the highest value the analyzer measures; judge anything above it by eye.</p>
+<p>One more thing worth knowing: a recommendation of 0 is flagged. It is correct for the scene as it stands and wrong the moment you add a material that uses that light path — an alpha-mapped leaf, for instance.</p>
+<h3 id="sampling-analyzer">Sampling Analyzer</h3>
+<p>It renders one high-sample answer key with no threshold at all, then one image per threshold from loose to tight — the tightest rung, 0.002, is always included — timing each.</p>
+<p>The important design decision: <strong>every one of those images is denoised first</strong>, and what gets compared is the finished picture. Measuring the raw noisy images would be circular — the noise adaptive sampling leaves behind is roughly the threshold itself, so you would be measuring the threshold with the threshold. And the denoised picture is what you actually look at.</p>
+<p>Every rung is compared with the tightest one. The suggestion is the cheapest rung whose finished picture stays within 10% of the tightest rung — both on raw error and on the version that mimics the eye in the shadows. The ladder runs the opposite way to the light path one (loose to tight), so the search walks from the tightest end towards loose and stops at the first rung that is more than 10% off; one lucky loose rung cannot win. The report puts it as "Suggested Noise Threshold X: in this analysis, compared with the tightest rung (0.002), the error of the finished picture differs by no more than Y%".</p>
+<p>The small 25% test images can miss a highlight. So when they pick a rung looser than the tightest, the scan runs once more at 50% and the tighter of the two answers is kept. When a scene really needs the tightest rung, the report says "this scene needs the tightest rung (the shadows or highlights are still changing)" and Apply fills that one in.</p>
+<p>When the two tightest rungs (0.005 and 0.002) come out almost the same finished picture — both errors within 0.1% of each other in the last pass — Max Samples stopped them both, and the report and Apply add a hint (a WARNING). If the pick is the tightest rung, it says Max Samples is probably what limits the scene: if the result still looks too noisy, raise Max Samples and analyze again. If the pick is a looser rung, it says the tighter rungs are held back by Max Samples and come out almost the same, so this rung was picked; for a cleaner picture, raise Max Samples and analyze again. With First, Middle, Last (below) any of the three frames is enough, and the hint names those frames. The hint never changes the pick.</p>
+<p>The analysis denoises on the CPU and with persistent data off, so the same scene gives the same answer every time; your settings are put back afterwards, also when it stops with an error.</p>
+<p>Limits. Motion blur is not rendered during the analysis, so the answer for a motion-blurred shot does not include it. When the camera has depth of field, the pick is automatically made one rung tighter than the analysis result (the report and the Info line name the rung the analysis originally suggested). The analysis cannot judge the depth of field of a custom lens (for example an OSL lens add-on) - please judge it yourself. And analysing the current frame takes about 10–50 seconds; analyse a shot once and the result keeps applying to it. For an animation, choose First, Middle, Last (below).</p>
+<p><strong>Analyze Frames</strong> (just above Analyze Sampling) chooses what the analysis looks at. <strong>Current Frame</strong>, the default, analyses the frame the scene is on, exactly as described above. <strong>First, Middle, Last</strong> analyses the first, middle and last frame of the frame range (1–48 gives 1, 25 and 48) with the same steps, and uses the strictest pick of all of them; the depth-of-field step comes after that, when the camera has depth of field on any of those frames. The report lists every frame's pick and names the frame that decided it, and "within Y%" is that frame's figure. Choose it for an animation: a single frame can pick a looser rung than the rest of the shot needs — a dark stretch that runs into Max Samples looks finished at 0.02 while the bright part needs 0.01. The panel says so next to the option. Limits: it takes about 3 times as long (about 30–150 seconds), and the point is to avoid a wrong pick, not necessarily to save time; a bright stretch that is short and does not include any of those three frames can still be missed; an unbaked simulation can come out differently when the analysis jumps between frames than in the real render — bake it first. With a one-frame range it is the same as Current Frame.</p>
+<p><strong>Apply Suggested Threshold</strong> sets only <code>adaptive_threshold</code>. Max Samples is left alone deliberately: the scan used your current value as its ceiling.</p>
+<hr>
+<h2 id="8-background-rendering">8. Background rendering</h2>
+<figure class="shot" id="shot-cli_render"><div class="shot-frame" style="max-width:871px"><a href="img/en/cli_render.png"><img src="img/en/cli_render.png" width="871" height="148" alt="The CLI Render box: CLI Render Still, CLI Render Animation and the Clean launch checkbox" loading="lazy"></a><span class="shot-dot" style="left:19.52%;top:69.59%" aria-hidden="true">1</span><span class="shot-dot" style="left:65.90%;top:69.59%" aria-hidden="true">1</span><span class="shot-dot" style="left:23.65%;top:88.51%" aria-hidden="true">2</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">CLI Render Still / CLI Render Animation</strong> Hand the job to a second, headless Blender with its own console window. The UI holds none of the VRAM, stays usable, and you may even close it — the render carries on.</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">Clean launch (factory startup)</strong> The analyzers and the background renders start a second Blender. With it on — the default — that Blender does not load your other add-ons.</span></li></ol></figure>
+<p><strong>CLI Render Still</strong> and <strong>CLI Render Animation</strong> hand the job to a second, headless Blender with its own console window. The UI holds none of the VRAM, stays usable, and you may even close it — the render carries on.</p>
+<p>The window reports live:</p>
+<pre><code>[FQP] frame 12/240 done | this frame 41.3s | avg 39.8s/frame | 228 left ~= 2h 31m | finishing 18:42</code></pre>
+<p>It starts estimating after the first frame and keeps recomputing from the running average, so a scene that gets heavier later shows it. The per-frame seconds are Blender's own <code>Time:</code> figure, which excludes start-up and scene loading — that is what keeps the first estimate usable. The frame count follows your Frame Step.</p>
+<p>Blender's own output is reprinted underneath, line for line. At the end you get totals, the fastest and slowest frame, and Blender's exit code.</p>
+<p>Two warnings: it renders the copy <strong>on disk</strong>, so save first; and a GPU only has room for one render at a time, so do not press F12 as well.</p>
+<p>Resuming an animation with Overwrite off (Output Properties &gt; Output): the frame count and the finishing time cover only the frames that still have to render, and the window says how many existing frames it skips.</p>
+<p>If no python interpreter can be found the progress summary is skipped and the buttons fall back to launching Blender directly. The render is unaffected.</p>
+<p>For people who start the analyzer or watcher scripts by hand: their parameters must be a JSON object, with numbers written as numbers (<code>16</code>, not <code>&quot;16&quot;</code>). Anything else ends the job as failed with one sentence saying what was wrong.</p>
+<hr>
+<h2 id="9-animation-start-to-finish">9. Animation, start to finish</h2>
+<p><strong>Before rendering</strong></p>
+<ol><li>Set the engine to Cycles, assign a camera, save the file.</li><li>Build Pipeline → Apply Final Sampling → Set 32-bit EXR Output.</li><li>Switch Motion Blur <strong>off</strong>. Leave Frame Step at 1.</li><li>Choose your Beauty Source, then press Prepare Animation Output.</li><li>Press Health Check and read its lines.</li></ol>
+<p><strong>Rendering</strong> — once, and it is the expensive part. Ctrl+F12, or the CLI Render Animation button.</p>
+<p><strong>After rendering</strong> — cheap, and you can retry as often as you like:</p>
+<ol start="6"><li>Build Temporal → Run Temporal.</li><li>Look at the result. Ghosting behind moving objects means Clip Gamma is too high or the radius too wide; leftover shimmer means the opposite. Change and run again — no re-rendering involved. The temporal pass works best on locked-off or slow shots; on a fast dolly or pan, also look at the outlines of objects moving across the background, which can come out slightly worse than without it (see Known limits).</li></ol>
+<p>The frame range comes from the files actually on disk, not from the scene's frame range, and holes in the sequence stop the run rather than producing frames that silently read the wrong neighbour. If the holes are evenly spaced, the message points at Frame Step, or the <code>-j</code> command-line option. A sequence that starts at frame 0 gets frame 1 stabilized too. Frames outside the range you prepared, or older than your last Prepare, are reported as leftovers instead of being blended in.</p>
+<p>A render that was stopped and resumed with <strong>Placeholders</strong> on and <strong>Overwrite</strong> off (Output Properties &gt; Output) leaves 0-byte files, and the resumed render skips those frames. Run Temporal then stops and names them: delete the 0-byte files (in the Frames folder and in your Output folder) and render those frames again. For animation it is simpler to leave Placeholders off, or Overwrite on.</p>
+<h3 id="patching-a-few-frames">Patching a few frames</h3>
+<p>Run Temporal done, and a few frames need rendering again — or some are missing? You do not have to render the whole range again.</p>
+<ol><li>Fix the scene. Keep the frame range exactly as it was when you pressed Prepare, and Frame Step at 1.</li><li>Press <strong>Prepare, keep existing frames</strong> (under Prepare Animation Output; it only shows up when the Frames folder holds an earlier Prepare of this scene for the same frame range). The status bar says how many frames are kept and which ones are still missing.</li><li>Render only the frames you need: set Frame Start and End to them and use Render Animation (a single F12 does not write numbered frames). A frame rendered again replaces its old files. Set the range back afterwards.</li><li>Press <strong>Run Temporal</strong>. All its checks still apply — 0-byte, resized or damaged files still stop it.</li></ol>
+<p>The kept frames are <strong>not</strong> checked for being out of date. If you changed the scene, lights, materials or render settings since they were rendered, use the ordinary Prepare Animation Output and render the whole range. The button refuses a different frame range, a Frame Step other than 1, and a folder prepared for another scene, and says why. Two more things to know: the button also shows up right after an ordinary Prepare, before anything is rendered — pressing it then keeps all the old frames, so only do that if you know they are still good; and a .blend with the same file name in another folder counts as the same file, so it can patch frames in a Frames folder they share.</p>
+<hr>
+<h2 id="10-faq">10. FAQ</h2>
+<p><strong>Compositing has become slow.</strong> The tree carries a lot of Denoise nodes. Check that the compositor is on the GPU (Health Check reports it). Clean Guide Passes is off by default; if you switched it on for a dark, noisy shot, it adds two denoise nodes.</p>
+<p><strong>Prepare Animation Output refuses to run and tells me to turn off motion blur.</strong> Cycles writes no Vector pass while motion blur is on, and the temporal pass aligns frames entirely by that pass. You lose nothing: the blur is painted back on at the end with Vector Blur, using the scene's own shutter value.</p>
+<p><strong>My animation is missing frames at the start and end.</strong> By design. The first and last frames have no neighbour on one side, so there is nothing to stabilize them against. Render a few frames of handle at each end.</p>
+<p><strong>The stabilized frames have ghosts trailing moving objects.</strong> Lower Clip Gamma, or narrow the radius, or lower Depth Tolerance. Ghosting means neighbouring frames are being trusted further than they deserve. A thin dotted line along the outline of an object moving across the background (a fast dolly or pan) is a different thing: the temporal pass works best on locked-off or slow shots, and these settings do not fix it. Use the per-frame result for that stretch (see Known limits).</p>
+<p><strong>Can I use EEVEE?</strong> No. The pipeline runs on per-pass and denoising data that only Cycles produces.</p>
+<p><strong>I added a Glare node after building. Will it survive a rebuild?</strong> Yes. Build Pipeline walks your whole filter chain and splices itself in at the head, and if the tail of that chain is not connected to the Group Output it connects it (Remove leaves that link in place). Parallel branches that read the raw render image — a Glare mixed back over the original, say — are moved onto the denoised image as well, so no branch sneaks the noisy picture back in.</p>
+<p><strong>Transparent Film — anything to watch for?</strong> Include Environment is skipped automatically while it is on, and the panel says so. Otherwise the HDRI would leak back through the alpha. If you change Transparent Film after building, press Rebuild — the panel reminds you. The temporal pass keeps the alpha all the way to the finished frames.</p>
+<p><strong>Several scenes in one .blend?</strong> Each scene owns its own node group — including a scene made with Full Copy or Linked Copy, which gets its own group the first time you touch a slider there. Two scenes that point at the very same compositor tree share everything in it, FQP included. Build and Health Check tell you when that is the case; to give the scenes separate settings, give one of them a compositor tree of its own (tree selector in the Compositor header) and press Build Pipeline there. Undo also undoes the split, if you want the copy to share again.</p>
+<p><strong>Several view layers?</strong> Build uses the Render Layers node that feeds your final output and points it at the view layer you are on (if that layer is not rendered, at the first one that is). Remove puts it back.</p>
+<p><strong>Another scene in my Render Layers node, or several layers in one comp?</strong> FQP works on the scene it is built in. A Render Layers node that reads another scene (cross-scene compositing) is not supported: build FQP in the scene that renders, and composite its result in your comp scene. Only one view layer per scene is denoised; if you composite several layers, give each its own scene.</p>
+<p><strong>Can I animate the sliders?</strong> No. FQP's sliders and settings cannot be animated: their values live in the compositor nodes, or are read when you press a button, and are not re-read while frames render. Right-click offers no Insert Keyframe; to change the look mid-shot, render the parts separately. Keys that an older file carries on these settings do nothing — Health Check lists them. Delete them in the Dope Sheet or Graph Editor, then move each of those settings once so the panel and the nodes agree.</p>
+<p><strong>Shadow Catcher?</strong> Shadow Catcher needs Transparent Film. With an opaque background the pipeline rebuilds the picture from its light passes, and the caught shadows are lost; turn on Film &gt; Transparent and composite over your plate. Build and Health Check warn when this happens.</p>
+<p><strong>My Group Output has several inputs.</strong> Blender renders only the first input of the active Group Output, so FQP connects and reads that first one too.</p>
+<p><strong>Run Temporal calls all my frames leftovers after I pressed Prepare again.</strong> Prepare starts a new round, so frames rendered before it count as leftovers. If those frames are still good, press <strong>Prepare, keep existing frames</strong> instead and render only what is missing — see <a href="#patching-a-few-frames">Patching a few frames</a>.</p>
+<p><strong>How much render time does raising the bounces cost?</strong> The light path report gives a rough level worked out from the 25% test images (how to read it is under <a href="#light-path-analyzer">Light Path Analyzer</a>); it does not measure the time of your final render. The numbers below were measured separately on a few scenes and are not a promise (RTX 4090). For the surface bounces (Diffuse, Glossy, Transmission, Transparent) the measured increases were these: with every bounce setting at its highest, against Blender's factory values, the kitchen scene was about 9 to 11% slower at most (the largest values of the two sets of measurements are +11.3% and +9.07%) and the foliage scene about 6% at most (+5.6%). Volume bounces cost a lot: on a cloud scene (640×960, 256 samples) Volume 0, 16, 32 and 64 took 30, 183, 216 and 215 seconds.</p>
+<p><strong>How many Volume bounces for a cloud or smoke?</strong> Let the analyzer measure it. Blender's factory value is 0. A measured example (it stands for this one scene only): a cloud scene was set to 32, and both the Strict and the Visual value came out at 48 — at rung 32 the colour difference against the reference was dE p99 4.075, at rung 48 it was 0.033 (limit 0.360). If a dense cloud renders slowly, see the volume hint in <a href="#6-health-check">Health Check</a> as well.</p>
+<p><strong>Alpha-mapped leaves: how many Transparent bounces?</strong> Let the analyzer measure it. Blender's factory value is 8. A measured example (it stands for this one scene only): on a foliage scene the Visual values of Diffuse, Glossy and Transmission were 1, 1 and 2 (Strict 3, 2 and 4), and Transparent was 16 (Strict 24) — this light path needs a far higher value than the others there.</p>
+<p><strong>How do I roll back?</strong> Remove restores your original compositor wiring and the passes it had switched on, and undoes the rest of what Build changed (a tree it created, nodes it added, Compositing and the compositor device); Remove Animation Output does the same for the temporal node. Nothing outside the compositor, the render passes, Light Paths and the sampling settings is ever touched, and those last two only change when you press the buttons that say they will — each of which asks first.</p>
+<hr>
+<h2 id="11-platform-notes">11. Platform notes</h2>
+<p>Windows opens a real console window for every background job. macOS asks Terminal.app through <code>osascript</code>. Linux takes the first of <code>x-terminal-emulator</code>, <code>gnome-terminal</code>, <code>konsole</code> or <code>xterm</code> it can find.</p>
+<p>If no terminal can be opened — none installed, or macOS refused Blender permission to control Terminal — the job still runs: it detaches into the background and writes its output to a log file next to your .blend (the analyzers use <code>&lt;report&gt;.log</code>, background renders a timestamped <code>fqp_&lt;job&gt;_&lt;stamp&gt;.log</code>). A warning tells you the path. Open it in a text editor, or <code>tail -f</code> it.</p>
+<p>Testing status:</p>
+<ul><li><strong>Windows</strong> — tested on real hardware; this is where the add-on is used day to day.</li><li><strong>macOS</strong> — tested on real hardware by the author (MacBook Pro M1, 2026-10-07); no problems found.</li><li><strong>Linux</strong> — covered by the test suite; not yet tested on real hardware.</li></ul>
+<hr>
+<h2 id="12-known-limits">12. Known limits</h2>
+<ul><li><strong>Cycles only.</strong> Not a preference, a dependency.</li><li><strong>The temporal pass needs consecutive frames.</strong> Frame Step above 1 produces a sequence it cannot use, and it will say so rather than guess.</li><li><strong>The temporal pass is at its best on locked-off or slow shots.</strong> On a fast dolly or pan, the outline of an object moving across the background can come out slightly worse than without it, sometimes as a thin dotted line: the depth check works per pixel, and an anti-aliased outline pixel is part object, part background. Check moving outlines before you commit a sequence; where they matter more than the flicker, use the per-frame result (the <code>beauty####.exr</code> files in Frames Dir) for that stretch.</li><li><strong>On a shot where the object turns and the lights stay still, the temporal pass can come out worse than per-frame denoising.</strong> For example, a product on a turntable. This was measured by a separate study (on temporal denoising), and its conditions are copied here as given: a gacha machine scene, camera fixed, the machine turning 7° per frame, lights fixed; 16 samples, adaptive off, animated seed on, 960×480, 32 frames, frames 4–29 evaluated; a reference of 2×2048 samples per frame. The numbers (lower is better; tonemapped space, ×1000), Cycles' built-in OIDN per frame first and FQP 1.2.9 with Run Temporal second: per-pixel temporal error (flicker), whole frame, 2.03 against 2.75; temporal error in the edge regions, 21.3 against 29.5; error against the reference (tm-RMSE), whole frame, 5.72 against 7.97. This is one scene at 16 samples, not a general conclusion. In the same batch of tests, on fast indoor pan and dolly shots, Run Temporal beat per-frame: temporal error over the whole frame, again per-frame first and Run Temporal second, 19.62 against 17.71 on the pan shot and 15.73 against 14.79 on the dolly shot. Before you commit such a sequence, take a few frames and compare the result with the temporal pass side by side with the result without it. The numbers above compare against Cycles' built-in per-frame denoising, not against FQP's own per-frame result.</li><li><strong>The analyzers cost time up front.</strong> Analyse a shot once and the result keeps applying to it, so it pays back best over a sequence or a scene you render again and again.</li><li><strong>The Sampling Analyzer measures a stand-in.</strong> It uses Cycles' built-in denoiser as a proxy for this pipeline's per-pass denoising. The two do not differ in a fixed direction. Motion blur is not rendered during the analysis; when the camera has depth of field, the pick is automatically made one rung tighter (the depth of field of a custom lens, such as an OSL lens add-on, cannot be judged - please judge it yourself); scenes heavy on depth of field, motion blur or hair may need one step tighter than the report says — check one frame before you commit a sequence.</li><li><strong>The Light Path Analyzer measures one frame of one shot, and so does the Sampling Analyzer on its default Current Frame.</strong> Reflections and lighting move during an animation. On a moving shot, one rung of margin is cheap — or set Analyze Frames to First, Middle, Last, which checks the first, middle and last frame of the range (a short bright stretch between them can still be missed).</li><li><strong>Visual was calibrated on one observer and on still images only.</strong> How the picture changes from one frame to the next in an animation was not measured; neither were other observers, or viewing side by side or one image at a time.</li><li><strong>On a dark scene the Strict value can differ by a rung or two.</strong> The Strict error is divided by the average brightness of the whole frame, so in a very dark frame a single pixel can decide the result. A measured example: on a dark alley scene (textures limited to 1K), changing nothing but the seed (the starting point of the random numbers a render uses; the analysis always uses seed 0) put the first Diffuse step within the threshold at 12, 8 and 6 for seed 0, 1 and 2, and the difference came from one pixel. Another: on a darkened kitchen scene, running the same code again once moved the tm.RMSE of the top Glossy rung by 8.4e-4 (42% of the 0.002 threshold); the verdict did not change. 1.3 does not change how Strict is measured. This entry is about running again in the same Blender version; another version is a different matter, see "A different Blender version" below — it has a dark scene on which the two versions differ even in the Strict verdict.</li><li><strong>The Visual numbers move a little from one run to the next.</strong> The analysis denoises on the GPU. What was measured: on the bottle camera of a darkened kitchen scene, the set check of one and the same set (Diffuse 8, Glossy 64, Transmission 12, Transparent 4) was run twice and its dE p99 was 0.2970 and 0.2866, about 0.01 apart (limit 0.360; it passed both times). GPU against CPU denoising, in set rounds close to the limit, differs by 0.0001 to 0.0044, and in those comparisons the verdicts did not differ because of it.</li><li><strong>A different Blender version can give a different result: mostly a difference of one rung, and on a dark scene even a different Strict verdict.</strong> What follows is eight scene settings, each run once in Blender 5.1.2 and once in 5.2.1; it is not a promise.<ul><li>Foliage, a cloud, a gacha machine: both versions gave the same verdicts and the same values. The bottle camera of the darkened kitchen: the verdicts and the values Apply writes were the same in both.</li><li>Kitchen and alley: some channels are one rung apart. On the bottle camera of the kitchen, Transparent was 4 (5.1.2) against 8 (5.2.1). On the other kitchen camera (the wide shot) the Diffuse knee (Strict) was 24 against 16, and three channels of the Visual set were one rung lower (Diffuse 12 against 8, Transmission 12 against 8, Transparent 8 against 4). On the alley, Diffuse was 8 (5.1.2) against 12 (5.2.1).</li><li>The wide shot of the darkened kitchen: in 5.1.2 only the top rung of Glossy met Strict (it counts as settled, unconfirmed), and the Strict joint check passed after one step up; 5.2.1 judged the same channel not settled, and the Strict joint check still failed after the step up, which was not kept. The values Apply Strict writes differ accordingly (Diffuse, Glossy, Transmission, Transparent: 32, 64, 24, 8 against 24, 64, 16, 4). On this scene the Visual values were the same in both versions (8, 64, 6, 4).</li></ul><p>This is the same kind of behaviour as in "On a dark scene the Strict value" above (its cause was not measured separately). So when one version reports "not settled" together with a Strict joint check that did not pass, and the other version does not, that is known behaviour and not a broken tool: for a channel it is not sure about, the report never goes below your own setting, and its last section lists what to raise by hand (see "When the Strict joint check does not pass" under <a href="#light-path-analyzer">Light Path Analyzer</a>). A suggestion: after changing the Blender version, analyse again rather than reuse a report made with the other version.</p></li><li><strong>The 1K texture limit rests on three scenes only.</strong> A gacha machine, a kitchen and a foliage scene gave the same verdicts at no limit, 2048, 1024 and 512. The scenes that gain are the ones that do not fit in the graphics card's memory: on a 2.5 GB dark alley scene the whole analysis took 1273 seconds in 1.2.9, and 239 and 181 seconds were measured during 1.3 development (RTX 4090). A scene that fits anyway does not get faster; for a scene that still does not fit at 1K there is no answer yet.</li><li><strong>When the graphics card's memory overflows, the analysis still runs, but slower.</strong> A measured example: on the same alley scene each test image took 16 to 26 seconds without the texture limit and 3.8 to 4.0 seconds with the 1K limit. 1.3 does nothing further about an overflow.</li><li><strong>How long an analysis takes: these are measured numbers, not a promise</strong> (RTX 4090). The foliage scene took about 10 seconds, the kitchen about 85, the alley (2.5 GB) about 181 and a cloud about 400. The estimate the console prints is rough; last estimate against the seconds taken: foliage 9.7 and 10.1, kitchen 83 and 85, alley 180 and 181, cloud 339 and 400 (15% low).</li><li><strong>With Clean launch off, the light path analysis can stall</strong> — see <a href="#clean-launch">Clean launch</a>.</li><li><strong>In a narrow panel the text of the two Apply buttons is shortened.</strong> Blender cuts the button text to "Apply Str..." (in the Chinese interface, "套用 Stric..."), and the number in brackets is no longer shown. What was measured: with the Properties editor 339 px wide the text is complete, at 225 px it is shortened. Make the Properties editor wider, or hover over the button and read the tooltip.</li><li><strong>The popups fold a long line onto several lines, but there are cases the folding does not reach.</strong> This goes for three popups alike: Health Check, the light path Show Report and Show Sampling Report. A line that is too long is folded onto several lines, and the continuation lines are indented a little further than the line they continue; the system console and the report files keep the text as it is, unfolded. The limits that remain: in a very narrow window, or at a large interface scale (Resolution Scale), the end of a line can still be cut; when a popup is taller than the Blender window, Blender shows scroll arrows. The whole text is always in the system console (Window &gt; Toggle System Console), and both analyzers also have their report files.</li><li><strong>Background jobs read the file on disk.</strong> Unsaved edits are invisible to them, which is why they refuse to start on a dirty file.</li><li><strong>One scene, one view layer.</strong> Cross-scene compositing is not supported, and only one view layer per scene is denoised — see the <a href="#10-faq">FAQ</a>.</li><li><strong>Shadow Catcher needs Transparent Film.</strong> With an opaque background the caught shadows are lost.</li><li><strong>Settings cannot be animated.</strong> Render the parts of a shot separately if the look has to change.</li><li><strong>Run Temporal's file checks have limits.</strong> A pass file that has the normal size but is damaged inside, or is cut short by only a little, is not caught. Multi-part EXR files — a multilayer EXR written by Blender 5.1 is one — are left out of the resolution check with a warning. The files FQP writes itself are single-layer and always checked.</li><li><strong>Kept frames are trusted.</strong> Prepare, keep existing frames does not check whether the kept frames are out of date.</li><li><strong>The black-reference check looks at the render itself.</strong> Color Management's view Exposure is not counted, so a scene that is only bright because of a large view Exposure is refused as black — brighten it with lights or Film exposure instead. With a very low reference sample count (1, possible only when you write the analyzer's parameters by hand; the panel always uses 2048) a black scene may not be refused.</li></ul>
+<hr>
+<h2 id="13-troubleshooting">13. Troubleshooting</h2>
+<div class="table-wrap"><table><thead><tr><th>Symptom</th><th>Likely cause</th><th>What to do</th></tr></thead><tbody><tr><td>The panel does not appear</td><td>Add-on not ticked on, Blender older than 5.1, or it is installed twice</td><td>Check Edit &gt; Preferences &gt; Add-ons. Look in Properties &gt; <strong>Render</strong>, at the very top. If it is listed twice, remove one copy.</td></tr><tr><td>Fog, smoke or god rays are gone from the result</td><td>The Volume passes were switched off after Build — by a preset, another add-on, or a view layer change</td><td>Press <strong>Rebuild Pipeline</strong>. It switches the passes back on.</td></tr><tr><td>Parts of the picture come out black after Build</td><td>The Render Layers node reads a view layer without the passes</td><td>Read the warning Build showed; switch to the view layer you render and Rebuild.</td></tr><tr><td>The analysis window vanished, or nothing seems to happen</td><td>The job crashed or was closed; the status line says <strong>failed</strong></td><td>Open <code>&lt;blend&gt;.fqp_*_report.log</code> next to your .blend. If it makes no sense, message me on the Superhive product page, or email jerrythepopper@gmail.com (see <a href="#reporting-a-problem">Reporting a problem</a> for what to include).</td></tr><tr><td>Apply refuses: the report belongs to another file or scene</td><td>The report next to your .blend was made for a different .blend or scene</td><td>Run Analyze on this file and this scene.</td></tr><tr><td>Stabilized frames have ghosts behind moving objects</td><td>The neighbouring frames are trusted too much</td><td>Lower <strong>Clip Gamma</strong>. Then narrow the radius, or lower Depth Tolerance.</td></tr><tr><td>A thin dotted line along an outline that moves across the background (fast dolly or pan)</td><td>A known limit of the temporal pass on moving outlines; it works best on locked-off or slow shots</td><td>Changing the settings does not remove it. Use the per-frame result for that stretch, or the temporal pass only on the locked-off parts.</td></tr><tr><td>"No frames found", or you cannot find the finished frames</td><td>With the default folders everything sits in a <code>&lt;blend&gt;_&lt;scene&gt;</code> subfolder</td><td>Look inside <code>//fqp_frames/&lt;blend&gt;_&lt;scene&gt;/</code> and <code>//fqp_final/&lt;blend&gt;_&lt;scene&gt;/</code>. The panel shows the name.</td></tr><tr><td>Run Temporal reports leftover frames</td><td>Frames from an earlier render are still in the folder</td><td>Empty the folder, or press Prepare Animation Output again and re-render. If the frames are still good and only a few need rendering, use <strong>Prepare, keep existing frames</strong> (see <a href="#patching-a-few-frames">Patching a few frames</a>).</td></tr><tr><td>Run Temporal stops: resolution changed, 0-byte or damaged files</td><td>Part of the sequence was rendered at another size, a render was stopped mid-frame, or a resumed render skipped placeholder frames</td><td>Delete the files it names (0-byte ones in your Output folder too), render those frames again at the same resolution, then Run Temporal.</td></tr><tr><td>Prepare Animation Output: a folder cannot be written</td><td>The drive or network share is not connected, the path is longer than 260 characters, or the folder is read-only</td><td>Connect the drive, or pick a shorter path or a folder you can write to, then press Prepare again.</td></tr><tr><td>F12 comes out black or wrong after switching away from Cycles</td><td>The pipeline only works in Cycles</td><td>Switch back to Cycles, or press <strong>Remove</strong> before switching engines.</td></tr><tr><td>An analyzer refuses: the reference is almost entirely black</td><td>No light reaches the camera: lights off, not rendered or excluded, exposure or world strength too low — or, less often, a GPU fault</td><td>Check the lights and exposure first, then the GPU. Brighten with lights or Film exposure, not view Exposure.</td></tr><tr><td>macOS: pressing Analyze opens no Terminal</td><td>macOS has not allowed Blender to control Terminal</td><td>Allow it when macOS asks, or in System Settings &gt; Privacy &amp; Security &gt; Automation. Until then the job runs in the background; the warning names its log file.</td></tr><tr><td>The background job errors out, or renders differently from F12</td><td>The scene needs a third-party add-on and <strong>Clean launch</strong> is on</td><td>Turn off Clean launch in the add-on's preferences and run again.</td></tr></tbody></table></div>
+<h3 id="reporting-a-problem">Reporting a problem</h3>
+<p>Message me on the Superhive product page, or email jerrythepopper@gmail.com. Send these three things:</p>
+<ol><li><strong>Blender version</strong> — Help &gt; About, or the splash screen.</li><li><strong>Health Check output</strong> — press Health Check, then copy the lines from the system console (Window &gt; Toggle System Console on Windows).</li><li><strong>The <code>.log</code> file</strong> — <code>&lt;blend&gt;.fqp_*_report.log</code> for an analyzer, <code>fqp_&lt;job&gt;_&lt;stamp&gt;.log</code> for a background render.</li></ol>
+<p>Logs and reports contain file paths, which include your user name. Look them over before you send them anywhere.</p>
+<hr>
+<h2 id="14-living-with-other-denoise-add-ons">14. Living with other denoise add-ons</h2>
+<p>Two compositor denoise setups running at once stack on top of each other: the picture gets denoised twice and fine detail smears. Pick one per scene.</p>
+<p>This add-on only changes the compositor when you press Build Pipeline (or Remove). It does not run anything in the background, and it does not touch the compositor when a file opens. If another add-on rebuilds the compositor after you built this one, Health Check line 9 tells you, and Build Pipeline puts it back in front.</p>
+<p>Build does not look for a Denoise node already in your own chain. If you have one, mute or delete it yourself.</p>
+<hr>
+<h2 id="15-uninstall">15. Uninstall</h2>
+<ol><li>In each scene where you built it, press <strong>Remove</strong> (and <strong>Remove Animation Output</strong> if you used the temporal flow). Save the file.</li><li>Edit &gt; Preferences &gt; Add-ons (or Get Extensions), untick it.</li><li>Open its entry and remove / uninstall it.</li></ol>
+<p>Files you did not clean up are fine. The pipeline is ordinary Blender compositor nodes, so such a file opens and renders without the add-on — the sliders just stop being live. The <code>FQP_Temporal</code> helper scene, if you built one, stays in the file until you delete it from the scene selector.</p>
+  </main>
+</div>
+
+<footer class="page-footer">
+  Final Quality Pipeline &middot; generated from MANUAL_EN.md
+</footer>
+<script>
+(function () {
+  var btn = document.getElementById('jtpThemeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var root = document.documentElement;
+    var current = root.getAttribute('data-theme');
+    if (current !== 'dark' && current !== 'light') {
+      current = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    var next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('jtpTheme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

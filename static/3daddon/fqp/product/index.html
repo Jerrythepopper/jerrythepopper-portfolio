@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f7f7f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15161d" media="(prefers-color-scheme: dark)">
+<!-- 防閃（仿 build-site.js:552）。嵌入模式 ?embed=1：強制深色、不讀不寫 localStorage。
+     一般模式（W3d-1a，與網站同一邏輯）：一律掛 data-theme——jtpTheme 有值照它，沒值＝light（不跟系統）。 -->
+<script>(function(){var d=document.documentElement;d.className+=' js';if(/[?&]embed=1(&|$)/.test(location.search)){d.className+=' is-embed';d.setAttribute('data-theme','dark');return}var t='light';try{var s=localStorage.getItem('jtpTheme');if(s==='dark'||s==='light')t=s}catch(e){}d.setAttribute('data-theme',t);var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++){m[i].removeAttribute('media');m[i].setAttribute('content',t==='dark'?'#15161d':'#f7f7f7')}})();</script>
+<title>Final Quality Pipeline — Jerrythepopper</title>
+<meta name="description" content="It finds how many samples and bounces your scene needs, then builds the denoise for the final render.">
+<link rel="canonical" href="https://www.jerrythepopper.com/3daddon/fqp/product/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 原型用完整 family；正式版照 build-site.js:446-519（S45）子集化 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500&display=swap">
+<link rel="stylesheet" href="fqp.css">
+<noscript><style>.fade-up{opacity:1;transform:none}.flow-line::after{transform:scaleX(1)}.tabs-rail::after{transform:scaleY(1)}.panel[hidden]{display:none}</style></noscript>
+<script src="fqp.js" defer></script>
+</head>
+<body>
+
+<!-- 頂列：一般模式才有（嵌入模式 display:none） -->
+<div class="topbar">
+  <a href="/" class="brand">Jerrythepopper</a>
+  <span class="crumb">Blender add-on · Final Quality Pipeline</span>
+  <button class="theme-toggle" type="button" aria-label="Toggle light / dark" title="Toggle light / dark">
+    <svg class="ic-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.3M12 19.1v2.3M4.5 4.5l1.6 1.6M17.9 17.9l1.6 1.6M2.6 12h2.3M19.1 12h2.3M4.5 19.5l1.6-1.6M17.9 6.1l1.6-1.6"/></svg>
+    <svg class="ic-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.3 14.7A8.5 8.5 0 0 1 9.3 3.7a8.5 8.5 0 1 0 11 11Z"/></svg>
+  </button>
+</div>
+
+<main>
+
+<!-- ============================== 00 HERO（W3a：v4 Title＋Opening） ============================== -->
+<header class="hero">
+  <div class="wrap">
+    <div class="head fade-up">
+      <p class="eyebrow"><span class="n">00</span><span class="flow-line" aria-hidden="true"></span><span class="sr"> — </span><span>Final Quality Pipeline</span></p>
+      <h1>Who Needs Another Render Setup?</h1>
+      <p class="answer">Fair. Mine measures your scene first.</p>
+      <p class="subtitle">It finds how many samples and bounces your scene needs, then builds the denoise for the final render.</p>
+    </div>
+    <figure class="frame fade-up">
+      <img src="assets/kitchen/hero_cam001_2560x1280.webp" width="2560" height="1280" decoding="async" alt="Kitchen · Camera.001" data-lb>
+    </figure>
+    <ul class="specline fade-up" aria-label="Specs">
+      <li>Blender <span class="num">5.1 / 5.2</span></li>
+      <li>Cycles only</li>
+      <li>Version <span class="num">1.3.0</span></li>
+    </ul>
+    <div class="prose opening fade-up">
+      <p>Nobody needs another render setup. I made one anyway, because every bounce count and noise threshold I had ever copied was measured on someone else’s scene. Possibly a donut.</p>
+      <p>FQP renders <em>your</em> scene, measures it, and tells you what is enough. When it can’t tell, it says that too. Cycles only, Blender <span class="num">5.1</span> and <span class="num">5.2</span>.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ============================== 01 ANALYZER ============================== -->
+<section class="block" id="analyzer" aria-labelledby="h-analyzer">
+  <div class="wrap">
+    <div class="head fade-up">
+      <p class="eyebrow"><span class="n">01</span><span class="flow-line" aria-hidden="true"></span><span class="sr"> — </span><span>Analyzer</span></p>
+      <h2 id="h-analyzer">It measures, so you don’t have to guess</h2>
+      <p class="lede">Blender’s factory bounce values are the same for every scene: a product shot, a forest, a cloud. FQP’s two analyzers render your saved .blend in a separate Blender (so save first) and report what it needs. They never save over your file.</p>
+    </div>
+
+    <!-- W3b（規格 §3.7 第 1 點）：01 段的順序＝導言 → Light Path Analyzer 標題 → 第一段 → Strict／Visual 兩條 →
+         「Visual is never higher…」→「The report answers three questions:」與三條 → 步進器 →
+         「Two measured examples…」→「The honest part…」→ Sampling Analyzer。文字沒改，只搬位置。
+         W3c-1：導言與這個小節之間原本的那條 1px 線拿掉了（fqp.css「.head + .prose.sub」）。
+         W3c-2：報告區塊（W3c-1 放在三條與步進器之間）搬到「The honest part…」之後、Sampling Analyzer 之前。 -->
+    <div class="prose sub fade-up">
+      <h3>Light Path Analyzer: two answers, and you pick</h3>
+      <p>Press <b>Analyze Light Paths</b>. It renders one reference with everything turned up, then turns one bounce setting down at a time (diffuse, glossy, transmission, transparent, volume) and compares, on small test images. For each one it finds two values:</p>
+      <ul>
+        <li><b>Strict</b>: where the raw, un-denoised render stops differing from the reference, by the numbers.</li>
+        <li><b>Visual</b>: where the denoised picture is too close to the reference to matter when you flip between the two.</li>
+      </ul>
+      <p>Visual is never higher than Strict. Each set is rendered once more together, and the report says when it didn’t hold. Then two buttons, <b>Apply Strict</b> and <b>Apply Visual</b>. No default: you pick, and it asks before it writes.</p>
+      <p>The report answers three questions:</p>
+      <ul>
+        <li><b>What do I get?</b> Both values for every bounce type.</li>
+        <li><b>Where is the difference?</b> Where in the frame the step below still differs, in words and as a small picture. Look there and decide.</li>
+        <li><b>What does it cost?</b> Whether the higher setting took noticeably longer on the test images: a rough level, not your final render time.</li>
+      </ul>
+    </div>
+
+    <!-- 反彈階梯步進器（W3a：四個分頁，一個場景負責一條光路；資料在 fqp.js 的 LADDERS。W3b：四條都沒有缺格）。
+         Volume＝雲，三格並排（每格 2:3，三格合起來剛好 2:1）：左固定 Default · 0、中＝點選的那一格 Selected · N、
+         右固定 Measured · 48。其餘三條＝單張 2:1，圖左上角標牌 Selected · N。
+         所有幀由 fqp.js 預載＋decode() 後疊放，切換只改 opacity → 不出空白幀。
+         下面這排 HTML 是無 JS 時的預設（Volume，停在 Strict 那一格 48）；有 JS 時按鈕、記號由 LADDERS 重建。
+         <img data-stepper-img data-lb> 是 lightbox 的點擊目標（data-lb-src 跟著目前那一格換）。
+         W3c-1：(1) 差異在哪裡——[data-stepper-diff] 是疊在圖上的一層，fqp.js 依 DIFFS（三份報告的 diff_rung／diff_tiles）
+         在「選的那一格等於 diff_rung」時畫 1px 細線框；[data-diff-tools] 裡是報告的原句與疊圖開關，同樣只在那一格出現。
+         Volume 沒有這些。(2) 按住比較——[data-stepper-hold]：按住時畫面切到該階梯 Visual 值那一格，放開復原。 -->
+    <div class="stepper mt fade-up" data-stepper>
+      <div class="seg ladder-tabs" role="radiogroup" aria-label="Bounce type" data-ladder-group>
+        <button type="button" role="radio" aria-checked="true" tabindex="0" data-ladder="volume">Volume</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-ladder="transparent">Transparent</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-ladder="diffuse">Diffuse</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-ladder="transmission">Transmission</button>
+      </div>
+      <figure class="frame is-tri" data-stepper-frame>
+        <img data-stepper-img src="assets/cloud/volume_v48_640x960.webp" width="640" height="960" decoding="async" alt="Cloud · Volume bounces: 48" data-lb>
+        <span class="plate tl" aria-live="polite">Selected · <span class="num" data-stepper-n>48</span></span>
+        <div class="diff" data-stepper-diff aria-hidden="true"></div>
+        <div class="tri on" data-stepper-tri>
+          <div class="pane"><img src="assets/cloud/volume_v00_640x960.webp" width="640" height="960" decoding="async" alt="Cloud · Default · 0" data-tri-left><span class="plate tl">Default · <span class="num">0</span></span></div>
+          <div class="pane" data-tri-mid><img class="stk on" src="assets/cloud/volume_v48_640x960.webp" width="640" height="960" decoding="async" alt="" aria-hidden="true" data-tri-base data-n="48"><span class="plate tl" aria-live="polite">Selected · <span class="num" data-stepper-n>48</span></span></div>
+          <div class="pane"><img src="assets/cloud/volume_v48_640x960.webp" width="640" height="960" decoding="async" alt="Cloud · Measured · 48" data-tri-right><span class="plate tl">Measured · <span class="num">48</span></span></div>
+        </div>
+      </figure>
+      <div class="stepper-meta">
+        <span class="label" id="lbl-bounces"><span data-stepper-type>Volume</span> bounces</span>
+        <span class="label hint" aria-hidden="true">← →</span>
+      </div>
+      <!-- 記號（規格 §3.1、§3.7 第 3 點）：固定三列高，四條階梯同高 → 切分頁不改頁高。
+           .mark＝那一格刻度中線上的 1px 指示線；.mark-t＝字，預設在線的右邊，放不下就收到左邊（.flip）。 -->
+      <div class="marks" data-stepper-marks>
+        <span class="mark" style="--i:0;--n:9;--row:1"><span class="mark-t">Blender default</span></span>
+        <span class="mark flip" style="--i:7;--n:9;--row:2"><span class="mark-t">Visual = Strict</span></span>
+      </div>
+      <div class="seg" role="radiogroup" aria-labelledby="lbl-bounces" data-stepper-group>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-n="0">0</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-n="4">4</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-n="8">8</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-n="12">12</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-n="16">16</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-n="24">24</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-n="32">32</button>
+        <button type="button" role="radio" aria-checked="true" tabindex="0" data-n="48">48</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-n="64">64</button>
+      </div>
+      <!-- W3c-1 工具列（高度固定：兩欄各自的內容都一直佔位，只切 visibility → 切格、切分頁不改頁高）。
+           左：按住比較（鍵盤：焦點在步進器內時按住 C；焦點在鈕上時按住 Space／Enter）。選的格就是 Visual 值時 disabled。
+           右：只在「選的那一格等於報告的 diff_rung」時出現——報告的原句（三句疊在同一格，逐字取自各自那份報告的 .txt）
+           與疊圖開關（預設關；離開那一格自動收起）。Volume 分頁沒有右欄。 -->
+      <div class="stepper-tools">
+        <div class="tool">
+          <button type="button" class="tool-btn" aria-pressed="false" aria-keyshortcuts="C" disabled data-stepper-hold>Hold to compare</button>
+          <p class="tool-note"><span class="plain">Flipping is how the Visual value was calibrated.</span></p>
+        </div>
+        <div class="tool is-off" data-diff-tools>
+          <button type="button" class="tool-btn" aria-pressed="false" disabled data-diff-toggle>Show the difference picture</button>
+          <!-- 規格 §3.12：四條階梯都有差異圖。data-diff-where＝停在報告拍的那一階時的說明（雲、樹葉＝報告 .txt 的原句，
+               逐字；廚房兩條不放報告的句子，原因見 fqp.js DIFFS 的註解，改成一句中性說明）。
+               data-diff-hint＝同一條階梯的其他格：告訴讀者報告拍的是哪一階（那時開關是 disabled）。
+               全部疊在同一格、只切 visibility，高度固定。 -->
+          <p class="tool-note where-stack">
+            <span data-diff-where="volume" aria-hidden="true">below 48, at rung 32, the difference is largest on the left side of the frame</span>
+            <span data-diff-where="transparent" aria-hidden="true">below 16, at rung 8, the difference is largest in the middle of the frame</span>
+            <span class="plain" data-diff-where="diffuse" aria-hidden="true">The analyzer’s own picture of what differs at this rung.</span>
+            <span class="plain" data-diff-where="transmission" aria-hidden="true">The analyzer’s own picture of what differs at this rung.</span>
+            <span class="plain" data-diff-hint="volume" aria-hidden="true">The report pictured rung 32. Step there to see it.</span>
+            <span class="plain" data-diff-hint="transparent" aria-hidden="true">The report pictured rung 8. Step there to see it.</span>
+            <span class="plain" data-diff-hint="diffuse" aria-hidden="true">The report pictured rung 6. Step there to see it.</span>
+            <span class="plain" data-diff-hint="transmission" aria-hidden="true">The report pictured rung 12. Step there to see it.</span>
+          </p>
+        </div>
+      </div>
+      <!-- 四條圖說疊在同一格（高度＝最長那條），切分頁只換可見的那一條。廚房兩條加 Blender 5.1（規格 §3.7 第 4 點） -->
+      <p class="caption cap-stack" data-stepper-caps>
+        <span data-cap="volume">Cloud · Camera · 640×960 · 256 samples · <span class="plain">One scene, measured once. It stands for that scene only.</span></span>
+        <span data-cap="transparent" aria-hidden="true">Foliage · Camera · 1920×960 · 256 samples · <span class="plain">One scene, measured once. It stands for that scene only.</span></span>
+        <span data-cap="diffuse" aria-hidden="true">Kitchen · Camera.001 · 1920×960 · 256 samples · Blender 5.1 · <span class="plain">One scene, measured once. It stands for that scene only.</span></span>
+        <span data-cap="transmission" aria-hidden="true">Kitchen · Camera glass bottle · 1920×960 · 256 samples · Blender 5.1 · <span class="plain">One scene, measured once. It stands for that scene only.</span></span>
+      </p>
+    </div>
+
+    <div class="prose after-figures fade-up">
+      <p>Two measured examples, each standing for that one scene only. On a cloud, where Blender’s factory Volume is <span class="num">0</span>, the scene settled only at <span class="num">48</span>. On a foliage scene, where factory Transparent is <span class="num">8</span>, Visual came out at <span class="num">16</span> and Strict at <span class="num">24</span>.</p>
+      <p>The honest part: Visual was calibrated on one trained observer (me), on still images, flipping against the reference. Animation was not part of it. And when the analyzer is not sure, it does not lower your setting.</p>
+    </div>
+
+    <!-- 報告區塊（W3c-1 加入；規格 §3.2＋§3.7 第 10 點）：樹葉 v2 那份 Blender 5.1 的 1.3.0 英文報告 .txt 的逐字節錄。
+         W3c-2：從「三條之後、步進器之前」搬到 Light Path Analyzer 小節的最後（The honest part… 之後、Sampling Analyzer 標題之前），
+         並再刪掉兩類整行——四條 ===== 分隔線、verdict 那一行下面的四行說明（來源行號在 README「W3c-2 變更」）。
+         只整行刪除，刪掉的地方是一行「…」（.gap）；其餘各行逐字；沒有含路徑的行。
+         <pre> 是 white-space:pre，寬度不夠時區塊內部橫向捲動。TRANSPARENT 兩張表的每一列是 .rl[data-report-n]：
+         fqp.js 只把「Transparent 階梯上有圖」的列變成可點（role=button），點了＝步進器切到 Transparent 的那一格（往上捲回步進器）。 -->
+    <figure class="console report fade-up" data-report>
+      <figcaption class="bar"><span>From a real report · foliage scene · Blender 5.1</span></figcaption>
+      <pre tabindex="0" data-report-pre><span class="gap">…</span>
+TRANSPARENT   (scene.cycles.transparent_max_bounces, reference render used 64)
+<span class="gap">…</span>
+   bounces |   rel.RMSE |    tm.RMSE |    p99(tm) |   secs | note
+   --------+------------+------------+------------+--------+-------------
+<span class="rl" data-report-n="0">         <span class="rn">0</span> |  48.199169 |   0.923716 |   3.692803 |    0.3 | </span>
+<span class="rl" data-report-n="4">         <span class="rn">4</span> |  48.193044 |   0.236239 |   1.023034 |    0.4 | </span>
+<span class="rl" data-report-n="8">         <span class="rn">8</span> |  48.191827 |   0.061889 |   0.119832 |    0.5 | </span>
+<span class="rl" data-report-n="16">        <span class="rn">16</span> |   0.000661 |   0.001112 |   0.000001 |    0.6 | &lt;== knee</span>
+<span class="rl" data-report-n="24">        <span class="rn">24</span> |   0.000082 |   0.000139 |   0.000001 |    0.6 | &lt;== recommended (escalated)</span>
+<span class="gap">…</span>
+   visual check (display values after OIDN denoise, dE2000 vs reference 64, blur 1 px)
+   bounces |   dE p99 |  dE&gt;2 % | note
+<span class="rl" data-report-n="0">         <span class="rn">0</span> |   33.240 |  94.447 | </span>
+<span class="rl" data-report-n="4">         <span class="rn">4</span> |   10.417 |  48.173 | </span>
+<span class="rl" data-report-n="8">         <span class="rn">8</span> |    1.770 |   0.749 | </span>
+<span class="rl" data-report-n="16">        <span class="rn">16</span> |    0.056 |   0.000 | &lt;== Visual: difference small from here</span>
+<span class="rl" data-report-n="24">        <span class="rn">24</span> |    0.044 |   0.000 | </span>
+<span class="gap">…</span>
+   below 16, at rung 8, the difference is largest in the middle of the
+   frame
+   (difference picture: scene_copy_v2.fqp_lightpath_diff_transparent.png)
+<span class="gap">…</span>
+JOINT VERIFICATION   the Strict values applied AT ONCE and really rendered, to check the set holds
+<span class="gap">…</span>
+   verdict: ESCALATED
+<span class="gap">…</span>
+ SUGGESTED LIGHT PATH SETTINGS
+<span class="gap">…</span>
+   Max Bounces (Total)       : 64   &lt;- your setting, kept (sum of the values below is 33)
+   Diffuse                   : 3   (your scene: 32)
+   Glossy                    : 2   (your scene: 32)
+   Transmission              : 4   (your scene: 12)
+   Transparent               : 24   (your scene: 32)
+   Volume                    : (not measured, your own setting is kept)
+<span class="gap">…</span>
+ VISUAL SETTINGS
+<span class="gap">…</span>
+   Max Bounces (Total)       : 64   &lt;- your setting, kept (sum of the values below is 20)
+   Diffuse                   : 1   (Strict 3; your scene: 32)
+   Glossy                    : 1   (Strict 2; your scene: 32)
+   Transmission              : 2   (Strict 4; your scene: 12)
+   Transparent               : 16   (Strict 24; your scene: 32)
+   Volume                    : (not measured, your own setting is kept)
+<span class="gap">…</span></pre>
+    </figure>
+
+    <div class="prose sub fade-up">
+      <h3>Sampling Analyzer: how tight is tight enough</h3>
+      <p>Press <b>Analyze Sampling</b>. It renders your scene at a ladder of noise thresholds, denoises each one, and suggests the cheapest whose finished picture stays within <span class="num">10%</span> of the tightest. When there is nothing to save, it says so: this scene needs the tightest one.</p>
+      <p>A few cases it handles itself:</p>
+      <ul>
+        <li>If the camera has depth of field, it picks one step tighter.</li>
+        <li>If Max Samples is what’s actually limiting quality, the report warns you.</li>
+        <li>For animation, set <b>Analyze Frames</b> to <b>First, Middle, Last</b>: it checks three frames and takes the strictest answer, in about three times the time. Its job is to avoid a wrong pick, not to save time.</li>
+      </ul>
+      <p>Analysing the current frame takes about <span class="num">10–50</span> seconds.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 02 PIPELINE（W3a：v4「Build once, then three buttons」；原 Detail＋Grain 併入） ============================== -->
+<section class="block" id="pipeline" aria-labelledby="h-pipeline">
+  <div class="wrap">
+    <div class="head fade-up">
+      <p class="eyebrow"><span class="n">02</span><span class="flow-line" aria-hidden="true"></span><span class="sr"> — </span><span>Pipeline</span></p>
+      <h2 id="h-pipeline">Build once, then three buttons</h2>
+    </div>
+
+    <div class="prose fade-up">
+      <ol>
+        <li><b>Build Pipeline</b> puts the whole denoise tree in front of your own compositor chain. Your Glare, grading and the rest keep working.</li>
+        <li><b>Apply Final Sampling</b></li>
+        <li><b>Set 32-bit EXR Output</b></li>
+      </ol>
+      <p>Then F12. The nodes are all there if you want to look.</p>
+    </div>
+
+    <!-- ④ 編號步驟分頁（tablist）：六步（規格 §3.5），面板＝1.3.0 介面截圖＋一句說明；可自動輪播、有暫停鈕。
+         左側細線沿用 .flow-line 語彙：進入視窗時由上往下長滿。
+         W3b（規格 §3.7 第 6 點、§3.8 第 2 點）：上方加 eyebrow「Workflow」。
+         W3c-1（規格 §3.10 第 4 點）：面板圖改用 1.3.0 截圖的原始解析度（871px 寬的整排，只裁高度、不縮放；
+         顯示時 max-width:100%，不會放大超過 1.0 倍）。六張同一個框（871:304＝六步裡最高的那一步），圖在框內置中、
+         底色＝面板底色。02、03 兩步各放兩段（Light Path 與 Sampling 兩張截圖各一段）。裁切表在 README「W3c-1 變更」。
+         點圖放大開的是整張原截圖（data-lb-src）。 -->
+    <p class="eyebrow flow-eyebrow mt fade-up">Workflow</p>
+    <div class="tabs fade-up" data-tabs>
+      <div class="tabs-side">
+        <div class="tablist" role="tablist" aria-label="Pipeline steps" aria-orientation="vertical">
+          <span class="tabs-rail" aria-hidden="true"></span>
+          <button type="button" role="tab" id="tab-1" aria-controls="panel-1" aria-selected="true" tabindex="0"><span class="idx">01</span><span class="ttl">Apply Final Sampling</span><span class="prog" aria-hidden="true"></span></button>
+          <button type="button" role="tab" id="tab-2" aria-controls="panel-2" aria-selected="false" tabindex="-1"><span class="idx">02</span><span class="ttl">Analyze</span><span class="prog" aria-hidden="true"></span></button>
+          <button type="button" role="tab" id="tab-3" aria-controls="panel-3" aria-selected="false" tabindex="-1"><span class="idx">03</span><span class="ttl">Apply</span><span class="prog" aria-hidden="true"></span></button>
+          <button type="button" role="tab" id="tab-4" aria-controls="panel-4" aria-selected="false" tabindex="-1"><span class="idx">04</span><span class="ttl">Build Pipeline</span><span class="prog" aria-hidden="true"></span></button>
+          <button type="button" role="tab" id="tab-5" aria-controls="panel-5" aria-selected="false" tabindex="-1"><span class="idx">05</span><span class="ttl">F12 / CLI Render</span><span class="prog" aria-hidden="true"></span></button>
+          <button type="button" role="tab" id="tab-6" aria-controls="panel-6" aria-selected="false" tabindex="-1"><span class="idx">06</span><span class="ttl">Build &amp; Run Temporal <span class="tag">Animation only</span></span><span class="prog" aria-hidden="true"></span></button>
+        </div>
+        <button type="button" class="tabs-pause" aria-pressed="false" data-tabs-pause><span data-tabs-pause-label>Pause</span></button>
+      </div>
+      <div class="panels">
+        <div class="panel" role="tabpanel" id="panel-1" aria-labelledby="tab-1" tabindex="0">
+          <figure class="frame ui"><img src="assets/ui/flowc_01_apply_final_sampling_871x92.webp" width="871" height="92" loading="lazy" decoding="async" alt="Apply Final Sampling" data-lb data-lb-src="assets/ui/main_built.webp"></figure>
+          <p>Sets the sampling the analyzers measure against. Press it first.</p>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-2" aria-labelledby="tab-2" tabindex="0" hidden>
+          <figure class="frame ui"><img src="assets/ui/flowc_02a_analyze_light_paths_871x140.webp" width="871" height="140" loading="lazy" decoding="async" alt="Analyze Light Paths" data-lb data-lb-src="assets/ui/analysis_lightpath.webp"><img src="assets/ui/flowc_02b_analyze_sampling_871x143.webp" width="871" height="143" loading="lazy" decoding="async" alt="Analyze Sampling" data-lb data-lb-src="assets/ui/analysis_sampling.webp"></figure>
+          <p>Analyze Light Paths and Analyze Sampling render your saved .blend in a separate Blender.</p>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-3" aria-labelledby="tab-3" tabindex="0" hidden>
+          <figure class="frame ui"><img src="assets/ui/flowc_03a_apply_strict_visual_871x90.webp" width="871" height="90" loading="lazy" decoding="async" alt="Apply Strict, Apply Visual" data-lb data-lb-src="assets/ui/analysis_lightpath.webp"><img src="assets/ui/flowc_03b_apply_suggested_threshold_871x61.webp" width="871" height="61" loading="lazy" decoding="async" alt="Apply Suggested Threshold" data-lb data-lb-src="assets/ui/analysis_sampling.webp"></figure>
+          <p>Apply Strict or Apply Visual for bounces; Apply Suggested Threshold for noise. Each asks first.</p>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-4" aria-labelledby="tab-4" tabindex="0" hidden>
+          <figure class="frame ui"><img src="assets/ui/main_start.webp" width="871" height="130" loading="lazy" decoding="async" alt="Build Pipeline" data-lb data-lb-src="assets/ui/main_start.webp"></figure>
+          <p>The whole denoise tree, in front of your own compositor chain.</p>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-5" aria-labelledby="tab-5" tabindex="0" hidden>
+          <figure class="frame ui"><img src="assets/ui/cli_render.webp" width="871" height="148" loading="lazy" decoding="async" alt="CLI Render Still, CLI Render Animation" data-lb data-lb-src="assets/ui/cli_render.webp"></figure>
+          <p>Render as usual, or hand it to a second Blender and keep working.</p>
+        </div>
+        <div class="panel" role="tabpanel" id="panel-6" aria-labelledby="tab-6" tabindex="0" hidden>
+          <figure class="frame ui"><img src="assets/ui/temporal.webp" width="871" height="304" loading="lazy" decoding="async" alt="Build &amp; Run Temporal" data-lb data-lb-src="assets/ui/temporal.webp"></figure>
+          <p>For locked-off or slow shots: steadies what the denoiser guesses differently on each frame.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="prose mt fade-up">
+      <p>It’s the same denoiser Cycles uses, fed more carefully: every light pass is denoised on its own, in full HDR, guided by albedo and normals. Measured against high-sample references in a product shot and a kitchen interior, FQP and the built-in denoiser come out level: the difference is smaller than the noise left in the reference.</p>
+    </div>
+
+    <!-- ② 拖拉對比（W3b 加回；規格 §3.6＋§3.8 第 5 點）。左＝未降噪 64 samples（loupe_raw64，W3r 補算）、
+         右＝FQP（loupe_fqp，與放大鏡主圖同一張）。同鏡位、同尺寸 1600×800，逐像素對齊（檢查見 README「W3b 變更」）。
+         右側標籤不寫版號；圖說不寫 same samples（兩張是分兩次算的）。互動同 W3a 之前的版本：
+         拖曳（Pointer Events）、鍵盤 ←→／Shift／Home／End／PageUp／PageDown、touch-action:pan-y。沒有引註。 -->
+    <div class="mt fade-up" data-compare>
+      <figure class="frame cmp" style="--split:50%" data-cmp>
+        <div class="layer layer-a"><img data-cmp-a src="assets/kitchen/loupe_raw64_1600x800.webp" width="1600" height="800" loading="lazy" decoding="async" alt="Kitchen render at 64 samples, no denoise"></div>
+        <div class="layer layer-b"><img data-cmp-b src="assets/kitchen/loupe_fqp_1600x800.webp" width="1600" height="800" loading="lazy" decoding="async" alt="Kitchen render at 64 samples, FQP"></div>
+        <span class="side side-a" data-cmp-la>64 samples, no denoise</span>
+        <span class="side side-b" data-cmp-lb>FQP</span>
+        <span class="divider" aria-hidden="true"></span>
+        <div class="grip" role="slider" tabindex="0" aria-label="Comparison divider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50%" data-grip>
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 3.5 1.5 7 5 10.5M9 3.5 12.5 7 9 10.5"/></svg>
+        </div>
+      </figure>
+      <p class="caption"><span class="plain">64 samples: no denoise on the left, FQP on the right. One scene, measured once. It stands for that scene only.</span></p>
+    </div>
+
+    <!-- ① 同步放大鏡：主圖上可拖的方框，三個放大窗同步顯示同一位置。廚房 Camera swril（KC 放大鏡組）。
+         主圖＝FQP 縮圖；三窗讀 3840×1920 原圖（data-natural＝原圖寬）。
+         W3c-2 改制（規格 §3.6 的 T3；實作單 W3c-2 第 3～6 步）：
+         (1) 倍率依原圖像素：100%＝放大窗裡一個 CSS 像素顯示原圖的一個像素，200%、400% 依此類推（三窗共用倍率與位置）；
+             方框寬＝放大窗寬 ÷ 倍率 ÷ 3840 × 主圖顯示寬。200% 以上用 pixelated。左上角小標固定寫 Crop。
+         (2) 按住翻切：[data-mag-flip] 兩顆鈕。按住期間「中間那個窗」每 500 ms 在鈕名的兩張圖之間交替（位置、倍率不變），
+             窗下的名字跟著換；放開回到原本那一張。左右兩窗不動。減少動態時改成按一次切過去、再按一次切回。
+         (3) 鍵盤（焦點在這個模組裡）：+／= 放大一級、- 縮小一級、R 方框回預設位置；方框上的方向鍵照舊。
+         (4) 視窗寬 ≤520px：只顯示中間那個窗（左右兩窗 display:none），上方 [data-mag-tabs] 三個分頁選它平常顯示哪一張
+             （預設 FQP）；翻切作用在這個窗上，放開回到所選的分頁。>520px 三窗並排、分頁列不顯示。
+         中間那個窗的三張原圖都由 fqp.js 疊成圖層（解碼好才能換上去，只切 opacity）；名字三個 span 疊在同一格
+         （高度＝最高那個）→ 翻切、切分頁、換倍率、拖方框都不改頁高。 -->
+    <div class="mag fade-up" data-mag data-cx="0.6" data-cy="0.25" data-natural="3840">
+      <div class="mag-head">
+        <span class="label">Crop</span>
+        <div class="seg zoom-seg" role="radiogroup" aria-label="Magnification" data-mag-zoom>
+          <button type="button" role="radio" aria-checked="true" tabindex="0" data-k="1">100%</button>
+          <button type="button" role="radio" aria-checked="false" tabindex="-1" data-k="2">200%</button>
+          <button type="button" role="radio" aria-checked="false" tabindex="-1" data-k="4">400%</button>
+        </div>
+        <span class="label hint" aria-hidden="true">Drag the square · ← → · + − · R</span>
+      </div>
+      <figure class="frame mag-main" data-mag-main>
+        <img src="assets/kitchen/loupe_fqp_1600x800.webp" width="1600" height="800" loading="lazy" decoding="async" alt="Kitchen render, FQP, used as the magnifier map" data-mag-img>
+        <div class="loupe" tabindex="0" role="group" aria-roledescription="magnifier" aria-label="Magnifier position. Use arrow keys to move." data-mag-loupe></div>
+      </figure>
+      <div class="seg mag-tabs" role="radiogroup" aria-label="Magnified image" data-mag-tabs>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-mag-tab="builtin">Cycles built-in</button>
+        <button type="button" role="radio" aria-checked="true" tabindex="0" data-mag-tab="fqp">FQP</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-mag-tab="reference">Reference</button>
+      </div>
+      <div class="mag-wins">
+        <figure class="mag-win is-side"><div class="win" data-mag-win="builtin" data-src="assets/kitchen/loupe_builtin_3840x1920.webp" role="img" aria-label="Magnified crop, Cycles built-in"></div><figcaption class="label">Cycles built-in</figcaption></figure>
+        <figure class="mag-win is-flip"><div class="win" data-mag-win="fqp" data-src="assets/kitchen/loupe_fqp_3840x1920.webp" role="img" aria-label="Magnified crop, FQP"></div><figcaption class="label name-stack"><span data-mag-name="builtin" aria-hidden="true">Cycles built-in</span><span class="on" data-mag-name="fqp">FQP</span><span data-mag-name="reference" aria-hidden="true">Reference</span></figcaption></figure>
+        <figure class="mag-win is-side"><div class="win" data-mag-win="reference" data-src="assets/kitchen/loupe_reference_3840x1920.webp" role="img" aria-label="Magnified crop, reference"></div><figcaption class="label">Reference</figcaption></figure>
+      </div>
+      <div class="mag-flip">
+        <button type="button" class="tool-btn" aria-pressed="false" data-mag-flip="builtin,fqp">Hold: built-in ↔ FQP</button>
+        <button type="button" class="tool-btn" aria-pressed="false" data-mag-flip="fqp,reference">Hold: FQP ↔ reference</button>
+      </div>
+      <!-- W3c-1（規格 §3.9 第 2 點，作者拍板）：圖說換成兩行。第二行後面那句是規格 §1 第 3 條規定每組場景對比都要帶的，原本就在。 -->
+      <p class="mag-lead">I spent days measuring FQP against Cycles’ own denoiser. Try to find a difference. I couldn’t measure one.</p>
+      <p class="caption mag-sub"><span class="plain">Same 64 samples, next to a high-sample reference. One scene, measured once. It stands for that scene only.</span></p>
+    </div>
+
+    <!-- ⑤ Remix Highlights Only 分段切換鈕（aria-pressed）。KC remix (a) On／(b) Off，Camera.006 水槽。
+         整張看差異很小 → 預設直接顯示 4× 裁切（3840 版原生像素 960×480，左上 (1100,100)，
+         正規化中心 0.4115／0.1771：龍頭＋窗框亮處）；旁邊小全圖用 1px 框標出裁切位置。
+         On／Off 兩組圖都在 DOM 疊放，切換只改 opacity（不閃）。W3a：旁邊的文字換成 v4 的控制段。 -->
+    <div class="mt fade-up" id="control" data-remix>
+      <div class="switch-row">
+        <span class="label" id="lbl-remix">Remix Highlights Only</span>
+        <div class="seg" role="group" aria-labelledby="lbl-remix">
+          <button type="button" aria-pressed="true" data-remix-v="on">On</button>
+          <button type="button" aria-pressed="false" data-remix-v="off">Off</button>
+        </div>
+      </div>
+      <div class="remix">
+        <figure class="frame remix-crop">
+          <img class="rx" data-remix-img="on" src="assets/kitchen/remix_on_crop_960x480.webp" width="960" height="480" loading="lazy" decoding="async" alt="4× crop of the sink render: faucet and window frame, Remix Highlights Only on">
+          <img class="rx" data-remix-img="off" src="assets/kitchen/remix_off_crop_960x480.webp" width="960" height="480" loading="lazy" decoding="async" alt="4× crop of the sink render: faucet and window frame, Remix Highlights Only off" aria-hidden="true">
+          <span class="plate tl">Remix Highlights Only: <span data-remix-state>On</span></span>
+          <span class="plate tr">4× crop</span>
+        </figure>
+        <div class="mag-side">
+          <figure class="frame remix-mini" style="--cx:28.6458%;--cy:5.2083%;--cw:25%;--ch:25%">
+            <img class="rx" data-remix-img="on" src="assets/kitchen/remix_on_800x400.webp" width="800" height="400" loading="lazy" decoding="async" alt="Full sink render with the crop area marked, Remix Highlights Only on">
+            <img class="rx" data-remix-img="off" src="assets/kitchen/remix_off_800x400.webp" width="800" height="400" loading="lazy" decoding="async" alt="Full sink render with the crop area marked, Remix Highlights Only off" aria-hidden="true">
+            <span class="crop-mark" aria-hidden="true"></span>
+          </figure>
+          <div class="prose mag-text">
+            <p>What FQP adds is control. The <b>Denoise Strength</b> sliders set how much of each light pass is denoised, and with <b>Remix Highlights Only</b> (on by default) they keep grain in the brightest areas while the rest of the frame stays clean. In an ordinary-brightness scene you may see nothing change when you drag them. That’s expected.</p>
+          </div>
+        </div>
+        <!-- W3b（規格 §3.8 第 4 點）：這句從裁切圖與小全圖中間移到整個模組的最下面 -->
+        <p class="caption"><span class="plain">One scene, measured once. It stands for that scene only.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 03 CLI ============================== -->
+<section class="block" id="cli" aria-labelledby="h-cli">
+  <div class="wrap">
+    <div class="head fade-up">
+      <p class="eyebrow"><span class="n">03</span><span class="flow-line" aria-hidden="true"></span><span class="sr"> — </span><span>CLI Render</span></p>
+      <h2 id="h-cli">Know when it’ll finish</h2>
+      <p class="lede">For long renders, skip F12. <b>CLI Render Still</b> and <b>CLI Render Animation</b> hand the job to a second, headless Blender. Your UI holds none of the VRAM and stays usable, and you can even close it; the render carries on. For an animation, the console prints one line per frame, then a summary. From a real <span class="num">48</span>-frame render of a kitchen scene:</p>
+    </div>
+
+    <!-- 主控台（W3a）：v4 的四行真實紀錄（含 ... 那一行）。ghost＝同格疊放的隱形全文，打字中高度不變。 -->
+    <figure class="console fade-up" data-typer>
+      <div class="bar" aria-hidden="true"><span>Console</span></div>
+      <pre><span class="ghost" aria-hidden="true">[FQP] frame 12/48 done | this frame 13.9s | avg 14.1s/frame | 36 left ~= 8m 28s | finishing 18:45
+...
+[FQP] 48 frame(s) done | 11m 24s in total (start-up and scene loading included) | avg 14.1s/frame
+[FQP] fastest 13.5s | slowest 17.4s</span><span class="typed" data-typer-out>[FQP] frame 12/48 done | this frame 13.9s | avg 14.1s/frame | 36 left ~= 8m 28s | finishing 18:45
+...
+[FQP] 48 frame(s) done | 11m 24s in total (start-up and scene loading included) | avg 14.1s/frame
+[FQP] fastest 13.5s | slowest 17.4s</span></pre>
+    </figure>
+    <p class="caption console-note"><span>From a real 48-frame render</span></p>
+
+    <div class="prose after-figures fade-up">
+      <p>The estimate keeps recomputing from the running average, so if the back half of your shot gets heavier, the finishing time gradually admits it. Resume with Overwrite off and the count covers only the frames still left to render. Two catches: it renders the copy on disk, so save first; and a GPU fits one render at a time, so don’t press F12 as well.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 04 ANIMATION ============================== -->
+<section class="block" id="temporal" aria-labelledby="h-temporal">
+  <div class="wrap">
+    <div class="head fade-up">
+      <p class="eyebrow"><span class="n">04</span><span class="flow-line" aria-hidden="true"></span><span class="sr"> — </span><span>Animation</span></p>
+      <h2 id="h-temporal">Animation</h2>
+      <p class="lede">A denoiser guesses slightly differently on every frame, and playback shimmers. On a locked-off or slow-moving camera, <b>Run Temporal</b> steadies it: it warps neighbouring frames onto the current one along motion vectors, drops the pixels whose depth doesn’t match, and averages the rest. On a fast dolly or pan, the outline of an object moving across the background can come out slightly worse than without it, so it’s a per-shot choice.</p>
+    </div>
+
+    <!-- 單一大影片＋上方分頁。三支 640×320 片段（從 KT 三欄 MP4 裁出，見 README）疊放、
+         同時循環；切分頁時把目標片段對齊到目前時間點，seeked 後才換 opacity（不閃）。 -->
+    <div class="flicker fade-up" data-flicker>
+      <div class="seg" role="radiogroup" aria-label="Denoiser" data-flicker-group>
+        <button type="button" role="radio" aria-checked="true" tabindex="0" data-v="0">Cycles built-in</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-v="1">FQP</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-v="2">FQP + Run Temporal</button>
+      </div>
+      <figure class="frame flicker-frame">
+        <video class="on" autoplay muted loop playsinline preload="auto" width="640" height="320" aria-label="Kitchen animation, Cycles built-in denoiser" data-flicker-v>
+          <source src="assets/kitchen/flicker_builtin_640x320.mp4" type="video/mp4">
+        </video>
+        <video autoplay muted loop playsinline preload="auto" width="640" height="320" aria-label="Kitchen animation, FQP" aria-hidden="true" data-flicker-v>
+          <source src="assets/kitchen/flicker_fqp_640x320.mp4" type="video/mp4">
+        </video>
+        <video autoplay muted loop playsinline preload="auto" width="640" height="320" aria-label="Kitchen animation, FQP with Run Temporal" aria-hidden="true" data-flicker-v>
+          <source src="assets/kitchen/flicker_fqp-temporal_640x320.mp4" type="video/mp4">
+        </video>
+      </figure>
+      <p class="caption"><span>Kitchen · locked-off camera · 46 frames · <span class="plain">One scene, measured once. It stands for that scene only.</span></span></p>
+    </div>
+
+    <div class="prose after-figures fade-up">
+      <p>Motion blur sits out the render and comes back at the end as Vector Blur.</p>
+      <p><b>Prepare Animation Output, render as usual, Build Temporal, Run Temporal.</b> The expensive render stays on disk. Only the cheap part repeats.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 05 FINE PRINT ============================== -->
+<section class="block" id="fine" aria-labelledby="h-fine">
+  <div class="wrap">
+    <div class="head fade-up">
+      <p class="eyebrow"><span class="n">05</span><span class="flow-line" aria-hidden="true"></span><span class="sr"> — </span><span>Fine print</span></p>
+      <h2 id="h-fine">What it is not</h2>
+    </div>
+
+    <div class="prose fade-up">
+      <ul>
+        <li><b>Not a quality jump.</b> It’s Cycles’ own denoiser underneath. See the first FAQ.</li>
+        <li><b>Not mainly a way to render faster.</b> With every surface bounce at its highest, my kitchen scene rendered at most about <span class="num">9–11%</span> slower than at Blender’s factory values, and a foliage scene about <span class="num">6%</span> (one RTX 4090, not a promise). Volume bounces are the exception: they cost a lot. What the analysis buys is knowing, and that includes knowing you were already fine.</li>
+        <!-- W3b（規格 §3.8 第 6 點）：巷子圖放在這一條旁邊（一般模式寬螢幕在右側；嵌入與窄寬度在這一條下方），2:1 -->
+        <li class="has-fig"><span class="li-text"><b>Not instant on heavy scenes.</b> <span class="num">1.3</span> limits textures to 1K during the analysis only, and on the one scene I measured that doesn’t fit in graphics memory, <span class="num">21</span> min <span class="num">13</span> s became <span class="num">3</span> min <span class="num">59</span> s. Scenes that already fit don’t get faster.</span>
+          <figure class="alley">
+            <div class="frame"><img src="assets/alley/alley_saved_1600x800.webp" width="1600" height="800" loading="lazy" decoding="async" alt="The scene in question" data-lb></div>
+            <figcaption class="caption"><span>The scene in question · 2.5 GB · 836 textures</span></figcaption>
+          </figure>
+        </li>
+        <li><b>Analyzer limits.</b> Motion blur isn’t rendered during analysis, and custom lens cameras (OSL lens add-ons) can’t be read for depth of field. Judge those shots yourself.</li>
+        <li><b>Run Temporal limits.</b> Consecutive frames only. On a turntable-style shot (object turns, lights stay still) it can come out worse than per-frame denoising. The manual has the measurement.</li>
+        <li><b>Cycles only.</b></li>
+      </ul>
+      <p>Also in the box: <b>Health Check</b> (read-only diagnostics: it points, it doesn’t touch), 32-bit EXR output, and an English / Traditional Chinese UI.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 06 FAQ／What has changed so far／Specs／Support ==============================
+     W3c-1（規格 §3.9 第 1 點，作者拍板）：嵌入模式（?embed=1）不顯示這四塊——.embed-hide 在 html.is-embed 底下
+     display:none（四塊各自掛，外層這個 section 也掛，免得只剩「06」那一列）。一般模式照常顯示。HTML 沒有刪。 -->
+<section class="block embed-hide" id="more" aria-labelledby="h-faq">
+  <div class="wrap">
+    <div class="head fade-up">
+      <p class="eyebrow"><span class="n">06</span><span class="flow-line" aria-hidden="true"></span></p>
+    </div>
+
+    <div class="fine fade-up">
+      <section class="embed-hide" aria-labelledby="h-faq">
+        <h3 id="h-faq">FAQ</h3>
+        <dl class="faq">
+          <dt>Is it better than the built-in denoiser?</dt>
+          <dd>Not in a way I can measure on real scenes: in a product shot and a kitchen interior the difference was smaller than the noise in the reference renders. Buy it for the Analyzer and for control over the denoise, not for a quality jump.</dd>
+          <dt>Will it make my renders faster?</dt>
+          <dd>Not by itself. The Sampling Analyzer finds a cheaper threshold where one exists and says so when it doesn’t. The Light Path Analyzer can just as well ask for more bounces than you had. And the pipeline adds compositing time on every frame: small next to most final renders, but not zero.</dd>
+          <dt>Strict or Visual?</dt>
+          <dd>Strict is the measurement: the raw render against the reference, by the numbers. Visual is where one observer stopped seeing a difference in the denoised picture, on still images. The report shows you where the two differ, so you can look at that spot before you pick.</dd>
+          <dt>Does the analysis change my scene?</dt>
+          <dd>No. It reads your saved .blend in a separate Blender and never saves over it. The 1K texture limit applies to the analysis images only; your final render uses your textures as they are. Nothing is written to your settings until you press an Apply button and confirm.</dd>
+          <dt>Where is the manual?</dt>
+          <dd>In the .zip, and online with screenshots at jerrythepopper.com/3daddon/fqp. It is long on purpose: every limit I know of is in there, including the ones that don’t flatter the add-on.</dd>
+        </dl>
+      </section>
+      <section class="prose embed-hide" aria-labelledby="h-changed">
+        <h3 id="h-changed">What has changed so far</h3>
+        <ul>
+          <li><b><span class="num">1.3</span></b>: the Light Path Analyzer finds two values for every light path, Strict and Visual, with an Apply button for each. A setting it isn’t sure about is never lowered. Scenes that don’t fit in graphics memory are analysed faster. The report was rewritten.</li>
+          <li><b><span class="num">1.2</span></b>: a new denoise layout (each light pass is multiplied by its surface colour first, then denoised), and grain kept only in the highlights. The Sampling Analyzer got its “within <span class="num">10%</span> of the tightest” rule, the depth-of-field step and <b>First, Middle, Last</b>. The Light Path Analyzer learned to measure further up on glass-heavy scenes and to say what to raise by hand. Run Temporal leaves far fewer dots along moving outlines.</li>
+          <li><b><span class="num">1.1</span></b>: <b>Filter Fireflies Before Remix</b>, and a reliability release for Build, Remove, Health Check and Temporal.</li>
+          <li><b><span class="num">1.0</span></b>: the denoise pipeline, the temporal pass, both analyzers, CLI render with a live estimate, and the bilingual UI.</li>
+        </ul>
+        <p>The full changelog is in the .zip. New features get announced when they work, not before.</p>
+      </section>
+    </div>
+
+    <!-- Specs：沿用定義清單版型；欄位與值照 v4。v4 沒有欄名的那一條（No dependencies…）欄名用 Dependencies（規格 §3.7 第 5 點）。 -->
+    <div class="specs embed-hide fade-up">
+      <h3>Specs</h3>
+      <dl>
+        <div class="row"><dt>Version</dt><dd class="num">1.3.0</dd></div>
+        <div class="row"><dt>Blender</dt><dd><span class="num">5.1 / 5.2</span> · Cycles only</dd></div>
+        <div class="row"><dt>Install</dt><dd>Edit &gt; Preferences &gt; Get Extensions &gt; <b>Install from Disk</b></dd></div>
+        <div class="row"><dt>Platforms</dt><dd>Windows (tested on hardware; this is where it is used day to day); macOS (tested on hardware: MacBook Pro M1); Linux (covered by the test suite, not yet tested on real hardware)</dd></div>
+        <div class="row"><dt>License</dt><dd>GPL-3.0-or-later</dd></div>
+        <div class="row"><dt>Documentation</dt><dd>full manual, English + Traditional Chinese, in the .zip and online</dd></div>
+        <div class="row"><dt>Dependencies</dt><dd>No dependencies, no internet access, nothing phones home</dd></div>
+      </dl>
+    </div>
+
+    <div class="support embed-hide fade-up">
+      <h3>Support</h3>
+      <p>message me on Superhive, or email <a class="inline" href="mailto:jerrythepopper@gmail.com">jerrythepopper@gmail.com</a>. Include your Blender version and the .log file the add-on writes next to your .blend.</p>
+      <a class="cta" href="mailto:jerrythepopper@gmail.com"><span>Email</span><span class="arr" aria-hidden="true">→</span></a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <a href="/">Jerrythepopper</a>
+    <span>Final Quality Pipeline · Blender add-on</span>
+  </div>
+</footer>
+
+<!-- ⑥ 點圖放大 lightbox：role=dialog，Esc／關閉鈕／點背景關閉，焦點回原處 -->
+<div class="lb" role="dialog" aria-modal="true" aria-label="Image viewer" hidden data-lb-dialog>
+  <div class="lb-stage" data-lb-stage>
+    <img alt="" data-lb-img>
+  </div>
+  <button type="button" class="lb-close" aria-label="Close" data-lb-close><span aria-hidden="true">Close</span><span class="x" aria-hidden="true"></span></button>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1379 @@
+/* =============================================================================
+   FQP 商品頁原型——延伸 Jerrythepopper 網站「貴船風」
+   -----------------------------------------------------------------------------
+   token 一律照抄網站，不另創色票：
+     · 淺色 --color-*、字型、easing／duration：styles.css:7-32
+     · 深色 --dk-* 字面值與兩段啟用區塊：src-site/patch.css:809-916
+     · .cta / .eyebrow / .flow-line / .fade-up：styles.css:54-74、379-444
+     · 深淺切換鈕：patch.css:926-993
+   零圓角、1px 線。兩種模式：一般（跟網站）／嵌入 ?embed=1（強制深色、690px 設計、
+   所有互動區塊固定長寬比 → 互動不改頁高）。
+   ============================================================================= */
+
+/* ---- 淺色 token（styles.css:7-32 原值） ---- */
+:root {
+  --color-bg: #f7f7f7;
+  --color-bg-alt: #f1f1ef;
+  --color-text: #111112;
+  --color-text-muted: #6a6c74;   /* W2a：網站 S45 覆寫值（patch.css:1271）；舊 #95979c 對 #f7f7f7 只有 2.73:1 */
+  --color-text-faint: #c8c8cb;
+  --color-white: #ffffff;
+  --color-line: #1d1d1f;
+  --color-line-faint: rgba(17, 17, 18, 0.12);
+
+  --font-serif: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  --font-sans: "Jost", "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  --font-numeric: "Lustria", "Noto Serif JP", serif;
+  /* 網站沒有等寬 token；CLI 那一行用系統等寬字（不另載外部字型） */
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  --ease-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 0.3s;
+  --dur-base: 0.6s;
+  --dur-slow: 1.2s;
+
+  --container-pad: clamp(20px, 4vw, 64px);
+  --page-max: 1040px;   /* 一般模式的內容框；嵌入模式改 690px（見檔尾） */
+  --measure: 620px;     /* 內文行長 */
+
+  /* ---- 深色字面值（patch.css:813-821 原值，唯一一份） ---- */
+  --dk-bg: #15161d;
+  --dk-bg-alt: #28292d;
+  --dk-text: #e4e6ea;
+  --dk-text-muted: #83858d;
+  --dk-text-faint: #5c5e66;
+  --dk-line: rgba(228, 230, 234, 0.55);
+  --dk-line-faint: rgba(228, 230, 234, 0.14);
+  --dk-flow-rule: rgba(228, 230, 234, 0.8);
+  --dk-flow-track: rgba(228, 230, 234, 0.16);
+  --dk-frosted: rgba(21, 22, 29, 0.78);
+
+  /* ---- 可切換槽：預設＝亮場值（patch.css:832-843 原值） ---- */
+  --c-frosted: rgba(247, 247, 247, 0.82);
+  --c-cta-hover-fg: var(--color-white);
+  --c-media-bg: #1d1d1f;
+  --c-flow-rule: rgba(17, 17, 18, 0.75);
+  --c-flow-track: rgba(17, 17, 18, 0.15);
+  --tt-sun: 0;
+  --tt-moon: 1;
+
+  /* ---- W2a 對比修正 ----
+     亮場 muted：照網站 S45 覆寫值（src-site/patch.css:1271，#95979c → #6a6c74；
+     對 #f7f7f7 4.89:1、對 #f1f1ef 4.63:1）。原型先前抄的是 styles.css 舊值（2.73:1）。
+     --c-muted-on-alt：bg-alt 底上的次要字（Console 標頭、頁尾）。亮場＝muted 本身（4.63:1 已過）；
+     暗場 --dk-text-muted #83858d 對 #28292d 只有 3.95:1 → 同色相提亮到 #8f9199（4.62:1）。 */
+  --c-muted-on-alt: var(--color-text-muted);
+}
+
+/* ---- 啟用深色：系統偏好（未手動指定時）＋ 手動指定（patch.css:865-914 同構） ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg: var(--dk-bg);
+    --color-bg-alt: var(--dk-bg-alt);
+    --color-text: var(--dk-text);
+    --color-text-muted: var(--dk-text-muted);
+    --color-text-faint: var(--dk-text-faint);
+    --color-line: var(--dk-line);
+    --color-line-faint: var(--dk-line-faint);
+    --c-frosted: var(--dk-frosted);
+    --c-cta-hover-fg: var(--color-bg);
+    --c-media-bg: var(--color-bg-alt);
+    --c-flow-rule: var(--dk-flow-rule);
+    --c-flow-track: var(--dk-flow-track);
+    --c-muted-on-alt: #8f9199;
+    --tt-sun: 1;
+    --tt-moon: 0;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: var(--dk-bg);
+  --color-bg-alt: var(--dk-bg-alt);
+  --color-text: var(--dk-text);
+  --color-text-muted: var(--dk-text-muted);
+  --color-text-faint: var(--dk-text-faint);
+  --color-line: var(--dk-line);
+  --color-line-faint: var(--dk-line-faint);
+  --c-frosted: var(--dk-frosted);
+  --c-cta-hover-fg: var(--color-bg);
+  --c-media-bg: var(--color-bg-alt);
+  --c-flow-rule: var(--dk-flow-rule);
+  --c-flow-track: var(--dk-flow-track);
+  --c-muted-on-alt: #8f9199;
+  --tt-sun: 1;
+  --tt-moon: 0;
+}
+:root[data-theme="light"] { color-scheme: light; }
+
+/* =============================================================================
+   基礎
+   ============================================================================= */
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: 0.05em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+img, video { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; transition: opacity var(--dur-fast) var(--ease-out); }
+a:hover { opacity: 0.6; }
+button { font: inherit; letter-spacing: inherit; color: inherit; border-radius: 0; }
+:focus-visible { outline: 1px solid var(--color-text); outline-offset: 3px; }
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---- fade-up（styles.css:55-56 原值） ---- */
+.fade-up { opacity: 0; transform: translateY(16px); transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out); }
+.fade-up.in { opacity: 1; transform: translateY(0); }
+html:not(.js) .fade-up { opacity: 1; transform: none; }
+
+/* ---- 生長細線（styles.css:59-72 原值；eyebrow 的「—」就是這一畫） ---- */
+.flow-line {
+  position: relative;
+  display: block;
+  width: 40px; height: 1px;
+  background: var(--color-line-faint);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.flow-line::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--color-line);
+  transform: scaleX(0); transform-origin: left center;
+  transition: transform 0.9s var(--ease-inout) 0.15s;
+}
+.flow-line.in::after, .in .flow-line::after { transform: scaleX(1); }
+
+/* fade-up 未進場時 translateY(16px)：最後一塊（.support）會往下凸出 main 16px、把
+   scrollHeight 撐高，進場後又縮回 → 嵌入頁高會跳。main 用 overflow:clip 吃掉這 16px
+   （clip 不建立捲動容器，不影響 sticky／fixed）。 */
+main { display: block; overflow: clip; }
+
+/* ---- 版框 ---- */
+.wrap {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 var(--container-pad);
+}
+
+/* =============================================================================
+   頂列（一般模式；嵌入模式隱藏）——frosted 語彙（styles.css:283-321）
+   ============================================================================= */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px;
+  padding: 10px clamp(20px, 4vw, 48px);
+  min-height: 56px;
+  background: var(--c-frosted);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border-bottom: 1px solid var(--color-line-faint);
+}
+.topbar .brand {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.topbar .crumb {
+  margin-left: auto;
+  font-family: var(--font-sans);
+  font-size: 12px;   /* W2a：11 → 12（標籤最小 12px） */
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---- 深淺切換鈕（patch.css:926-971 原值） ---- */
+.theme-toggle {
+  flex: 0 0 auto;
+  position: relative;
+  width: 44px; height: 44px;
+  padding: 0; margin: 0 -10px 0 0;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  opacity: 0.65;
+  transition: opacity var(--dur-fast) var(--ease-out), scale 140ms var(--ease-out);
+}
+.theme-toggle:hover { opacity: 1; }
+.theme-toggle:active { scale: 0.96; }
+.theme-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; opacity: 1; }
+.theme-toggle svg {
+  position: absolute;
+  width: 18px; height: 18px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 300ms cubic-bezier(0.2, 0, 0, 1),
+              scale 300ms cubic-bezier(0.2, 0, 0, 1),
+              filter 300ms cubic-bezier(0.2, 0, 0, 1);
+}
+.theme-toggle .ic-sun {
+  opacity: var(--tt-sun);
+  scale: calc(0.25 + 0.75 * var(--tt-sun));
+  filter: blur(calc(4px - 4px * var(--tt-sun)));
+}
+.theme-toggle .ic-moon {
+  opacity: var(--tt-moon);
+  scale: calc(0.25 + 0.75 * var(--tt-moon));
+  filter: blur(calc(4px - 4px * var(--tt-moon)));
+}
+/* 只在使用者真的點了鈕的 0.42 秒存在（patch.css:981-993） */
+@media (prefers-reduced-motion: no-preference) {
+  :root.theme-transitioning,
+  :root.theme-transitioning *:not(img):not(video),
+  :root.theme-transitioning *::before,
+  :root.theme-transitioning *::after {
+    transition: background-color 350ms var(--ease-out),
+                color 350ms var(--ease-out),
+                border-color 350ms var(--ease-out),
+                outline-color 350ms var(--ease-out),
+                fill 350ms var(--ease-out),
+                stroke 350ms var(--ease-out) !important;
+  }
+}
+
+/* =============================================================================
+   共用排版
+   ============================================================================= */
+.eyebrow {
+  display: flex; align-items: center; gap: 16px;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.eyebrow .n {
+  font-family: var(--font-numeric);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--color-text);
+  text-transform: none;
+}
+
+.block {
+  padding: clamp(88px, 11vw, 160px) 0 0;
+}
+.block > .wrap > .head {
+  display: flex; flex-direction: column; gap: 24px;
+  margin-bottom: clamp(36px, 5vw, 56px);
+}
+h1, h2, h3 { margin: 0; font-weight: 500; }
+h2 {
+  font-family: var(--font-serif);
+  font-size: clamp(27px, 3.4vw, 42px);
+  line-height: 1.25;
+  letter-spacing: 0.03em;
+  max-width: 18em;
+  text-wrap: balance;
+}
+.lede, .prose p, .prose li {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.95;
+  letter-spacing: 0.035em;
+  overflow-wrap: break-word;
+}
+.lede { margin: 0; max-width: var(--measure); color: var(--color-text); }
+.prose { max-width: var(--measure); }
+.prose p { margin: 0 0 1.2em; }
+.prose p:last-child { margin-bottom: 0; }
+.prose ul { margin: 0 0 1.2em; padding: 0; list-style: none; }
+.prose li { position: relative; padding-left: 22px; margin-bottom: 0.5em; }
+.prose li::before {
+  content: ''; position: absolute; left: 0; top: 0.98em;
+  width: 10px; height: 1px; background: var(--color-text-muted);
+}
+/* W3a：編號清單（v4「Build once, then three buttons」的三顆按鈕）——序號用 Lustria，不畫短橫 */
+.prose ol { margin: 0 0 1.2em; padding: 0; list-style: none; counter-reset: step; }
+.prose ol > li { padding-left: 30px; counter-increment: step; }
+.prose ol > li::before {
+  content: counter(step);
+  left: 0; top: 0;
+  width: auto; height: auto; background: none;
+  font-family: var(--font-numeric);
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+}
+/* W3a：段內子節（Light Path Analyzer／Sampling Analyzer 全文）——上緣一條 1px 線，單欄直排 */
+.prose.sub {
+  margin-top: clamp(40px, 6vw, 64px);
+  padding-top: 32px;
+  border-top: 1px solid var(--color-line-faint);
+  max-width: none;
+}
+.prose.sub > * { max-width: var(--measure); }
+/* W3c-1：段標題區（導言）後面直接接的子節不畫上緣線——只有 01 段的 Light Path Analyzer 那一塊符合
+   （W3b 把步進器搬走後，那條線變成夾在導言與小標之間）。Sampling Analyzer 那一塊前面是 .after-figures，線照舊。
+   只拿掉線；間距（margin-top＋padding-top）沒動。 */
+.head + .prose.sub { border-top: 0; }
+b { font-weight: 500; }
+.num { font-family: var(--font-numeric); letter-spacing: 0.02em; }
+.muted { color: var(--color-text-muted); }
+
+/* =============================================================================
+   W2a 字級階層（全頁統一；網站對照見 README「字級階層」）
+     H1  hero 標題        Noto Serif JP 500  clamp(34px, 5.6vw, 68px) / 1.12
+     H2  段標題           Noto Serif JP 500  clamp(27px, 3.4vw, 42px) / 1.25（嵌入 24–32px）
+     H3  段內子主題       Noto Serif JP 500  23px / 1.4（≤520px：20px）——本次新增
+     eyebrow             Jost 11px .32em 大寫 muted——只用在段落編號列與極短分類標籤
+     內文                 Noto Serif JP 400  15px / 1.95（未改）；並列小項用內文粗體 500
+     caption／標籤／圖上字  Jost 12px 大寫（最小 12px），對背景 ≥ 4.5:1
+   ============================================================================= */
+.prose h3, .fine h3, .specs h3, .support h3 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 23px;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  color: var(--color-text);
+  text-transform: none;
+  margin: 0 0 16px;
+}
+.prose p.eyebrow.sub {          /* H3 上方的短分類標籤（不帶段落編號，避免與 01／02 段號撞） */
+  margin: 0 0 10px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.32em;
+  color: var(--color-text-muted);
+}
+@media (max-width: 520px) {
+  .prose h3, .fine h3, .specs h3, .support h3 { font-size: 20px; }
+}
+
+/* 小標（同 about-body h3 語彙：Jost 大寫 muted）。W2a：11 → 12px */
+.label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* ---- 圖框：一律固定長寬比、明確尺寸 → 切換只換圖不改高度 ---- */
+.frame {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  background: var(--c-media-bg);
+  margin: 0;
+}
+.frame > img, .frame .layer img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+/* 角落標牌：牆色底＋正文色，零圓角（圖上不疊漸層、不壓白字） */
+.plate {
+  position: absolute; z-index: 3;
+  display: inline-flex; align-items: baseline; gap: 10px;
+  padding: 8px 12px 7px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 12px;   /* W2a：10 → 12 */
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.plate .num { font-size: 14px; letter-spacing: 0.04em; text-transform: none; }
+.plate.tl { top: 0; left: 0; }
+.plate.tr { top: 0; right: 0; }
+
+.caption {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+  margin-top: 14px;
+  font-family: var(--font-sans);
+  font-size: 12px;   /* W2a：10 → 12 */
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.caption .hint { white-space: nowrap; }
+
+/* ---- 文字按鈕列（步進器、配對、開關共用）：1px 線、零圓角、選中＝上緣一畫 ---- */
+.seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  border-top: 1px solid var(--color-line-faint);
+}
+.seg button {
+  position: relative;
+  min-height: 44px;
+  padding: 12px 6px 10px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 12px;   /* W2a：10 → 12 */
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  transition: color var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.seg button::before {
+  content: ''; position: absolute; left: 0; right: 0; top: -1px;
+  height: 1px; background: var(--color-text);
+  transform: scaleX(0); transform-origin: left center;
+  transition: transform var(--dur-base) var(--ease-inout);
+}
+.seg button:hover { color: var(--color-text); }
+.seg button[aria-checked="true"], .seg button[aria-pressed="true"] { color: var(--color-text); }
+.seg button[aria-checked="true"]::before, .seg button[aria-pressed="true"]::before { transform: scaleX(1); }
+.seg button:focus-visible { outline-offset: -3px; }
+
+/* =============================================================================
+   00 HERO
+   ============================================================================= */
+.hero { padding: clamp(72px, 10vw, 140px) 0 0; }
+.hero .head { display: flex; flex-direction: column; gap: 28px; margin-bottom: clamp(40px, 6vw, 64px); }
+.hero h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(34px, 5.6vw, 68px);
+  line-height: 1.12;
+  letter-spacing: 0.03em;
+  max-width: 13em;
+  text-wrap: balance;
+}
+/* W3a：副標（v4 hero secondary line）＝標題那個問句的回答 → H3 字級（Noto Serif JP 500 23px），正文色 */
+.hero .answer {
+  margin: -6px 0 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 23px;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  color: var(--color-text);
+}
+/* 功能句（v4 function line）沿用原本的 .subtitle 樣式 */
+.hero .subtitle {
+  margin: 0;
+  max-width: 34em;
+  font-size: 15px;
+  line-height: 2;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+/* W3a：Opening 兩段，接在 Hero 的規格列下方 */
+.hero .opening { margin-top: clamp(40px, 6vw, 64px); }
+@media (max-width: 520px) {
+  .hero .answer { font-size: 20px; }
+}
+.specline {
+  display: flex; flex-wrap: wrap; gap: 10px 0;
+  margin: 18px 0 0; padding: 0; list-style: none;
+  font-family: var(--font-sans);
+  font-size: 12px;   /* W2a：10 → 12 */
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.specline li { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.specline li + li::before {
+  content: ''; display: inline-block; width: 24px; height: 1px;
+  margin: 0 16px; background: var(--color-line-faint);
+  align-self: center;
+}
+.specline .num { font-size: 12px; color: var(--color-text); letter-spacing: 0.04em; text-transform: none; }
+
+/* =============================================================================
+   01 ANALYZER —— 反彈次數步進器
+   ============================================================================= */
+.stepper { margin-top: 0; }
+.stepper .seg button {
+  font-family: var(--font-numeric);
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  padding: 12px 0 10px;
+}
+.stepper-meta {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin: 26px 0 0;
+}
+/* W2a：階梯分頁（Diffuse／Transmission）在圖上方；字照一般 .seg（Jost 大寫），不吃數字鈕的 Lustria */
+.stepper .ladder-tabs { border-top: 1px solid var(--color-line-faint); }
+.stepper .seg.ladder-tabs button {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 12px 6px 10px;
+}
+/* W2a：預載幀疊放（fqp.js 產生）。切換只改 opacity、無過渡 → 不會出現空白幀 */
+.frame > img.stk { opacity: 0; pointer-events: none; z-index: 1; }
+.frame > img.stk.on { opacity: 1; }
+
+/* ---- W3a：雲（Volume）三格並排 ----
+   .tri 蓋滿原本 2:1 的圖框，三等欄、gap 0：每格寬＝框寬÷3、高＝框高＝框寬÷2 → 每格 2:3，
+   三格合起來剛好 2:1，頁高不變。左格固定（Default · 0）、中格＝點選的那一格（Selected · N，幀疊在這一格內）、
+   右格固定（Measured · 48）。整組只切 opacity（不閃）。
+   .tri 本身 pointer-events:none → 點擊落到底下的 <img data-lb>（lightbox 開目前中間那一格）。 */
+.stepper .tri {
+  position: absolute; inset: 0; z-index: 2;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0;
+  background: var(--c-media-bg);
+  opacity: 0; pointer-events: none;
+}
+.stepper .tri.on { opacity: 1; }
+.stepper .tri .pane { position: relative; overflow: hidden; min-width: 0; }
+.stepper .tri .pane > img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.stepper .tri .pane > img.stk { opacity: 0; z-index: 1; }
+.stepper .tri .pane > img.stk.on { opacity: 1; }
+/* 格與格之間一條 1px 牆色線（畫在格內，不佔寬度） */
+.stepper .tri .pane + .pane::after {
+  content: ''; position: absolute; z-index: 2;
+  left: 0; top: 0; bottom: 0; width: 1px;
+  background: var(--color-bg);
+}
+/* 格內標牌：允許換行，寬度不超過那一格（窄螢幕每格只有一百多 px） */
+.stepper .tri .plate {
+  display: block;
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.5;
+}
+/* W3b：右格（Measured · 48）的圖已到貨，原本文字佔位用的兩條規則跟著 HTML 一起拿掉 */
+/* 三格版型時，整框左上那塊「Selected · N」標牌讓位給各格自己的標牌 */
+.stepper .frame.is-tri > .plate { visibility: hidden; }
+
+/* ---- W3a：刻度上方的記號（Blender default／Visual／Strict）----
+   固定三列高（每列 20px），四條階梯同高、沒有記號資料的階梯留空 → 切分頁不改頁高。
+   每個記號＝Jost 12px 大寫小字＋一條 1px 細線，線落在該格的中線上、往下接到刻度的上緣。
+   --i＝第幾格（0 起）、--n＝總格數、--row＝第幾列（0 在最上）；.flip＝字收到線的左邊。 */
+.stepper .marks {
+  position: relative;
+  height: 60px;
+  margin-top: 12px;
+}
+/* W3b（規格 §3.7 第 3 點）：.mark 本身就是那條 1px 指示線，水平中心＝該格刻度的中線
+   （left 百分比－0.5px），所以量 .mark 的中心 x 就是量記號對不對位。字是子元素 .mark-t，
+   用 left／right 貼在線的右邊或左邊（.flip＝右邊放不下，收到左邊）——不用 transform。 */
+.stepper .mark {
+  position: absolute;
+  left: calc((var(--i) + 0.5) / var(--n) * 100%);
+  top: calc(var(--row) * 20px);
+  bottom: 0;
+  width: 1px;
+  margin-left: -0.5px;
+  background: var(--color-text-muted);
+}
+.stepper .mark-t {
+  position: absolute;
+  top: 0; left: 100%;
+  padding: 0 0 0 8px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+.stepper .mark.flip .mark-t {
+  left: auto; right: 100%;
+  padding: 0 6px 0 0;
+}
+
+/* ---- W3a：圖說 ----
+   .cap-stack：四條階梯的圖說疊在同一格（高度＝最長那條），只顯示目前那一條 → 切分頁不改頁高。
+   .plain：圖說裡的整句話（One scene, measured once. …）不轉大寫、字距收小，比較好讀。 */
+.caption.cap-stack { display: grid; }
+.caption.cap-stack > [data-cap] { grid-area: 1 / 1; }
+.caption.cap-stack > [aria-hidden="true"] { visibility: hidden; }
+.caption .plain { text-transform: none; letter-spacing: 0.06em; }
+.caption > .plain, .caption > span { line-height: 1.7; }
+
+/* ---- W3c-1：差異在哪裡（規格 §3.7 第 9 點＋§3.10 第 1 點）----
+   .diff 蓋滿 2:1 的圖框（在疊放幀之上、標牌之下），不接收點擊（點擊照樣落到底下的 lightbox 目標）。
+   .diff-box＝1px 細線框，位置是整張圖的百分比（fqp.js 由報告的 diff_tiles 換算：left＝col/8、top＝row/4）。
+   .diff-img＝分析器自己輸出的差異小圖（480×240 原檔，沒有放大重存；這裡只是顯示時拉到整個圖框），半透明疊上去。
+   按住比較期間不顯示疊圖：那張圖是「diff_rung 那一階對參考圖」的差異，底下換成 Visual 那一格時不該還疊著。 */
+.stepper .diff { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.stepper .diff-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: fill;
+  opacity: 0;
+}
+.stepper .diff-img.on { opacity: 0.65; }
+.stepper.is-holding .diff-img.on { opacity: 0; }
+.stepper .diff-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+/* ---- W3c-1：按住比較（規格 §3.7 第 8 點）----
+   按住期間 .stepper 掛 .is-holding：畫面是 Visual 那一格，所以「Selected · N」標牌先收起來（N 是讀者選的格，
+   不是畫面上那一格），刻度上的 Visual 記號轉成正文色。只切 visibility／顏色，不改版面。 */
+.stepper.is-holding .frame > .plate,
+.stepper.is-holding [data-tri-mid] > .plate { visibility: hidden; }
+.stepper.is-holding .mark.is-visual { background: var(--color-text); }
+.stepper.is-holding .mark.is-visual .mark-t { color: var(--color-text); }
+
+/* ---- W3c-1：工具列（按住比較｜差異在哪裡）----
+   兩欄；每一欄＝一顆鈕＋下面一行小字。右欄的三句（三條階梯各一句）疊在同一格，高度＝最長那句；
+   不該出現的時候整欄 visibility:hidden（仍佔位）→ 切格、切分頁都不改頁高。≤560px 改成上下兩列。 */
+.stepper-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px clamp(16px, 3vw, 32px);
+  align-items: start;
+  margin-top: 18px;
+}
+.stepper-tools .tool { min-width: 0; }
+.stepper-tools .tool.is-off { visibility: hidden; }
+.tool-btn {
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 14px 7px;
+  border: 1px solid var(--color-line-faint);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--color-text);
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.tool-btn[data-stepper-hold] { touch-action: none; }   /* 按住時手指小幅移動不要變成捲動（會中斷按住） */
+.tool-btn:hover { border-color: var(--color-text); }
+.tool-btn[aria-pressed="true"] { background: var(--color-text); color: var(--c-cta-hover-fg); border-color: var(--color-text); }
+/* 停用：字轉 muted 灰（對比仍 ≥4.5:1）、框維持淡線。不畫刻度鈕那種刪除線——這顆鈕在每條階梯的 Visual 那一格
+   都是停用的（雲與 Transmission 一開始就是），整顆鈕畫刪除線會像「這個功能壞了」。 */
+.tool-btn:disabled, .tool-btn:disabled:hover {
+  cursor: not-allowed;
+  color: var(--color-text-muted);
+  border-color: var(--color-line-faint);
+}
+.tool-note {
+  margin: 10px 0 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.7;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+/* 報告的原句：等寬字（和上面的報告區塊同一種字），正文色 */
+.tool-note.where-stack {
+  display: grid;
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+  color: var(--color-text);
+  overflow-wrap: break-word;
+}
+.where-stack > span { grid-area: 1 / 1; min-width: 0; visibility: hidden; }
+/* 規格 §3.12：不是報告原句的說明（廚房那一格的中性說明、其他格的「報告拍的是哪一階」）用一般小字，不用等寬字 */
+.where-stack > span.plain {
+  font-family: var(--font-sans);
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+.stepper-tools .tool:not(.is-off) .where-stack > span.on { visibility: visible; }
+@media (max-width: 560px) {
+  .stepper-tools { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* =============================================================================
+   02 PIPELINE（W3a：原 Detail＋Grain 併入。W3b：拖拉對比加回，未降噪圖已到貨）
+   ============================================================================= */
+/* 模組接在文字後面時的間距（步進器、流程分頁、拖拉對比、Remix 開關） */
+.mt { margin-top: clamp(40px, 6vw, 64px); }
+
+/* ② 拖拉對比（W3b 加回；規則同 W3a 之前的版本，拿掉引註與文字佔位）。
+   兩張圖疊在同一個 2:1 圖框，右圖用 clip-path 從 --split 往右顯示；拖曳只改 --split → 不改頁高。 */
+.cmp { margin-top: 0; touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: ew-resize; }
+.cmp .layer { position: absolute; inset: 0; }
+.cmp .layer-b { clip-path: inset(0 0 0 var(--split, 50%)); }
+/* 兩側 Jost 小標籤：貼著分界線兩邊，跟著走。.plate 同款「牆色底＋正文色」12px，
+   對比＝主題前景對背景，不取決於影像內容。 */
+.cmp .side {
+  position: absolute; z-index: 4;
+  top: 0;
+  padding: 8px 12px 7px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  pointer-events: none;
+  overflow: hidden;   /* W3b：分界線拖到最邊上時這一側的寬度趨近 0，字不可以溢到標籤外面蓋住另一側 */
+}
+/* 寬度不超過分界線這一側（窄螢幕自動換行，不被框裁掉） */
+.cmp .side-a { right: calc(100% - var(--split, 50%) + 1px); max-width: calc(var(--split, 50%) - 1px); }
+.cmp .side-b { left: calc(var(--split, 50%) + 1px); max-width: calc(100% - var(--split, 50%) - 1px); }
+.cmp .divider {
+  position: absolute; z-index: 4;
+  top: 0; bottom: 0; left: var(--split, 50%);
+  width: 1px; margin-left: -0.5px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.25);
+}
+.cmp .grip {
+  position: absolute; z-index: 5;
+  top: 50%; left: var(--split, 50%);
+  width: 44px; height: 44px;
+  margin: -22px 0 0 -22px;
+  padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 0;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.cmp .grip::before {
+  content: '';
+  width: 26px; height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  background: rgba(17, 17, 18, 0.35);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.cmp .grip:hover::before, .cmp .grip:focus-visible::before { background: rgba(17, 17, 18, 0.6); }
+.cmp .grip:focus-visible { outline: none; }
+.cmp .grip:focus-visible::before { outline: 1px solid rgba(255, 255, 255, 0.92); outline-offset: 3px; }
+.cmp .grip svg {
+  position: absolute; width: 14px; height: 14px;
+  fill: none; stroke: rgba(255, 255, 255, 0.92); stroke-width: 1.25;
+}
+
+/* ① 同步放大鏡（W3c-2 改制）：主圖上可拖方框，放大窗裡是原圖的 <img> 圖層（.lay），
+   寬高＝原圖像素×倍率、left／top 依方框位置即時算（fqp.js）；方框大小＝放大窗在原圖上看到的那一塊換成主圖上的大小。
+   放大窗固定 1:1 長寬比 → 尺寸只跟寬度有關，互動不改頁高。 */
+.mag { margin-top: clamp(48px, 7vw, 80px); }
+/* 拖拉對比與放大鏡容器一律 pan-y（手機上下捲動不被攔截；把手與方框自己是 none） */
+.mag, [data-compare] { touch-action: pan-y; }
+.mag-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  border-top: 1px solid var(--color-line-faint);
+}
+.mag-head > .label { padding: 12px 0 10px; }
+.mag-head .hint { margin-left: auto; }
+/* 倍率 100% / 200% / 400%（依原圖像素；三窗共用，三個永遠都可選） */
+.mag-head .zoom-seg { border-top: 0; flex: 0 0 auto; width: 168px; }
+.zoom-seg button { font-family: var(--font-numeric); font-size: 14px; letter-spacing: 0.02em; text-transform: none; }
+/* 停用鈕（現在只有步進器的缺格會用到；放大鏡的倍率鈕 W3c-2 起不再停用）：
+   不用 faint（對比 1.56／2.79 太淡）→ 維持 muted 灰（≥4.89:1）＋1px 刪除線表示不可用 */
+.seg button:disabled, .seg button:disabled:hover {
+  cursor: not-allowed;
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.mag-main { cursor: crosshair; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.mag-main .loupe {
+  position: absolute; z-index: 4;
+  left: 0; top: 0;
+  width: 48px; height: 48px;          /* JS 依放大窗寬覆寫 */
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  cursor: grab;
+  touch-action: none;
+  will-change: transform;
+}
+.mag-main .loupe.dragging { cursor: grabbing; }
+.mag-main .loupe:focus-visible { outline: 1px solid rgba(255, 255, 255, 0.95); outline-offset: 3px; }
+.mag-wins {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(10px, 1.6vw, 20px);
+  margin-top: clamp(10px, 1.6vw, 20px);
+}
+.mag-win { margin: 0; min-width: 0; }
+.mag-win .win {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  background-color: var(--c-media-bg);
+}
+/* 原圖圖層（fqp.js 解碼好才疊進來）：左右兩窗各一張；中間那個窗三張疊放，只有 .on 那一張看得見。
+   換圖只改 opacity、沒有過渡 → 不會出現空白幀。寬高與 left／top 由 fqp.js 寫（px）。 */
+.mag-win .win > .lay {
+  position: absolute; left: 0; top: 0;
+  max-width: none;
+  opacity: 0;
+  pointer-events: none;
+  user-select: none; -webkit-user-select: none;
+}
+.mag-win .win > .lay.on { opacity: 1; }
+.mag-win figcaption { display: block; padding-top: 10px; }
+/* 中間那個窗的名字：三個名字疊在同一格（高度＝最高那個），翻切／切分頁只換可見的那一個 → 不改頁高 */
+.mag-win figcaption.name-stack { display: grid; }
+.name-stack > span { grid-area: 1 / 1; min-width: 0; visibility: hidden; }
+.name-stack > span.on { visibility: visible; }
+/* W3c-2 窄螢幕分頁列：>520px 不顯示（規則在檔尾「一般模式 ≤520px」那一段打開） */
+.mag-tabs { display: none; }
+/* W3c-2 按住翻切的兩顆鈕（沿用 .tool-btn）：放不下就自動換到下一列；每種寬度的排法是固定的 */
+.mag-flip {
+  display: flex; flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 16px;
+}
+.tool-btn[data-mag-flip] { touch-action: none; }   /* 按住時手指小幅移動不要變成捲動（會中斷按住） */
+/* W3c-1（規格 §3.9 第 2 點）：放大鏡圖說兩行——第一行用內文字（Noto Serif JP 15px，正文色），第二行＝原本的圖說小字 */
+.mag-lead {
+  margin: 18px 0 0;
+  max-width: var(--measure);
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.9;
+  letter-spacing: 0.035em;
+  color: var(--color-text);
+}
+.caption.mag-sub { margin-top: 8px; }
+/* W2a Grain：上＝4× 裁切大圖；下＝小全圖（1px 框標裁切位置）＋說明文字並排，窄版上下 */
+.remix .mag-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: clamp(20px, 4vw, 48px);
+  margin-top: clamp(10px, 1.6vw, 20px);
+  align-items: start;
+}
+.remix .mag-text { max-width: none; }
+/* On／Off 兩張疊放：Off 在上層，切到 Off 才顯示（只改 opacity，不換 src → 不閃） */
+[data-remix] .rx[data-remix-img="off"] { opacity: 0; }
+[data-remix][data-v="off"] .rx[data-remix-img="off"] { opacity: 1; }
+.remix-mini .crop-mark {
+  position: absolute; z-index: 2;
+  left: var(--cx); top: var(--cy); width: var(--cw); height: var(--ch);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.after-figures { margin-top: 32px; }
+
+/* =============================================================================
+   02 PIPELINE（續）—— Remix Highlights Only 開關
+   ============================================================================= */
+.switch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  border-top: 1px solid var(--color-line-faint);
+}
+.switch-row .label { padding: 12px 0 10px; }
+.switch-row .seg { border-top: 0; flex: 0 0 auto; width: 176px; }
+/* ⑤ 分段切換鈕：aria-pressed（共用 .seg 的上緣一畫） */
+
+/* =============================================================================
+   04 ANIMATION —— 影片
+   ============================================================================= */
+.frame.wide { aspect-ratio: 1920 / 360; }
+.frame.wide video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* W2a：單一大影片（2:1 滿版）＋上方分頁；三支片段疊放，只有 .on 那支可見 */
+.flicker .seg { border-top: 1px solid var(--color-line-faint); }
+.flicker-frame video {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; pointer-events: none;
+}
+.flicker-frame video.on { opacity: 1; pointer-events: auto; z-index: 1; }
+
+/* =============================================================================
+   03 CLI —— 逐字打出（幽靈全文佔位，打字不改高度）
+   ============================================================================= */
+.console {
+  margin: 0;
+  border: 1px solid var(--color-line-faint);
+  background: var(--color-bg-alt);
+}
+.console .bar {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 10px 16px 9px;
+  border-bottom: 1px solid var(--color-line-faint);
+  font-family: var(--font-sans);
+  font-size: 12px;                    /* W2a：10 → 12 */
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--c-muted-on-alt);       /* W2a：bg-alt 底，暗場 muted 3.95:1 不足 → 提亮槽 */
+}
+.console pre {
+  margin: 0;
+  padding: 22px 16px 24px;
+  display: grid;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.8;
+  letter-spacing: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.console pre > span { grid-area: 1 / 1; }
+.console .ghost { visibility: hidden; }
+.console .caret {
+  display: inline-block;
+  width: 7px; height: 1.05em;
+  margin-left: 1px;
+  vertical-align: -0.15em;
+  background: var(--color-text);
+  animation: caret 1.05s steps(1) infinite;
+}
+@keyframes caret { 50% { opacity: 0; } }
+.console-note { margin-top: 14px; }
+
+/* ---- W3c-1：報告區塊（01 段；W3c-2 起在 Light Path Analyzer 小節的最後，「The honest part…」之後）----
+   沿用主控台區塊的語彙（bg-alt 深底、1px 框、Jost 標頭、系統等寬字）。和主控台不同的只有換行：
+   報告的欄位靠空白對齊，所以用 white-space:pre、不折行；寬度不夠時 <pre> 自己橫向捲動，頁面不出水平捲軸。
+   .gap＝刪掉整行的地方那一行「…」。.rl.is-link＝可點的表格列（fqp.js 掛的）：只有反彈值那個數字畫底線，
+   滑過／聚焦時整列加淡底；沒有 .is-link 的列樣式不變。文字可選取。 */
+.console.report { margin-top: 32px; }
+.console.report .bar { display: block; line-height: 1.7; }
+.console.report pre {
+  display: block;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+.console.report pre:focus-visible { outline-offset: -3px; }
+.console.report .gap { color: var(--c-muted-on-alt); }
+.console.report .rl.is-link { cursor: pointer; }
+.console.report .rl.is-link .rn {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.console.report .rl.is-link:hover,
+.console.report .rl.is-link:focus-visible { background: var(--color-line-faint); }
+.console.report .rl.is-link:focus-visible { outline: 1px solid var(--color-text); outline-offset: 0; }
+
+/* =============================================================================
+   02 PIPELINE（續）—— 六步細線流程分頁（線隨捲動生長）。W3a：從原本的 06 搬到 02
+   ============================================================================= */
+/* ④ 編號步驟分頁：寬版左欄分頁＋右欄面板；窄版（含嵌入）分頁在上 */
+.tabs {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(0, 2fr);
+  gap: clamp(28px, 5vw, 64px);
+  align-items: start;
+}
+.tablist { position: relative; display: flex; flex-direction: column; }
+/* 縱向細線：軌道 hairline，進入視窗由上往下長滿（.flow-line 同語彙） */
+.tabs-rail {
+  position: absolute;
+  left: 8px; top: 30px; bottom: 30px;
+  width: 1px;
+  background: var(--c-flow-track);
+  overflow: hidden;
+}
+.tabs-rail::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--color-line);
+  transform: scaleY(0); transform-origin: top center;
+  transition: transform var(--dur-slow) var(--ease-inout) 0.25s;
+}
+.tabs.in .tabs-rail::after { transform: scaleY(1); }
+.tablist [role="tab"] {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  align-items: baseline;
+  gap: 0 8px;
+  min-height: 56px;
+  padding: 18px 0 16px;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.tablist [role="tab"]:hover, .tablist [role="tab"][aria-selected="true"] { color: var(--color-text); }
+.tablist [role="tab"]:focus-visible { outline-offset: -2px; }
+.tablist .idx {
+  position: relative; z-index: 1;
+  font-family: var(--font-numeric);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  background: var(--color-bg);   /* 蓋住細線，數字像串在線上 */
+  padding: 4px 0;
+  width: 22px;
+}
+/* W2a 字級：步驟標題是並列子主題 → 由 Jost 11px 大寫改成「內文粗體」（Noto Serif JP 15px／500）。
+   不用 H3 23px：在分頁鈕裡會撐爆左欄。 */
+.tablist .ttl {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.035em;
+  text-transform: none;
+  line-height: 1.6;
+}
+.tablist .tag {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 12px;                    /* W2a：9 → 12 */
+  text-transform: uppercase;
+  line-height: 1.5;
+  vertical-align: 1px;
+  letter-spacing: 0.2em;
+  color: var(--color-text-muted);
+  padding: 1px 6px 0;
+  border: 1px solid var(--color-line-faint);
+  white-space: nowrap;
+}
+/* 選中分頁底下一條 1px：自動輪播時當計時條由左長到右 */
+.tablist .prog {
+  position: absolute; left: 48px; right: 0; bottom: 0;
+  height: 1px;
+  background: var(--color-line-faint);
+  overflow: hidden;
+}
+.tablist .prog::after {
+  content: ''; position: absolute; inset: 0;
+  background: var(--color-text);
+  transform: scaleX(0); transform-origin: left center;
+}
+.tablist [aria-selected="true"] .prog::after { transform: scaleX(1); }
+.tabs.is-playing .tablist [aria-selected="true"] .prog::after {
+  transform: scaleX(0);
+  animation: tab-prog var(--tab-ms, 5200ms) linear forwards;
+}
+@keyframes tab-prog { to { transform: scaleX(1); } }
+.tabs-pause {
+  margin-top: 18px;
+  min-width: 96px; min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--color-line-faint);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;                    /* W2a：10 → 12 */
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.tabs-pause:hover { background: var(--color-text); color: var(--c-cta-hover-fg); border-color: var(--color-text); }
+/* 面板全部疊在同一格：高度＝最高那一張，切換不改頁高 */
+.panels { display: grid; }
+.panel { grid-area: 1 / 1; min-width: 0; }
+.panel[hidden] { display: block; visibility: hidden; }
+.panel:not([hidden]) { animation: panel-in var(--dur-base) var(--ease-out); }
+@keyframes panel-in { from { opacity: 0; } to { opacity: 1; } }
+.panel:focus-visible { outline-offset: 6px; }
+.panel p {
+  margin: 18px 0 0;
+  font-size: 15px;
+  line-height: 1.9;
+  letter-spacing: 0.035em;
+  max-width: 34em;
+}
+/* W3c-1（規格 §3.10 第 4 點）：面板圖＝1.3.0 介面截圖的原始解析度（871px 寬的整排，只裁高度）。
+   六步同一個框：寬＝容器寬，高＝871:304（六步裡最高的那一步，06 的整張 temporal 截圖）。
+   圖在框內上下左右置中，底色＝截圖裡的面板底色（取樣 #2a2a2a）。圖寬 100%、上限 871px（＝每一張的原始寬度）：
+   容器比 871px 窄就等比縮小，比 871px 寬也只顯示到原始大小——不會放大超過 1.0 倍。高度 auto，
+   由 HTML 的 width／height 屬性定比例，所以圖還沒載入時位置就已經排好。
+   02、03 兩步各有兩段截圖，上下排列，間距 8/871（跟著圖一起縮）。 */
+.frame.ui {
+  aspect-ratio: 871 / 304;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: #2a2a2a;
+}
+.frame.ui > img {
+  position: static;
+  flex: 0 0 auto;
+  width: 100%; max-width: 871px;
+  height: auto;
+  object-fit: fill;
+}
+.frame.ui > img + img { margin-top: 0.9185%; }
+/* W3b：流程分頁上方的 eyebrow「Workflow」（規格 §3.8 第 2 點）；分頁緊跟在它下面 */
+.flow-eyebrow + .tabs { margin-top: 20px; }
+.is-embed .tabs { grid-template-columns: 1fr; gap: 20px; }
+.is-embed .tabs-side { display: flex; flex-direction: column; }
+.tabs-pause { align-self: flex-start; }
+.mag-single { margin-top: 0; }
+@media (max-width: 800px) {
+  .tabs { grid-template-columns: 1fr; gap: 20px; }
+}
+
+/* =============================================================================
+   ⑥ Lightbox（role=dialog）。一般模式固定滿版；嵌入模式 iframe 依內容定高，
+   position:fixed 會置中在整頁高度的中間 → 改成蓋住整份文件、圖放在點擊處（JS 給 --lb-top）。
+   ============================================================================= */
+[data-lb] { cursor: zoom-in; }
+.lb {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(16, 17, 22, 0.95);   /* = --dk-lb */
+  display: flex; align-items: center; justify-content: center;
+  padding: clamp(16px, 4vw, 56px);
+  animation: lb-in var(--dur-fast) var(--ease-out);
+}
+.lb[hidden] { display: none; }
+@keyframes lb-in { from { opacity: 0; } to { opacity: 1; } }
+.lb-stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+.lb-stage img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; }
+.lb-close {
+  position: absolute; top: 12px; right: 12px;
+  display: inline-flex; align-items: center; gap: 12px;
+  min-height: 44px; padding: 0 16px;
+  background: transparent;
+  border: 1px solid rgba(228, 230, 234, 0.55);
+  color: #e4e6ea;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;                    /* W2a：10 → 12 */
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.lb-close:hover { background: #e4e6ea; color: #15161d; }
+.lb-close:focus-visible { outline: 1px solid #e4e6ea; outline-offset: 3px; }
+.lb-close .x { position: relative; width: 12px; height: 12px; }
+.lb-close .x::before, .lb-close .x::after {
+  content: ''; position: absolute; left: 50%; top: 0;
+  width: 1px; height: 100%; background: currentColor;
+}
+.lb-close .x::before { transform: rotate(45deg); }
+.lb-close .x::after { transform: rotate(-45deg); }
+.is-embed body { position: relative; }
+.is-embed .lb { position: absolute; inset: 0; display: block; padding: 0; }
+.is-embed .lb[hidden] { display: none; }
+.is-embed .lb-stage {
+  position: absolute; left: 0; right: 0;
+  top: var(--lb-top, 0px);
+  height: auto;
+  padding: 64px 0 0;
+}
+.is-embed .lb-stage img { width: 100%; max-height: none; }
+.is-embed .lb-close { top: calc(var(--lb-top, 0px) + 10px); right: 10px; }
+
+/* =============================================================================
+   05 細則 What it is not；06 FAQ / What has changed so far / Specs / Support
+   ============================================================================= */
+/* W3b（規格 §3.8 第 6 點）：05 段「Not instant on heavy scenes」那一條的巷子圖，2:1。
+   預設（嵌入模式、窄寬度）：圖在那一條文字的下方，與文字同寬。
+   一般模式 ≥1040px：內文欄（620px）右邊有空 → 那一條改成「文字｜圖」兩欄，圖伸進右側空白（文字欄寬不變）。 */
+.prose li.has-fig .li-text { display: block; }
+.prose li.has-fig .alley { margin: 16px 0 10px; }
+.alley .caption { margin-top: 10px; }
+@media (min-width: 1040px) {
+  /* 2026-10-08 作者回報：原本用兩欄 grid，圖比文字高，把這一條撐高、下面空一大塊。
+     改成邊欄圖：圖絕對定位在文字欄右邊（位置與寬度同原本），不佔這一條的高度，往下延伸到下一條旁邊（右邊本來就是空的）。 */
+  html:not(.is-embed) .prose li.has-fig { position: relative; }
+  html:not(.is-embed) .prose li.has-fig .alley {
+    position: absolute;
+    left: calc(100% + 32px);
+    top: 8px;
+    width: 272px;
+    margin: 0;
+  }
+}
+
+.fine { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 6vw, 80px); }
+.fine section { min-width: 0; }
+/* W2a：FAQ／Specs／Support 小標由 Jost 11px 大寫 label 改成 H3（規則在「字級階層」區塊） */
+.fine h3, .specs h3, .support h3 { margin-bottom: 20px; }
+.faq dt {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.7;
+  letter-spacing: 0.03em;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-line-faint);
+}
+.faq dt:first-child { padding-top: 0; border-top: 0; }
+.faq dd {
+  margin: 8px 0 22px;
+  font-size: 14px;
+  line-height: 1.9;
+  letter-spacing: 0.035em;
+  color: var(--color-text);
+}
+.faq dd:last-child { margin-bottom: 0; }
+
+.specs { margin-top: clamp(56px, 8vw, 96px); }
+.specs dl { margin: 0; border-top: 1px solid var(--color-line-faint); }
+.specs .row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 16px;
+  padding: 14px 0 13px;
+  border-bottom: 1px solid var(--color-line-faint);
+}
+.specs dt {
+  font-family: var(--font-sans);
+  font-size: 12px;                    /* W2a：10 → 12 */
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding-top: 4px;
+}
+.specs dd { margin: 0; font-size: 14px; line-height: 1.8; letter-spacing: 0.035em; }
+/* W3a：Specs 的值與 Support 那一段逐字照 v4（v4 是「Documentation: full manual…」「Support: message me…」，
+   冒號後小寫開頭）。原始碼不改字，只在顯示時把第一個字母轉大寫。 */
+.specs dd::first-letter, .support p::first-letter { text-transform: uppercase; }
+
+.support {
+  margin-top: clamp(56px, 8vw, 96px);
+  padding-bottom: clamp(96px, 12vw, 160px);
+}
+.support p { margin: 0 0 28px; max-width: var(--measure); font-size: 15px; line-height: 1.95; letter-spacing: 0.035em; }
+
+/* CTA（styles.css:427-444；hover 反白吃 --c-cta-hover-fg 槽，深色也成立） */
+.cta {
+  display: inline-flex; align-items: center; gap: 14px;
+  padding: 16px 28px;
+  border: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), opacity 0s;
+  max-width: 100%;
+}
+.cta:hover { background: var(--color-text); color: var(--c-cta-hover-fg); opacity: 1; }
+.cta .arr { font-family: var(--font-sans); font-size: 14px; line-height: 1; }
+a.inline {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--color-line-faint);
+  text-underline-offset: 4px;
+  overflow-wrap: anywhere;
+  transition: text-decoration-color var(--dur-fast) var(--ease-out);
+}
+a.inline:hover { opacity: 1; text-decoration-color: var(--color-line); }
+
+.foot {
+  border-top: 1px solid var(--color-line-faint);
+  background: var(--color-bg-alt);
+  padding: 36px 0 32px;
+  font-family: var(--font-sans);
+  font-size: 12px;                    /* W2a：10 → 12 */
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--c-muted-on-alt);       /* W2a：bg-alt 底 → 提亮槽 */
+}
+.foot .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+/* =============================================================================
+   響應式
+   ============================================================================= */
+@media (max-width: 800px) {
+  .fine { grid-template-columns: 1fr; }
+}
+/* 一般模式 ≤520px：單欄 */
+@media (max-width: 520px) {
+  .specs .row { grid-template-columns: 1fr; gap: 4px; }
+  .topbar .crumb { display: none; }
+  .stepper .seg button { font-size: 13px; }
+  .remix .mag-side { grid-template-columns: 1fr; }
+  .remix-mini { max-width: 240px; }
+  .mag-head .hint { display: none; }
+  .specline li + li::before { margin: 0 10px; width: 14px; }
+  /* W3c-2 放大鏡的窄螢幕版型（一般與嵌入模式都適用；fqp.js 用同一個斷點判斷）：三個放大窗改成一次只顯示一個
+     （中間那個窗，滿寬 1:1），上方三個分頁選它平常顯示哪一張；左右兩窗不顯示。分頁列依字寬分欄（同 ≤440px 的階梯分頁）。 */
+  .mag-tabs {
+    display: grid;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(3, auto);
+    margin-top: 10px;
+  }
+  .mag-wins { grid-template-columns: minmax(0, 1fr); margin-top: 0; }
+  .mag-win.is-side { display: none; }
+}
+/* W3c-2 小修 (b)：一般模式 320 寬時 Remix 的 On／Off 鈕列（固定 176px）加上左邊的小標（最窄 109.5px＝HIGHLIGHTS 那個字）
+   與 16px 間距放不進 280px 的內容寬：鈕列右緣超出內容欄 21.5px、超出視窗 1.5px（W3c-1 驗收的額外發現）；
+   嵌入 320 也超出內容欄 13.5px（沒超出視窗）。≤344px 把鈕列收到 152px → 兩種模式都收在內容欄內，小標的行數不變。 */
+@media (max-width: 344px) {
+  .switch-row .seg { width: 152px; }
+}
+
+/* =============================================================================
+   嵌入模式（?embed=1）：Superhive iframe 用。強制深色（head 腳本掛 data-theme）、
+   無頂列、690px 設計、所有互動區塊固定長寬比。
+   ============================================================================= */
+.is-embed { --page-max: 690px; --container-pad: clamp(16px, 3.5vw, 24px); }
+.is-embed .topbar, .is-embed .foot { display: none; }
+.is-embed .hero { padding-top: 48px; }
+.is-embed .block { padding-top: 88px; }
+.is-embed .hero h1 { font-size: clamp(30px, 6vw, 44px); }
+.is-embed h2 { font-size: clamp(24px, 4.4vw, 32px); }
+/* 690 寬內就是窄版：細則單欄 */
+.is-embed .fine { grid-template-columns: 1fr; }
+.is-embed .specs .row { grid-template-columns: 150px 1fr; }
+.is-embed .support { padding-bottom: 72px; }
+/* W3c-1（規格 §3.9 第 1 點）：嵌入模式不顯示 FAQ／What has changed so far／Specs／Support（HTML 還在，一般模式照常）。
+   四塊各自掛 .embed-hide（各自的 display 都是 none），外層的 06 段也掛，免得只剩段落編號那一列。
+   原本頁尾的留白在 .support 上（72px），它不顯示之後改由最後一段（05）自己留同樣的 72px。 */
+.is-embed .embed-hide { display: none; }
+.is-embed #fine { padding-bottom: 72px; }
+@media (max-width: 520px) {
+  .is-embed .specs .row { grid-template-columns: 1fr; }
+}
+/* W3a：階梯分頁變成四個（Volume／Transparent／Diffuse／Transmission），四等分欄在窄螢幕放不下
+   （四個標籤最小寬度合計 386px，360 寬時會被切掉 58px）→ ≤440px 改成依字寬分欄、字距收小 */
+@media (max-width: 440px) {
+  .stepper .seg.ladder-tabs { grid-auto-flow: row; grid-template-columns: repeat(4, auto); }
+  .stepper .seg.ladder-tabs button { letter-spacing: 0.08em; padding-left: 0; padding-right: 0; }
+}
+@media (max-width: 420px) {
+  .stepper .seg button { font-size: 12px; letter-spacing: 0; }
+  .seg button { letter-spacing: 0.14em; padding-left: 2px; padding-right: 2px; }
+  .plate { padding: 6px 9px 5px; letter-spacing: 0.18em; }
+}
+
+/* =============================================================================
+   減少動態：全部關閉
+   ============================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+  .fade-up { opacity: 1; transform: none; }
+  .flow-line::after { transform: scaleX(1); }
+  .tabs-rail::after { transform: scaleY(1); }
+  .console .caret { display: none; }
+}

@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function () {
+  try {
+    var root = document.documentElement;
+    var hash = window.location.hash;
+    if (hash === '#dark') {
+      root.setAttribute('data-theme', 'dark');
+    } else if (hash === '#light') {
+      root.setAttribute('data-theme', 'light');
+    } else {
+      var stored = localStorage.getItem('jtpTheme');
+      if (stored === 'dark' || stored === 'light') {
+        root.setAttribute('data-theme', stored);
+      }
+    }
+  } catch (e) {}
+})();
+</script>
+<title>Final Quality Pipeline 使用手冊</title>
+<meta name="description" content="Final Quality Pipeline Blender 外掛使用手冊（Cycles 去噪與跨幀穩定管線）。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --bg: #f7f7f7;
+  --bg-alt: #f1f1ef;
+  --text: #111112;
+  --muted: #6a6c74;
+  --faint: #c8c8cb;
+  --line: #1d1d1f;
+  --line-faint: rgba(17, 17, 18, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15161d;
+    --bg-alt: #28292d;
+    --text: #e4e6ea;
+    --muted: #83858d;
+    --faint: #5c5e66;
+    --line: #e4e6ea;
+    --line-faint: rgba(228, 230, 234, .14);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15161d;
+  --bg-alt: #28292d;
+  --text: #e4e6ea;
+  --muted: #83858d;
+  --faint: #5c5e66;
+  --line: #e4e6ea;
+  --line-faint: rgba(228, 230, 234, .14);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-weight: 400;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line-faint);
+  text-underline-offset: 3px;
+  transition: color .15s ease;
+}
+a:hover { color: var(--muted); }
+
+.ui-label {
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400;
+  letter-spacing: .06em;
+}
+body.lang-zh .ui-label {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+}
+
+/* ---------------------------------------------------------------- header */
+.page-head {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 64px) clamp(20px, 4vw, 64px) clamp(40px, 6vw, 72px);
+  border-bottom: 1px solid var(--line-faint);
+}
+.page-head-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: clamp(24px, 4vw, 40px);
+}
+.eyebrow {
+  margin: 0;
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400;
+  font-size: .75rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+body.lang-zh .eyebrow {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .06em;
+  text-transform: none;
+}
+.head-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: .78rem;
+  letter-spacing: .06em;
+}
+body.lang-zh .head-controls {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+}
+.lang-switch { display: inline-flex; align-items: center; gap: 8px; }
+.lang-switch a { text-decoration: none; color: var(--muted); }
+.lang-switch a:hover { color: var(--text); }
+.lang-switch .is-current { color: var(--text); }
+.lang-switch .sep { color: var(--faint); }
+.theme-toggle {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--muted);
+}
+.theme-toggle .tt-light, .theme-toggle .tt-dark { color: var(--faint); }
+.theme-toggle .tt-sep { color: var(--faint); padding: 0 .35em; }
+:root:not([data-theme="dark"]) .theme-toggle .tt-light { color: var(--text); }
+:root[data-theme="dark"] .theme-toggle .tt-dark { color: var(--text); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .theme-toggle .tt-dark { color: var(--text); }
+  :root:not([data-theme]) .theme-toggle .tt-light { color: var(--faint); }
+}
+
+.page-title {
+  margin: 0 0 16px;
+  font-weight: 600;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1.2;
+  color: var(--text);
+}
+.page-subtitle {
+  margin: 0;
+  max-width: 680px;
+  font-weight: 400;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------- hero grid */
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line-faint);
+  max-width: 1280px;
+  margin: clamp(32px, 5vw, 56px) auto 0;
+}
+.hero-grid img { display: block; width: 100%; height: 100%; object-fit: cover; background: var(--bg-alt); }
+@media (max-width: 680px) {
+  .hero-grid { grid-template-columns: 1fr; }
+}
+
+/* ------------------------------------------------------------ toc + main */
+.content-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(48px, 8vw, 96px) clamp(20px, 4vw, 64px) clamp(64px, 10vw, 128px);
+}
+@media (min-width: 1024px) {
+  .content-shell {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 64px;
+    align-items: start;
+  }
+}
+
+.toc-label {
+  margin: 0 0 14px;
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400;
+  font-size: .7rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+body.lang-zh .toc-label {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .04em;
+  text-transform: none;
+}
+.toc {
+  border-top: 1px solid var(--line-faint);
+  padding-top: 20px;
+  margin-bottom: clamp(40px, 6vw, 64px);
+}
+.toc-list { list-style: none; margin: 0; padding: 0; }
+.toc-link { display: inline-flex; gap: 10px; align-items: baseline; text-decoration: none; }
+.toc-num {
+  font-family: Lustria, "Noto Serif JP", serif;
+  font-size: .8rem;
+  color: var(--faint);
+}
+.toc-text {
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: .82rem;
+  letter-spacing: .02em;
+  color: var(--text);
+}
+body.lang-zh .toc-text {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: .88rem;
+  letter-spacing: 0;
+}
+.toc-link:hover .toc-text { color: var(--muted); }
+@media (min-width: 1024px) {
+  .toc { position: sticky; top: clamp(20px, 4vw, 64px); margin-bottom: 0; }
+  .toc-list { display: flex; flex-direction: column; gap: 10px; }
+}
+@media (max-width: 1023px) {
+  .toc-list { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .toc-item { flex: 0 0 auto; }
+  .toc-link { padding: 6px 16px 6px 0; margin-right: 16px; border-right: 1px solid var(--line-faint); white-space: nowrap; }
+  .toc-item:last-child .toc-link { border-right: none; margin-right: 0; }
+}
+
+main { min-width: 0; max-width: 780px; }
+main h1, main h2, main h3 { scroll-margin-top: 24px; line-height: 1.35; font-weight: 600; color: var(--text); }
+main h2 {
+  margin-top: clamp(64px, 10vw, 128px);
+  padding-top: clamp(24px, 4vw, 40px);
+  border-top: 1px solid var(--line-faint);
+  font-size: 1.5rem;
+}
+main h2:first-child { margin-top: 0; }
+main h3 { margin-top: 2.2em; font-weight: 500; font-size: 1.15rem; }
+main p { margin: 0.9em 0; }
+main ul, main ol { padding-left: 1.4em; }
+main li { margin: 0.35em 0; }
+main blockquote {
+  margin: 1.6em 0;
+  padding: .2em 0 .2em 20px;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  font-style: italic;
+}
+main hr { border: none; border-top: 1px solid var(--line-faint); margin: 3em 0; }
+main a { color: var(--text); }
+
+code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  background: var(--bg-alt);
+  padding: 0.15em 0.4em;
+  font-size: 0.88em;
+  color: var(--text);
+}
+pre {
+  background: var(--bg-alt);
+  padding: 20px 24px;
+  overflow-x: auto;
+  margin: 1.6em 0;
+}
+pre code { background: none; padding: 0; font-size: 0.85em; line-height: 1.6; }
+
+.table-wrap { overflow-x: auto; margin: 2em 0; }
+table { border-collapse: collapse; width: 100%; min-width: 480px; }
+th, td {
+  text-align: left;
+  padding: 10px 20px 10px 0;
+  border-bottom: 1px solid var(--line-faint);
+  vertical-align: top;
+  font-size: .92rem;
+}
+th {
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 500;
+  font-size: .72rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+body.lang-zh th {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+  text-transform: none;
+}
+
+/* ------------------------------------------- panel screenshots (figures) */
+/* The picture is a dark Blender screenshot in both themes, so the dots use
+   fixed colours (yellow, dark digit, dark + light ring) and stay visible on
+   it whatever the page theme is.  Positions are percentages of the picture;
+   the dot size follows the picture's width (cqw), so on a narrow screen the
+   dots shrink with it instead of covering the neighbouring rows. */
+figure.shot { margin: 1.8em 0 2.4em; }
+.shot-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  container-type: inline-size;
+  line-height: 0;
+  background: #1d1d1d;
+  outline: 1px solid var(--line-faint);
+}
+.shot-frame a { display: block; }
+.shot-frame img { display: block; width: 100%; max-width: 100%; height: auto; }
+.shot-dot, .shot-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7em;
+  height: 1.7em;
+  border-radius: 50%;
+  background: #ffd23f;
+  color: #111112;
+  border: 1.5px solid #111112;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .9);
+  font-family: Jost, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.shot-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  font-size: clamp(6.5px, 1.45cqw, 12px);
+  pointer-events: none;
+}
+.shot-legend { list-style: none; margin: 1em 0 0; padding: 0; font-size: .92rem; line-height: 1.65; }
+.shot-legend li { display: flex; align-items: baseline; gap: .8em; margin: .45em 0; }
+.shot-num { flex: 0 0 auto; font-size: .72rem; box-shadow: 0 0 0 1px var(--line-faint); }
+.shot-text { min-width: 0; }
+.shot-label { font-weight: 600; margin-right: .35em; }
+
+footer.page-footer {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px clamp(20px, 4vw, 64px) 64px;
+  border-top: 1px solid var(--line-faint);
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: .75rem;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+body.lang-zh footer.page-footer {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+}
+
+@media (max-width: 600px) {
+  .page-head { padding-bottom: clamp(28px, 6vw, 48px); }
+}
+
+</style>
+</head>
+<body class="lang-zh">
+<header class="page-head">
+  <div class="page-head-top">
+    <p class="eyebrow">手冊 · v1.3.0</p>
+    <div class="head-controls">
+      <span class="lang-switch"><a href="index.html">EN</a><span class="sep">／</span><span class="is-current">中文</span></span>
+      <button type="button" class="theme-toggle" id="jtpThemeToggle" aria-label="Toggle light or dark theme">
+        <span class="tt-light">Light</span><span class="tt-sep">／</span><span class="tt-dark">Dark</span>
+      </button>
+    </div>
+  </div>
+  <h1 class="page-title">Final Quality Pipeline 使用手冊</h1>
+  <p class="page-subtitle">Cycles 去噪與跨幀穩定管線，Blender 外掛。</p>
+</header>
+
+<!-- HERO_IMAGES -->
+<!-- Drop 3-5 render screenshots into a seamless 3-column grid, e.g.:
+     <div class="hero-grid">
+       <img src="hero-1.jpg" alt="...">
+       <img src="hero-2.jpg" alt="...">
+       <img src="hero-3.jpg" alt="...">
+     </div>
+     .hero-grid already ships in the stylesheet (gap:1px, background:var(--line-faint),
+     collapses to a single column under 680px). Keep it above the TOC as a preview strip. -->
+
+<div class="content-shell">
+  <nav class="toc" aria-label="目錄">
+    <p class="toc-label">目錄</p>
+    <ol class="toc-list"><li class="toc-item"><a class="toc-link" href="#目錄"><span class="toc-num">01</span><span class="toc-text">目錄</span></a></li><li class="toc-item"><a class="toc-link" href="#1-安裝"><span class="toc-num">02</span><span class="toc-text">1. 安裝</span></a></li><li class="toc-item"><a class="toc-link" href="#2-語言"><span class="toc-num">03</span><span class="toc-text">2. 語言</span></a></li><li class="toc-item"><a class="toc-link" href="#3-三分鐘速查"><span class="toc-num">04</span><span class="toc-text">3. 三分鐘速查</span></a></li><li class="toc-item"><a class="toc-link" href="#4-它到底在做什麼"><span class="toc-num">05</span><span class="toc-text">4. 它到底在做什麼</span></a></li><li class="toc-item"><a class="toc-link" href="#5-面板逐項說明"><span class="toc-num">06</span><span class="toc-text">5. 面板逐項說明</span></a></li><li class="toc-item"><a class="toc-link" href="#6-健康檢查"><span class="toc-num">07</span><span class="toc-text">6. 健康檢查</span></a></li><li class="toc-item"><a class="toc-link" href="#7-兩支分析器"><span class="toc-num">08</span><span class="toc-text">7. 兩支分析器</span></a></li><li class="toc-item"><a class="toc-link" href="#8-背景算圖"><span class="toc-num">09</span><span class="toc-text">8. 背景算圖</span></a></li><li class="toc-item"><a class="toc-link" href="#9-動畫出片完整流程"><span class="toc-num">10</span><span class="toc-text">9. 動畫出片完整流程</span></a></li><li class="toc-item"><a class="toc-link" href="#10-常見問題"><span class="toc-num">11</span><span class="toc-text">10. 常見問題</span></a></li><li class="toc-item"><a class="toc-link" href="#11-各平台行為差異"><span class="toc-num">12</span><span class="toc-text">11. 各平台行為差異</span></a></li><li class="toc-item"><a class="toc-link" href="#12-已知限制"><span class="toc-num">13</span><span class="toc-text">12. 已知限制</span></a></li><li class="toc-item"><a class="toc-link" href="#13-疑難排解"><span class="toc-num">14</span><span class="toc-text">13. 疑難排解</span></a></li><li class="toc-item"><a class="toc-link" href="#14-與其他降噪外掛共存"><span class="toc-num">15</span><span class="toc-text">14. 與其他降噪外掛共存</span></a></li><li class="toc-item"><a class="toc-link" href="#15-解除安裝"><span class="toc-num">16</span><span class="toc-text">15. 解除安裝</span></a></li></ol>
+  </nav>
+
+  <main>
+<h1 id="final-quality-pipeline-使用手冊">Final Quality Pipeline 使用手冊</h1>
+<blockquote><p>版本 1.3.0 ｜ 適用 Blender 5.1 / 5.2 ｜ <strong>只支援 Cycles</strong> ｜ 網頁版（有截圖）：<a href="https://www.jerrythepopper.com/3daddon/fqp/zh.html">jerrythepopper.com/3daddon/fqp/zh.html</a></p></blockquote>
+<p>一條給 Cycles 用的出片級降噪管線。它把畫面拆成各路光線成分，每一路光先乘上材質顏色再分開、全程 HDR 不壓縮地降噪，並以 albedo／normal 引導，最後給你每一路一支滑桿——微細節要留多少，由<strong>你</strong>決定。動畫另外多一層跨幀處理，消掉降噪造成的閃爍，並在最後把動態模糊補回來。</p>
+<p>另外附兩把量尺：一把算出這個場景實際需要幾次光線反彈，一把算出雜訊門檻要收到多緊——後者跟「每一幀要花幾秒」根本是同一個問題。</p>
+<hr>
+<h2 id="目錄">目錄</h2>
+<ol><li><a href="#1-安裝">安裝</a></li><li><a href="#2-語言">語言</a></li><li><a href="#3-三分鐘速查">三分鐘速查</a></li><li><a href="#4-它到底在做什麼">它到底在做什麼</a></li><li><a href="#5-面板逐項說明">面板逐項說明</a></li><li><a href="#6-健康檢查">健康檢查</a></li><li><a href="#7-兩支分析器">兩支分析器</a></li><li><a href="#8-背景算圖">背景算圖</a></li><li><a href="#9-動畫出片完整流程">動畫出片完整流程</a></li><li><a href="#10-常見問題">常見問題</a></li><li><a href="#11-各平台行為差異">各平台行為差異</a></li><li><a href="#12-已知限制">已知限制</a></li><li><a href="#13-疑難排解">疑難排解</a></li><li><a href="#14-與其他降噪外掛共存">與其他降噪外掛共存</a></li><li><a href="#15-解除安裝">解除安裝</a></li></ol>
+<hr>
+<h2 id="1-安裝">1. 安裝</h2>
+<p>這個 .zip 會裝成 extension。入口有兩個，結果一樣。</p>
+<ul><li>把 .zip 直接拖進 Blender 視窗；或到 Edit &gt; Preferences &gt; Get Extensions，右上角的下拉選單選 <strong>Install from Disk</strong>。</li><li>或到 Edit &gt; Preferences &gt; Add-ons，右上角的下拉選單選 <strong>Install from Disk</strong>，選那個 .zip。</li></ul>
+<p>只留一份就好——多出來的一份（例如以前留在 <code>scripts/addons</code> 資料夾的舊版）會搶同一個面板。它在外掛清單裡叫 <strong>Who Needs Another Render Setup? (Final Quality Pipeline)</strong>，搜哪個名字都找得到。面板本身的標題還是 Final Quality Pipeline，出現在 Properties &gt; Render 的最上方，就在算圖引擎選單正下方。</p>
+<p>需求：Blender 5.1 或 5.2，算圖引擎必須是 <strong>Cycles</strong>。這不是偏好問題——整條管線吃的是只有 Cycles 生得出來的 per-pass 與 denoising 資料，EEVEE 給不出來。</p>
+<hr>
+<h2 id="2-語言">2. 語言</h2>
+<figure class="shot" id="shot-language_switch"><div class="shot-frame" style="max-width:871px"><a href="img/zh/language_switch.png"><img src="img/zh/language_switch.png" width="871" height="88" alt="Final Quality Pipeline 面板最上方：語言切換那一排，下面是健康檢查按鈕" loading="lazy"></a><span class="shot-dot" style="left:30.08%;top:51.14%" aria-hidden="true">1</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">語言</strong> 這個外掛講英文和繁體中文，而且切換鈕是它自己的：面板最上方那一排有三個選項。</span></li></ol></figure>
+<p>這個外掛講英文和繁體中文，而且<strong>切換鈕是它自己的</strong>：面板最上方那一排（或 Edit &gt; Preferences &gt; Add-ons 裡這個外掛自己的偏好設定）有三個選項。</p>
+<div class="table-wrap"><table><thead><tr><th>設定</th><th>意思</th></tr></thead><tbody><tr><td><strong>自動</strong></td><td>跟著 Blender 畫面上實際顯示的語言走：Blender 介面設成中文，<strong>而且</strong> Blender 真的有在翻譯介面（Preferences &gt; Interface &gt; Translation &gt; Interface 打勾）時用中文，其餘用英文</td></tr><tr><td><strong>English</strong></td><td>不管 Blender 設什麼，一律英文——連 Blender 自己有翻譯的字（例如 Diffuse、Shutter）也是英文</td></tr><tr><td><strong>中文</strong></td><td>不管 Blender 設什麼，一律繁體中文</td></tr></tbody></table></div>
+<p>因為它跟 Blender 的介面語言是分開的，你可以讓 Blender 維持英文、這個外掛看中文，反過來也行。選好會記住，換檔案、關掉重開都還在。</p>
+<p>「自動」是在你選它的時候、以及 Blender 啟動時做判斷。Blender 開著的時候改了 Blender 的語言或翻譯開關，請把這個外掛的語言重選一次（或重開 Blender），它才會跟上。</p>
+<p>切換是<strong>當場生效</strong>的：面板文字、按鈕名稱、滑鼠停留的說明全部立刻換掉，而且你設過的東西一個都不會動。兩支分析器寫出來的報告、背景算圖視窗裡的進度行，也跟著同一個設定走。</p>
+<hr>
+<h2 id="3-三分鐘速查">3. 三分鐘速查</h2>
+<h3 id="出一張靜幀">出一張靜幀</h3>
+<ol><li>Properties &gt; Render &gt; <strong>Final Quality Pipeline</strong></li><li>按 <strong>建立管線</strong></li><li>按 <strong>套用出片採樣設定</strong></li><li>按 <strong>設成 32-bit EXR 輸出</strong></li><li>F12 算圖</li><li>渲完拖 <strong>高光</strong> 滑桿（0.7～1.0）找質感。它是即時的，不用重渲。預設只作用在畫面很亮的地方（<strong>只在高光混回</strong>），所以亮度平均的場景拉了可能完全看不出差別，這是正常的。</li></ol>
+<h3 id="出一段動畫含消閃爍">出一段動畫（含消閃爍）</h3>
+<ol><li>上面 1～4 照做，然後存檔</li><li>把 <strong>Motion Blur 關掉</strong>（Render Properties &gt; Motion Blur）。這不是建議，是必要條件——原因見常見問題。</li><li>按 <strong>準備動畫素材輸出</strong>，然後照平常渲動畫</li><li>按 <strong>建立跨幀場景</strong>，再按 <strong>執行跨幀穩定</strong></li><li>成品在 <code>//fqp_final/&lt;blend&gt;_&lt;scene&gt;/</code>，檔名是 <code>stabilized####.exr</code>。整段的頭尾幾幀會少，這是故意的：它們有一邊沒有鄰居可以混。</li></ol>
+<h3 id="交件前">交件前</h3>
+<p>按一下 <strong>健康檢查</strong>。它什麼都不會改，只會一行一行告訴你這個場景有沒有踩到九個已知的地雷——另外還有幾行只在用得到時才出現。</p>
+<hr>
+<h2 id="4-它到底在做什麼">4. 它到底在做什麼</h2>
+<p>Cycles 可以把光線分成好幾份輸出：漫射、高光、穿透、自發光、體積——前三份還再拆成「照到多少光」和「表面本身什麼顏色」。一般的降噪是在完成的畫面上一次做完，那時候各種光早就混在一起了，粗糙金屬、玻璃、霧面材質只能共用同一套處理。</p>
+<p>這條管線改成一份一份來：每一路光先乘上材質顏色再降噪，每一份分開處理，全程 HDR、白的地方不切掉；材質紋理與降噪器一起處理，並以 albedo／normal 引導。自發光和體積（Volume Direct/Indirect）沒有自己的顏色 pass，所以直接降噪、直接加回去，不做那一次相乘。</p>
+<p>接著每一路各給一支滑桿，在「原圖」和「完全降噪」之間調。降噪器傷得最重的是反射——它會把粗糙金屬的高光燙成塑膠——所以「高光」那一格預設就低於 1。預設只在畫面很亮的地方把原圖混回來（<strong>只在高光混回</strong>）：高光保留顆粒和層次，其他地方維持乾淨。所以畫面裡沒有很亮的地方時，拉滑桿可能完全看不出差別，這是正常的，不是壞了。想讓滑桿作用在整個畫面（例如要全畫面的顆粒感），就把<strong>只在高光混回</strong>關掉，再按「重建管線」。體積那支滑桿不受這個開關影響，一律作用在整個畫面。</p>
+<p>動畫還有第二段。每一幀各自降噪會讓畫面浮動，因為降噪器每一幀猜的都不太一樣。跨幀那一段會抓每一幀的鄰居，用 Cycles 算出來的運動向量把它們搬到正確位置，把深度對不上的像素（以及緊鄰它們的像素）丟掉，剩下的混起來。這要求 Cycles 自己的動態模糊必須關掉，因為糊掉的畫面生不出能用的運動向量——模糊改在最後一步補回去。鎖定機位或慢速鏡頭效果最好；快速推軌或橫移時，在背景前移動的物體輪廓可能比不開跨幀穩定稍差（見「已知限制」）。</p>
+<hr>
+<h2 id="5-面板逐項說明">5. 面板逐項說明</h2>
+<h3 id="主區">主區</h3>
+<figure class="shot" id="shot-main_start"><div class="shot-frame" style="max-width:871px"><a href="img/zh/main_start.png"><img src="img/zh/main_start.png" width="871" height="130" alt="主區，管線還沒建立時：健康檢查與建立管線" loading="lazy"></a><span class="shot-dot" style="left:44.20%;top:55.38%" aria-hidden="true">1</span><span class="shot-dot" style="left:44.09%;top:86.92%" aria-hidden="true">2</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">健康檢查</strong> 九項檢查，外加幾項只在用得到時才出現。什麼都不改。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">建立管線</strong> 打開需要的 passes，把節點群組接好，放在你的 Render Layers 節點旁邊。隨時可以再按。</span></li></ol></figure>
+<figure class="shot" id="shot-main_built"><div class="shot-frame" style="max-width:871px"><a href="img/zh/main_built.png"><img src="img/zh/main_built.png" width="871" height="625" alt="主區，管線已建立：重建管線與移除、五支滑桿、混回前濾亮點、「改完要重建才生效」那個框、EXR 輸出按鈕與出片採樣那一排" loading="lazy"></a><span class="shot-dot" style="left:19.06%;top:18.08%" aria-hidden="true">1</span><span class="shot-dot" style="left:70.03%;top:18.08%" aria-hidden="true">2</span><span class="shot-dot" style="left:13.78%;top:26.56%" aria-hidden="true">3</span><span class="shot-dot" style="left:48.22%;top:33.76%" aria-hidden="true">4</span><span class="shot-dot" style="left:51.66%;top:36.80%" aria-hidden="true">5</span><span class="shot-dot" style="left:48.22%;top:40.00%" aria-hidden="true">6</span><span class="shot-dot" style="left:51.66%;top:43.20%" aria-hidden="true">7</span><span class="shot-dot" style="left:48.22%;top:46.40%" aria-hidden="true">8</span><span class="shot-dot" style="left:12.63%;top:50.56%" aria-hidden="true">9</span><span class="shot-dot" style="left:49.94%;top:53.76%" aria-hidden="true">10</span><span class="shot-dot" style="left:14.47%;top:58.56%" aria-hidden="true">11</span><span class="shot-dot" style="left:14.47%;top:63.04%" aria-hidden="true">12</span><span class="shot-dot" style="left:13.32%;top:67.52%" aria-hidden="true">13</span><span class="shot-dot" style="left:16.53%;top:72.00%" aria-hidden="true">14</span><span class="shot-dot" style="left:8.50%;top:76.48%" aria-hidden="true">15</span><span class="shot-dot" style="left:13.32%;top:80.96%" aria-hidden="true">16</span><span class="shot-dot" style="left:41.33%;top:87.52%" aria-hidden="true">17</span><span class="shot-dot" style="left:30.08%;top:93.28%" aria-hidden="true">18</span><span class="shot-dot" style="left:66.36%;top:93.28%" aria-hidden="true">19</span><span class="shot-dot" style="left:11.48%;top:97.28%" aria-hidden="true">20</span><span class="shot-dot" style="left:60.62%;top:97.28%" aria-hidden="true">21</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">重建管線</strong> 隨時可以再按：它會原地重建，並且把你後來加上去的濾鏡鏈重新接回來。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">移除</strong> 先問你一聲，再把群組拿掉、接線還原成你原本的樣子，並關回建立時打開的 passes。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">另存未降噪畫面</strong> 額外把完全沒降噪的原始畫面存成 <code>noisy####.exr</code>，放在輸出路徑底下的 <code>noisy image</code> 資料夾，渲一次兩種都拿到。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong class="shot-label">漫射</strong> 漫射降噪強度。預設 1（完全降噪）；漫射打光看起來很塑膠、或想在漫射表面留一點顆粒時，再往下拉。</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">高光</strong> 最先該動的那一支。往下拉可以把高光顆粒放回拉絲金屬和粗糙反射上。</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">穿透</strong> 玻璃之類看得穿的材質。</span></li><li><span class="shot-num" aria-hidden="true">7</span><span class="shot-text"><strong class="shot-label">自發光</strong> 會發亮的表面——燈條、螢幕。它們閃就往上調。</span></li><li><span class="shot-num" aria-hidden="true">8</span><span class="shot-text"><strong class="shot-label">體積</strong> 霧、煙、光束。體積雜訊通常是整張畫面裡最重的，所以留在 1。</span></li><li><span class="shot-num" aria-hidden="true">9</span><span class="shot-text"><strong class="shot-label">混回前濾亮點</strong> 上面那幾支滑桿把原始雜訊混回來之前，先把裡面孤立的亮點、暗點夾回降噪結果附近的合理範圍。</span></li><li><span class="shot-num" aria-hidden="true">10</span><span class="shot-text"><strong class="shot-label">保留顆粒</strong> 原始雜訊可以偏離降噪結果多遠，才會被夾回來。</span></li><li><span class="shot-num" aria-hidden="true">11</span><span class="shot-text"><strong class="shot-label">改完要重建才生效</strong> 「改完要重建才生效」那個框裡的全部項目、還有算圖輸出路徑，改完都要再按一次建立管線。</span></li><li><span class="shot-num" aria-hidden="true">12</span><span class="shot-text"><strong class="shot-label">先清乾淨引導圖</strong> 降噪器靠兩張「地圖」認路，這項先把那兩張清乾淨再讓它們指揮。</span></li><li><span class="shot-num" aria-hidden="true">13</span><span class="shot-text"><strong class="shot-label">只在高光混回</strong> 上面那幾支滑桿只作用在畫面很亮的地方：高光保留層次，其他地方維持乾淨。</span></li><li><span class="shot-num" aria-hidden="true">14</span><span class="shot-text"><strong class="shot-label">自動用 GPU 跑合成</strong> 按建立管線時順手把合成器切到 GPU。</span></li><li><span class="shot-num" aria-hidden="true">15</span><span class="shot-text"><strong class="shot-label">預過濾</strong> 那兩張引導圖要清得多仔細。</span></li><li><span class="shot-num" aria-hidden="true">16</span><span class="shot-text"><strong class="shot-label">包含環境背景</strong> 把世界背景合回畫面。</span></li><li><span class="shot-num" aria-hidden="true">17</span><span class="shot-text"><strong class="shot-label">設成 32-bit EXR 輸出</strong> 單層 32-bit OpenEXR RGBA、ZIP。</span></li><li><span class="shot-num" aria-hidden="true">18</span><span class="shot-text"><strong class="shot-label">出片採樣上限</strong> 按「套用出片採樣設定」時會寫進 Cycles 的採樣上限。</span></li><li><span class="shot-num" aria-hidden="true">19</span><span class="shot-text"><strong class="shot-label">套用出片採樣設定</strong> 先問你一聲，再打開適應性採樣、門檻 0.01、採樣上限用旁邊那格，外加藍雜訊與逐幀換種子。</span></li><li><span class="shot-num" aria-hidden="true">20</span><span class="shot-text"><strong class="shot-label">藍雜訊採樣</strong> 把殘留的雜訊排成細緻均勻的顆粒，而不是一坨一坨。由「套用出片採樣設定」套用。</span></li><li><span class="shot-num" aria-hidden="true">21</span><span class="shot-text"><strong class="shot-label">逐幀換種子</strong> 讓每一幀有自己的亂數種子，雜訊的花紋才不會整段定在原地。由「套用出片採樣設定」套用。</span></li></ol></figure>
+<div class="table-wrap"><table><thead><tr><th>項目</th><th>作用</th></tr></thead><tbody><tr><td><strong>健康檢查</strong></td><td>九項檢查，外加幾項只在用得到時才出現。什麼都不改。詳見下一節。</td></tr><tr><td><strong>建立管線</strong></td><td>打開需要的 passes，把節點群組接好，放在你的 Render Layers 節點旁邊。會自動插到你既有濾鏡鏈的<strong>最前面</strong>，降噪永遠是第一站。其他原本吃算圖原圖的地方——第二條分支、File Output——也一併改吃降噪後的圖；Viewer 節點保持吃原圖。有好幾個 view layer 時，讀的是你目前所在的那一層；那一層不會被渲染（Use for Rendering 沒勾）時，改建在第一個會渲染的 layer 並跳警告，全部都不渲染時什麼都不改、直接說明。有好幾顆 Render Layers 節點時，用的是 Image 接到最終輸出的那一顆；有好幾顆 Group Output 時，用的是作用中那一顆的第一個輸入（Blender 算圖用的就是它）。Compositing 沒開的話會幫你打開。隨時可以再按。</td></tr><tr><td><strong>移除</strong></td><td>先問你一聲，再把群組拿掉、接線還原成你原本的樣子，並關回建立時打開的 passes。建立時對場景做的其他事也一併還原：建立時新建的合成樹會拿掉；建立時補上的 Render Layers／Group Output 節點，之後沒人接線的會刪掉；Compositing 與合成器裝置改回原本的設定——除非建完之後你自己改過。你自己的節點不會被動到。建完之後你自己改過的線，會維持你改的樣子。</td></tr><tr><td><strong>清理殘留紀錄</strong></td><td>只在管線節點被手動刪掉時出現。把它留在場景裡的接線紀錄清掉，不動任何節點、也不動任何連線。</td></tr><tr><td><strong>漫射</strong>（1.0）</td><td>漫射降噪強度。預設 1（完全降噪）；漫射打光看起來很塑膠、或想在漫射表面留一點顆粒時，再往下拉。</td></tr><tr><td><strong>高光</strong>（0.85）</td><td>最先該動的那一支。往下拉可以把高光顆粒放回拉絲金屬和粗糙反射上。0.7～0.9 是實用區間。「只在高光混回」開著時，它和其他滑桿一樣只作用在畫面很亮的地方。</td></tr><tr><td><strong>穿透</strong>（0.9）</td><td>玻璃之類看得穿的材質。</td></tr><tr><td><strong>自發光</strong>（0.5）</td><td>會發亮的表面——燈條、螢幕。它們閃就往上調。</td></tr><tr><td><strong>體積</strong>（1.0）</td><td>霧、煙、光束。體積雜訊通常是整張畫面裡最重的，所以留在 1。細霧絲被抹糊時再往回拉。</td></tr><tr><td><strong>混回前濾亮點</strong>（開）</td><td>上面那幾支滑桿把原始雜訊混回來之前，先把裡面孤立的亮點、暗點夾回降噪結果附近的合理範圍。顆粒留著，亮點不會跟著混回來。關掉就跟 1.0.1 的結果完全一樣。詳見<a href="#混回前濾亮點">下方</a>。</td></tr><tr><td><strong>保留顆粒</strong>（0.75）</td><td>原始雜訊可以偏離降噪結果多遠，才會被夾回來。越高保留越多顆粒，也越容易留下亮點。濾亮點關掉時這格會變灰。</td></tr><tr><td><strong>先清乾淨引導圖</strong>（關）</td><td>降噪器靠兩張「地圖」認路，這項先把那兩張清乾淨再讓它們指揮。預設關；很暗或很多噪點的鏡頭才開，會讓細小凹凸變柔和。</td></tr><tr><td><strong>只在高光混回</strong>（開）</td><td>上面那幾支滑桿只作用在畫面很亮的地方：高光保留層次，其他地方維持乾淨。畫面裡沒有很亮的地方時，滑桿看不出差別是正常的。關掉就作用在整個畫面（舊行為，想要全畫面顆粒感時用）。體積那支滑桿一律作用在整個畫面。</td></tr><tr><td><strong>自動用 GPU 跑合成</strong>（開）</td><td>按建立管線時順手把合成器切到 GPU。這棵樹裡塞滿降噪節點，用 CPU 會變慢。</td></tr><tr><td><strong>預過濾</strong>（精確）</td><td>那兩張引導圖要清得多仔細。出正片就留在精確。</td></tr><tr><td><strong>包含環境背景</strong>（開）</td><td>把世界背景合回畫面。Transparent Film 開著時會自動跳過，免得 HDRI 從透明處漏出來。</td></tr><tr><td><strong>套用出片採樣設定</strong></td><td>先問你一聲，再打開適應性採樣、門檻 0.01、採樣上限用旁邊那格，外加藍雜訊與逐幀換種子。請在跑採樣分析之前按，<strong>之後</strong>才按<strong>套用建議門檻</strong>，不要反過來：它一律寫入 0.01，之後再按一次會把門檻改回 0.01。它設的採樣上限也是分析拿來當天花板的值。</td></tr><tr><td><strong>設成 32-bit EXR 輸出</strong></td><td>單層 32-bit OpenEXR RGBA、ZIP。刻意選單層：After Effects 讀 multilayer EXR 會整片黑。</td></tr><tr><td><strong>另存未降噪畫面</strong>（關）</td><td>額外把完全沒降噪的原始畫面存成 <code>noisy####.exr</code>，放在輸出路徑底下的 <code>noisy image</code> 資料夾，渲一次兩種都拿到。之後想換別的降噪工具試就用得上。這個資料夾是相對 .blend 記的（<code>//&lt;輸出&gt;/noisy image/</code>），另存新檔或整個專案搬家，它都跟著檔案走。檔案要先存過：檔案沒存過、或輸出路徑沒有磁碟機代號時，建立管線會跳過它並跳警告——存檔（或設好輸出路徑）後按重建管線。1.1.0 建過的場景要重建一次，健康檢查會提醒你。</td></tr></tbody></table></div>
+<p>五支滑桿、<strong>混回前濾亮點</strong>和<strong>保留顆粒</strong>都是<strong>即時</strong>的：拖了直接寫進節點樹，不用重建。「改完要重建才生效」那個框裡的全部項目、還有算圖輸出路徑，改完都要再按一次建立管線。建完之後才開或關 Transparent Film，面板會提醒你按重建。這個外掛的設定都不能做動畫——詳見<a href="#10-常見問題">常見問題</a>。</p>
+<p>建立時的重要訊息——少了哪個 pass、幫你換了哪個 view layer——會用警告顯示，不會一閃就被後面的訊息蓋掉。</p>
+<p>關於建立與移除，還有幾件值得知道的事：</p>
+<ul><li>如果 Render Layers 後面緊接一個 Reroute（按 New 時 Blender 產生的預設樹就是這樣），Viewer 接在 Reroute 上，建立之後看到的會是降噪後的圖。想繼續看原始渲染，請把 Viewer 直接接到 Render Layers。</li><li>把 Final Quality Pipeline 節點 mute 不等於略過它：Blender 會直接把它的第一個輸入（Diffuse Direct）送出去，畫面會變暗。想比較有沒有 FQP，請按移除，或暫時把 Render Layers 的 Image 直接接到輸出。</li><li>輸出原本沒接東西、建立時幫你把鏈尾接上去的話，移除會留著這條線，F12 照樣有畫面。</li><li>兩個場景用的是「同一棵」合成樹時，樹裡的管線是共用的。建立時會跳警告；移除會先問你，因為它會把 FQP 從這棵樹上所有場景拿掉。</li><li>1.1.0 建的場景，除了接線和 passes 之外沒有記下建立時改了什麼，所以在那種場景按移除，行為跟 1.1.0 一樣。先按移除、再按一次建立管線，之後的移除就會全部還原。</li><li>這條管線只在 Cycles 生效，切到 Workbench 時 F12 會整片黑。切換引擎<strong>之前</strong>請先按 <strong>移除</strong>；選了別的引擎時，面板仍會留著這顆按鈕，並附一行說明。</li></ul>
+<h3 id="混回前濾亮點">混回前濾亮點</h3>
+<p>那幾支混合滑桿的原理，是把一部分沒降噪的原始畫面混回降噪結果上：自然的顆粒感就是從這裡來的。問題是原始畫面裡也帶著亮點（firefly，那種孤零零、亮得離譜的像素），滑桿拉到 1 以下時，以前會連它們也按比例一起混回來。</p>
+<p><strong>混回前濾亮點</strong>打開時（預設），每一路原始雜訊在混回之前，會先跟自己的降噪結果比一比。兩者差不多的地方，原始像素原封不動混回去，你選的顆粒感留著；差很多的地方（孤立的亮點，或孤立的暗點），先夾回降噪值附近容許範圍的邊緣再混。容許範圍是 <strong>保留顆粒</strong> × 降噪後的亮度，再加一點固定餘量。作用在漫射、高光、穿透、體積四路；自發光照舊。</p>
+<p>什麼時候調<strong>保留顆粒</strong>：</p>
+<ul><li>滑桿拉到 1 以下，還是看到白點？往下調。越低越乾淨，顆粒也越少。</li><li>拉絲金屬、粗糙反射的顆粒感被收得太乾淨？往上調。越高保留越多顆粒，也越容易留下亮點。</li><li>0.75 是不錯的起點。拖了即時生效，不用重建。</li><li>滑桿在 1.0 的那一路本來就沒有混回原始雜訊，這個濾鏡在那一路看不出差別。</li></ul>
+<p>用舊版建過管線的場景，那條管線裡還沒有這個濾鏡。這時勾選框下面會出現：「按上面的「重建管線」後才能使用」，按一次<strong>重建管線</strong>就好。把濾鏡關掉，結果跟 1.0.1 完全一樣。</p>
+<h3 id="跨幀穩定區">跨幀穩定區</h3>
+<figure class="shot" id="shot-temporal"><div class="shot-frame" style="max-width:871px"><a href="img/zh/temporal.png"><img src="img/zh/temporal.png" width="871" height="304" alt="面板的跨幀穩定區，從跨幀半徑到建立跨幀場景、執行跨幀穩定" loading="lazy"></a><span class="shot-dot" style="left:9.41%;top:15.46%" aria-hidden="true">1</span><span class="shot-dot" style="left:48.22%;top:21.71%" aria-hidden="true">2</span><span class="shot-dot" style="left:51.66%;top:28.29%" aria-hidden="true">3</span><span class="shot-dot" style="left:13.32%;top:37.83%" aria-hidden="true">4</span><span class="shot-dot" style="left:73.48%;top:37.83%" aria-hidden="true">4</span><span class="shot-dot" style="left:10.56%;top:47.04%" aria-hidden="true">5</span><span class="shot-dot" style="left:13.55%;top:53.29%" aria-hidden="true">6</span><span class="shot-dot" style="left:31.23%;top:60.20%" aria-hidden="true">7</span><span class="shot-dot" style="left:12.63%;top:69.41%" aria-hidden="true">8</span><span class="shot-dot" style="left:40.41%;top:85.20%" aria-hidden="true">9</span><span class="shot-dot" style="left:19.52%;top:94.41%" aria-hidden="true">10</span><span class="shot-dot" style="left:68.31%;top:94.41%" aria-hidden="true">11</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">跨幀半徑</strong> 前後各拿幾幀來混：±1、±2 或 ±3。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">夾擠寬容度</strong> 鄰幀被信任的程度。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">深度容許差</strong> 借過來的像素在深度上可以差多少才算數，用「佔離相機距離的比例」表示：0.03 就是 3%。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong class="shot-label">補回動態模糊 + 快門</strong> 最後把模糊畫回去。</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">素材資料夾</strong> 四組序列寫進去、再讀回來的地方。</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">成品資料夾</strong> 完成品放哪，檔名是 <code>stabilized####.exr</code>。</span></li><li><span class="shot-num" aria-hidden="true">7</span><span class="shot-text">用預設資料夾時，每個 .blend 加每個場景會各自分一個子資料夾。面板上會顯示子資料夾的名字。</span></li><li><span class="shot-num" aria-hidden="true">8</span><span class="shot-text"><strong class="shot-label">Beauty 來源</strong> 要穩定哪一張。<em>Final</em> 是實際接在 Group Output 上的那張，你的 Glare、調色都算在內。</span></li><li><span class="shot-num" aria-hidden="true">9</span><span class="shot-text"><strong class="shot-label">準備動畫素材輸出</strong> 加上那顆負責存四組序列的 File Output，並記下這次準備的幀範圍。</span></li><li><span class="shot-num" aria-hidden="true">10</span><span class="shot-text"><strong class="shot-label">建立跨幀場景</strong> 建出實際幹活的輔助場景。執行跨幀穩定會自己建，這顆按鈕是給你想進去看的時候用的。</span></li><li><span class="shot-num" aria-hidden="true">11</span><span class="shot-text"><strong class="shot-label">執行跨幀穩定</strong> 真的執行消閃爍，把成品寫出來。</span></li></ol></figure>
+<div class="table-wrap"><table><thead><tr><th>項目</th><th>作用</th></tr></thead><tbody><tr><td><strong>跨幀半徑</strong>（±1，共 3 幀）</td><td>前後各拿幾幀來混：±1、±2 或 ±3。越寬越穩，但快速移動會糊，也更花時間。</td></tr><tr><td><strong>夾擠寬容度</strong>（1.0）</td><td>鄰幀被信任的程度。調高壓閃爍更狠，但會動的東西可能拖殘影；調低比較嚴格、動態處更乾淨。</td></tr><tr><td><strong>深度容許差</strong>（0.03）</td><td>借過來的像素在深度上可以差多少才算數，用「佔離相機距離的比例」表示：0.03 就是 3%。公分級產品照和公里級風景都一樣好用。這是用來擋「上一幀還被遮住的背景」被硬拉進來。1.2.9 起，緊鄰被丟掉像素的那一圈也不採用。調低它清不掉在背景前移動的輪廓（見「已知限制」）。舊版存的絕對值設定（大於 0.3 的）會自動重設成 0.03。</td></tr><tr><td><strong>補回動態模糊</strong> + <strong>快門</strong>（開、0.5）</td><td>最後把模糊畫回去。快門值從場景自己的 motion blur 快門帶入，所以結果等於 Cycles 自己會算出來的量。</td></tr><tr><td><strong>素材資料夾</strong></td><td>四組序列寫進去、再讀回來的地方。打 <code>frames/</code> 這種相對路徑，會當成 <code>//frames/</code>，也就是 .blend 旁邊。從磁碟根目錄開始、卻沒有磁碟機代號的路徑（<code>\frames</code>）會被拒絕。成品資料夾也一樣。</td></tr><tr><td><strong>成品資料夾</strong></td><td>完成品放哪，檔名是 <code>stabilized####.exr</code>。要交給剪接的就是這一份。</td></tr><tr><td><strong>Beauty 來源</strong>（Final）</td><td>要穩定哪一張。<em>Final</em> 是實際接在 Group Output 上的那張，你的 Glare、調色都算在內；<em>FQP Output</em> 是完全沒有那些的乾淨素材。兩種都是「按下當時」接線的快照——改過接線就重按一次準備。</td></tr><tr><td><strong>準備動畫素材輸出</strong></td><td>加上那顆負責存四組序列的 File Output，並記下這次準備的幀範圍，之後才分得出哪些是上一輪留下的殘留幀。Vector、Depth、Normal 取自管線所讀的同一顆 Render Layers 節點、開在它讀的那一層 view layer 上。它會先試寫素材資料夾與成品資料夾（沒有就建）：外接碟沒插、網路磁碟不在、路徑超過 260 個字元、或資料夾唯讀，都會停下並附上路徑與原因。以下情況會拒絕執行：動態模糊開著、檔案從沒存過、沒有任何 view layer 會渲染、Render Layers 節點讀的那一層沒勾 Use for Rendering、beauty／vector／depth／normal 任一沒有來源——跳警告，場景什麼都不改。</td></tr><tr><td><strong>準備（保留已算好的幀）</strong></td><td>素材資料夾裡有這個場景、同一段幀範圍的上一次準備紀錄時，才會出現在準備按鈕下方。不用從頭來，直接把動畫輸出節點重新打開，讓你補渲幾幀。已經在資料夾裡的幀會原樣保留，<strong>不會</strong>檢查是否過期。詳見<a href="#補渲幾幀">補渲幾幀</a>。</td></tr><tr><td><strong>建立跨幀場景</strong></td><td>建出實際幹活的輔助場景。執行跨幀穩定會自己建，這顆按鈕是給你想進去看的時候用的。</td></tr><tr><td><strong>執行跨幀穩定</strong></td><td>真的執行消閃爍，把成品寫出來。開跑前先檢查：動態模糊關了沒、每一幀的 beauty／vector／depth 檔都在不在（0 byte 的檔當成不在）、每個檔的尺寸是否跟第一張 beauty 一樣、有沒有看起來壞掉的檔（比同組小很多、而且讀不出來）、vector 是不是全空、有沒有混進上一輪的殘留幀。有問題就停下，並列出是哪幾幀。跑完會把動畫輸出節點靜音，之後再按 F12 就不會蓋掉你的幀；按準備會重新啟用。</td></tr><tr><td><strong>移除動畫輸出節點</strong></td><td>準備過之後才會出現。先問你一聲，再刪掉那顆節點，並關回準備時打開的 Vector／Depth／Normal pass。降噪管線和已經寫到磁碟的幀都不會動。</td></tr></tbody></table></div>
+<p>用預設資料夾時，每個 .blend 加每個場景會各自分一個子資料夾——<code>//fqp_frames/&lt;blend&gt;_&lt;scene&gt;/</code> 和 <code>//fqp_final/&lt;blend&gt;_&lt;scene&gt;/</code>——同一個資料夾裡的兩個檔案不會互相覆蓋。面板上會顯示子資料夾的名字。你自己打的路徑則照原樣用。資料夾名稱不分大小寫（Windows 本來就不分），所以兩個名字只差大小寫的場景——Shot 和 shot——原本會擠進同一個資料夾；現在其中一個會加上一段短短的後綴（例如 <code>&lt;blend&gt;_shot_8faccb</code>），已經有幀放在原名資料夾裡的那一個保留原名。其他場景的資料夾名稱都不變。</p>
+<p>準備之後按<strong>重建管線</strong>沒問題：動畫輸出節點會自動接回重建後的管線（訊息寫「Animation Output 已重新接到重建後的 pipeline」）。如果它已經被執行跨幀穩定靜音，重建後仍然是靜音——要重新寫幀請按準備。重建時換到了別的 view layer，會跳警告說已經渲好的幀來自舊的那一層，請重渲。</p>
+<p>Transparent Film 會一路帶到底：成品保留透明通道。</p>
+<p>人在 <code>FQP_Temporal</code> 輔助場景裡時，跨幀那幾顆按鈕會變灰。先切回你自己的場景。</p>
+<h3 id="分析區">分析區</h3>
+<figure class="shot" id="shot-analysis_lightpath"><div class="shot-frame" style="max-width:871px"><a href="img/zh/analysis_lightpath.png"><img src="img/zh/analysis_lightpath.png" width="871" height="198" alt="分析區的光線路徑那一半，有報告時：分析光線路徑與旁邊的狀態、套用 Strict (116)、套用 Visual (112)、看報告" loading="lazy"></a><span class="shot-dot" style="left:49.94%;top:37.88%" aria-hidden="true">1</span><span class="shot-dot" style="left:53.39%;top:47.47%" aria-hidden="true">2</span><span class="shot-dot" style="left:18.14%;top:62.12%" aria-hidden="true">3</span><span class="shot-dot" style="left:67.74%;top:62.12%" aria-hidden="true">4</span><span class="shot-dot" style="left:18.83%;top:76.26%" aria-hidden="true">5</span><span class="shot-dot" style="left:66.93%;top:76.26%" aria-hidden="true">6</span><span class="shot-dot" style="left:44.55%;top:90.40%" aria-hidden="true">7</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">分析解析度 %</strong> 分析器的測試圖要渲多大，以你實際出片尺寸的百分比計。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">分析採樣數</strong> 每張測試圖要算多細——採樣越高雜訊越少，也越慢。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">分析光線路徑</strong> 按下之後，通常會算 15 到 45 張小測試圖，實際張數寫在報告裡。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text">分析器按鈕旁邊有一行狀態，不用按任何東西就看得到上一次分析是<strong>執行中</strong>、<strong>完成</strong>、還是<strong>失敗</strong>。</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">套用 Strict</strong> 把 Strict 那一組填進 Render Properties &gt; Light Paths。按鈕上括號裡的數字是套用後的 Max Bounces。</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">套用 Visual</strong> 填 Visual 那一組。兩顆按鈕在寫入前都會先問一聲。</span></li><li><span class="shot-num" aria-hidden="true">7</span><span class="shot-text"><strong class="shot-label">看報告</strong> 在畫面上跳重點：列的是按套用會寫入的值（不是量到的膝點）、兩種整組驗證的結果、要注意的項目。</span></li></ol></figure>
+<figure class="shot" id="shot-analysis_sampling"><div class="shot-frame" style="max-width:871px"><a href="img/zh/analysis_sampling.png"><img src="img/zh/analysis_sampling.png" width="871" height="174" alt="分析區的採樣那一半：天花板那一行、分析幀數、分析採樣門檻、套用建議門檻、看採樣報告" loading="lazy"></a><span class="shot-dot" style="left:29.62%;top:25.86%" aria-hidden="true">1</span><span class="shot-dot" style="left:13.78%;top:41.95%" aria-hidden="true">2</span><span class="shot-dot" style="left:51.21%;top:58.05%" aria-hidden="true">3</span><span class="shot-dot" style="left:18.71%;top:74.14%" aria-hidden="true">4</span><span class="shot-dot" style="left:15.73%;top:90.23%" aria-hidden="true">5</span><span class="shot-dot" style="left:65.67%;top:90.23%" aria-hidden="true">6</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong>套用出片採樣設定</strong>設的採樣上限也是分析拿來當天花板的值。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">分析幀數</strong> 決定分析要看哪幾幀。預設的<strong>目前這一幀</strong>只分析場景現在停的那一幀。<strong>首中尾三幀</strong>分析幀範圍的首、中、尾三幀，取其中最嚴的選擇。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">算動畫時建議選<strong>首中尾三幀</strong>：只看一幀可能選到比整個鏡頭需要的還鬆的階。面板在這個選項旁邊也會提醒。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong class="shot-label">分析採樣門檻</strong> 先渲一張「採樣開很高、完全不設門檻」的標準答案，再用一組由鬆到緊的門檻各渲一張，每一張都計時。</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">套用建議門檻</strong> 只設 <code>adaptive_threshold</code>。Max Samples 刻意不動：這次分析就是拿你現在的值當天花板量出來的。</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">看採樣報告</strong> 把上次的採樣分析結果叫回來看。畫面上跳一個小視窗給你重點——建議門檻是多少、每一階與最緊一階相比差多少。</span></li></ol></figure>
+<p>分析器按鈕旁邊有一行狀態，不用按任何東西就看得到上一次分析是<strong>執行中</strong>、<strong>完成</strong>、還是<strong>失敗</strong>。詳見<a href="#7-兩支分析器">兩支分析器</a>。</p>
+<hr>
+<h2 id="6-健康檢查">6. 健康檢查</h2>
+<figure class="shot" id="shot-health_check_popup"><div class="shot-frame" style="max-width:917px"><a href="img/zh/health_check_popup.png"><img src="img/zh/health_check_popup.png" width="917" height="383" alt="健康檢查的彈出視窗：一行一行的 [OK] 與 [!]，沒過的下一行是怎麼修，最後是結論" loading="lazy"></a><span class="shot-dot" style="left:1.96%;top:10.97%" aria-hidden="true">1</span><span class="shot-dot" style="left:1.96%;top:21.41%" aria-hidden="true">1</span><span class="shot-dot" style="left:3.93%;top:26.63%" aria-hidden="true">2</span><span class="shot-dot" style="left:5.02%;top:31.85%" aria-hidden="true">3</span><span class="shot-dot" style="left:1.96%;top:96.34%" aria-hidden="true">4</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">每一行是 <code>[OK]</code> 或 <code>[!]</code>。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">沒過的下一行是「怎麼修」。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">過長的行折成多行，續行比原行多往內縮一點。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text">摘要跳在畫面上，完整內容印到系統主控台。</span></li></ol></figure>
+<p>一顆按鈕，九項檢查，沒有副作用——另外最多四行只在用得到時才出現。每一行是 <code>[OK]</code> 或 <code>[!]</code>，沒過的下一行是「怎麼修」。有一行的讀法不一樣：體積提示是 <code>[OK]</code> 開頭、後面帶一句建議。它不是問題，不算進「要注意」的數目，算在「通過」裡。摘要跳在畫面上，完整內容印到系統主控台。</p>
+<div class="table-wrap"><table><thead><tr><th>#</th><th>檢查項目</th><th>為什麼要查</th></tr></thead><tbody><tr><td>1</td><td>算圖引擎</td><td>不是 Cycles，這整套都不會動。管線已經建好的話，它會提醒你切換引擎前先按移除。</td></tr><tr><td>2</td><td>存檔狀態</td><td>兩支分析器和背景算圖讀的是<strong>磁碟上</strong>那份 .blend，你畫面上的改動它們看不到。</td></tr><tr><td>3</td><td>合成器裝置</td><td>合成器跑在 CPU 上會變慢——這棵樹裡塞滿了降噪節點。</td></tr><tr><td>4</td><td>跨幀流程前提</td><td>動態模糊開著、或 Frame Step 大於 1，跨幀流程會卡住。只出靜幀的話沒差。</td></tr><tr><td>5</td><td>Persistent Data</td><td>關著代表動畫每一幀都重建 BVH。它還會抓出一個已知會在開檔時把這項關掉的外掛。</td></tr><tr><td>6</td><td>Python 直譯器</td><td>只影響背景算圖視窗裡的進度摘要，算圖本身沒有它照樣跑。</td></tr><tr><td>7</td><td>輸出格式</td><td>multilayer EXR 進 After Effects 常常整片黑。</td></tr><tr><td>8</td><td>相機</td><td>沒有相機，背景算圖和兩支分析器一啟動就死。</td></tr><tr><td>9</td><td>FQP 管線</td><td>還沒建、沒接上、或 Post Processing 底下的 Compositing 被關掉了。也會抓「建了但沒在做事」：被繞過（輸出被改接、跳過它）、被 mute、建完後關了 pass 導致輸入變紅線（無效）、餵它的 Render Layers 讀的是不會渲染的 view layer、Sequencer 有 strip 且 Post Processing &gt; Sequencer 開著——或是它所在的合成樹跟別的場景共用。</td></tr><tr><td>+</td><td>Write Noisy 資料夾</td><td>只在另存未降噪畫面打開時出現。抓出 1.1.0 留下、不會跟著 .blend 走的資料夾，或沒有磁碟機代號的資料夾。</td></tr><tr><td>+</td><td>Shadow Catcher</td><td>只在畫面裡有 Shadow Catcher 時出現。背景不透明時，接住的影子會不見——見<a href="#10-常見問題">常見問題</a>。</td></tr><tr><td>+</td><td>FQP 設定上的 keyframe</td><td>只在舊檔於 FQP 設定上留有 keyframe 或 driver 時出現。它們不會生效；這一行會列出來。</td></tr><tr><td>+</td><td>體積提示</td><td>只在算圖引擎是 Cycles、場景有體積、而且 Biased 是關的時候出現（Blender 5.0 起的預設；濃密的雲或煙可能算很久）。一般建議，FQP 沒有量這一項：打開 Render &gt; Volumes &gt; Biased 並調低 Max Steps（例如 256）會比較快，準確度略降；薄霧類通常沒差。這一行是 <code>[OK]</code>，只是提示。</td></tr></tbody></table></div>
+<p>背景模式（<code>blender -b</code>）沒有視窗，popup 會自動降級成只印主控台，而不是硬叫一個畫不出來的視窗。</p>
+<hr>
+<h2 id="7-兩支分析器">7. 兩支分析器</h2>
+<p>兩支都會自己開一個主控台視窗，在另一個沒有介面的 Blender 裡跑，你的 Blender 照樣能用。兩支讀的都是<strong>磁碟上</strong>那份檔案，所以沒存檔會被擋下。兩支分析的都是你眼前這個場景，用的是 Blender 偏好設定裡指定的同一個 GPU 裝置，並把裝置記在報告裡。開跑前先把 viewport 從 Rendered 模式切掉，它佔著分析要用的 VRAM。</p>
+<p><strong>光線路徑分析器</strong>回答「每條光線要追多遠」，<strong>採樣分析器</strong>回答「每個像素要算多細」——也就是每一幀的價錢。建議先跑光線路徑那支、套用之後再跑採樣那支。</p>
+<h3 id="它會寫出哪些檔">它會寫出哪些檔</h3>
+<p>報告寫在 .blend 旁邊，檔名帶著 .blend 的名字，同一個資料夾裡的兩個 .blend 不會共用同一份報告：</p>
+<div class="table-wrap"><table><thead><tr><th>檔案</th><th>內容</th></tr></thead><tbody><tr><td><code>&lt;blend&gt;.fqp_lightpath_report.txt</code> / <code>.json</code></td><td>光線路徑報告，給人看的／給套用按鈕讀的</td></tr><tr><td><code>&lt;blend&gt;.fqp_sampling_report.txt</code> / <code>.json</code></td><td>採樣報告，同樣一對</td></tr><tr><td><code>&lt;報告&gt;.log</code></td><td>分析過程印出來的所有東西。出狀況時第一個要打開的檔。</td></tr><tr><td><code>&lt;報告&gt;.status.json</code></td><td><code>running</code>、<code>ok</code> 或 <code>failed</code>。面板的狀態行就是讀它。</td></tr></tbody></table></div>
+<p>分析還在跑的時候再按一次分析，會被擋下；分析還在跑、或上一次失敗時按套用，也會被擋下——你不會不小心套到上禮拜的數字。套用還會確認報告是<strong>這個</strong> .blend、<strong>這個</strong>場景做的，對不上就拒絕；報告產生之後 .blend 又存過檔，會提醒你。每一顆套用按鈕（套用 Strict、套用 Visual、套用建議門檻）在覆寫任何設定前都會先問你一聲。</p>
+<h3 id="用-render-border-加速">用 Render Border 加速</h3>
+<p>場景有設 Render Border 時，兩支分析器都只量框裡的範圍——通常快 3～10 倍。把框圈在畫面最噪的地方：高光、玻璃、毛髮。</p>
+<p>光線路徑分析器的合格線是拿「整張畫面的平均亮度」來比。畫面裡一個小物件配上大片亮背景時，整張可能過關，但物件本身的噪點其實超過合格線。小主角（玻璃、珠寶）請先用 Render Border 框住它再按分析。</p>
+<p>有框 border 時，採樣分析器只比框裡的範圍，報告上會註明。</p>
+<p>第一張參考圖渲完後，主控台會印出預估的總時間。在那個視窗按 Ctrl+C 可以中止。</p>
+<p>參考圖渲出來幾乎整片黑、或有無效像素時，分析會直接停下並說明原因，因為不擋下來的話，黑圖會讓每一項設定看起來都「夠好」。「幾乎整片黑」的意思是：平均低於 0.0001，而且沒有任何像素高於 0.001（linear 數值，螢幕上大約 3/255）。訊息會依序列出可能原因：燈光（關掉、不渲染、或放在被排除的 collection）、曝光或 world 強度，最後才是 GPU。很暗但確實有被照亮物體的鏡頭——太空、夜景——會照常分析。</p>
+<h3 id="乾淨啟動">乾淨啟動</h3>
+<p>分析器和背景算圖都會另外開一個 Blender。外掛偏好設定裡的<strong>乾淨啟動（factory startup）</strong>開著時（預設開），那個 Blender 不會載入你裝的其他外掛：啟動比較快、關得乾淨，也不會被某個一開就噴錯的外掛拖下水。</p>
+<p>如果場景<strong>需要</strong>第三方外掛才渲得出來——自訂節點、自訂算圖引擎、住在外掛裡的 driver——就把它關掉。開著的話，這種場景在背景會渲得不一樣，或根本渲不出來。</p>
+<p>關掉它有一個要知道的風險：背景的 Blender 會載入你裝的其他外掛。其中如果有外掛註冊了算圖 handler（<code>render_init</code>／<code>render_pre</code>／<code>render_post</code>／<code>render_complete</code>），而場景又讓顯示卡記憶體溢出，光線路徑分析可能停住不動。量到的是：有這類 handler 且溢出，3 次裡 3 次停住；沒有 handler 且溢出，5 次裡 0 次。樣本很少，是哪一個 handler、機制是什麼沒有查；乾淨啟動關著的這條路本身也沒有實測。分析時偵測到 render handler，報告的 Notes 會多一段提示。用不到第三方外掛的場景，保持乾淨啟動開著。</p>
+<h3 id="光線路徑分析器">光線路徑分析器</h3>
+<figure class="shot" id="shot-analysis_no_visual"><div class="shot-frame" style="max-width:871px"><a href="img/zh/analysis_no_visual.png"><img src="img/zh/analysis_no_visual.png" width="871" height="226" alt="分析區，報告沒有 Visual 結果時：套用 Visual 變灰，兩顆按鈕下面多一行提示" loading="lazy"></a><span class="shot-dot" style="left:68.89%;top:66.81%" aria-hidden="true">1</span><span class="shot-dot" style="left:33.52%;top:79.20%" aria-hidden="true">2</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">報告沒有 Visual 結果時，<strong>套用 Visual</strong> 不能按。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">面板會寫「這份報告沒有 Visual 結果——請重新分析」。</span></li></ol></figure>
+<figure class="shot" id="shot-lightpath_report_popup"><div class="shot-frame" style="max-width:629px"><a href="img/zh/lightpath_report_popup.png"><img src="img/zh/lightpath_report_popup.png" width="629" height="436" alt="光線路徑分析器「看報告」的彈出視窗：各項設定（Max Bounces 保留 64、Diffuse 3、Glossy 2、Transmission 4、Transparent 24）、Strict 聯合驗證 ESCALATED、Visual 設定（Diffuse 1、Glossy 1、Transmission 2、Transparent 16）、Visual 整組驗證 PASSED、報告檔的路徑" loading="lazy"></a><span class="shot-dot" style="left:4.61%;top:14.22%" aria-hidden="true">1</span><span class="shot-dot" style="left:3.02%;top:46.33%" aria-hidden="true">2</span><span class="shot-dot" style="left:3.02%;top:73.85%" aria-hidden="true">2</span><span class="shot-dot" style="left:3.02%;top:96.79%" aria-hidden="true">3</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">列的是按套用會寫入的值（不是量到的膝點）。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">兩種整組驗證的結果。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">逐階數字印在主控台，也存成 <code>&lt;blend&gt;.fqp_lightpath_report.txt</code>。</span></li></ol></figure>
+<figure class="shot" id="shot-lightpath_report_popup_failed"><div class="shot-frame" style="max-width:627px"><a href="img/zh/lightpath_report_popup_failed.png"><img src="img/zh/lightpath_report_popup_failed.png" width="627" height="575" alt="光線路徑分析器「看報告」的彈出視窗，Strict 聯合驗證是 FAILED 的報告：各項設定（Glossy 64，量到的最高值、未收斂）、「請手動調高：Glossy」那一行、Visual 整組驗證 ESCALATED、「[!] Glossy：未收斂」那一行、報告檔的路徑" loading="lazy"></a><span class="shot-dot" style="left:2.87%;top:35.13%" aria-hidden="true">1</span><span class="shot-dot" style="left:7.66%;top:42.09%" aria-hidden="true">2</span><span class="shot-dot" style="left:2.87%;top:87.30%" aria-hidden="true">3</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">升階後仍沒過時結果是 FAILED：誤差（tm.RMSE）下降不到 10% 的話升階不採用，報告列的是第一組。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">報告最後會多一段，列出要手動調高的項目，每一行列的是「套用 Strict」會寫入的值。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">要注意的項目。</span></li></ol></figure>
+<p>它先渲一張「全部開到最高」的標準答案，再一項一項往下調著渲、跟它比。因為每一張都用同一組亂數，雜訊顆粒在所有圖上長得一模一樣，比對時會自己抵銷——這就是為什麼測試圖可以又小又便宜。按下<strong>分析光線路徑</strong>之後，通常會算 15 到 45 張小測試圖，實際張數寫在報告裡。</p>
+<p><strong>為什麼要量。</strong> Blender 的出廠值是 Diffuse 4／Glossy 4／Transmission 12／Transparent 8／Volume 0。下面兩個是量到的例子，各自只代表那一個場景，不是通則：一朵雲的場景，Volume 的出廠值是 0，這個場景量到 48 才收斂——32 那一階對參考圖的色差 dE p99 是 4.075，48 那一階是 0.033（門檻 0.360）。一個樹葉場景，Transparent 的出廠值是 8，量到的 Visual 值是 16（Strict 24）。</p>
+<p>它替每一種光路（Diffuse／Glossy／Transmission／Transparent／Volume）找兩個值。報告裡各有一組，面板上各有一顆套用按鈕：</p>
+<ul><li><strong>Strict</strong>：未降噪的圖對參考圖的誤差（rel.RMSE 與 tm.RMSE），兩個指標都要低於門檻 0.0020（0.20%）。rel.RMSE 是純數學誤差；tm.RMSE 先模擬人眼對暗部的敏感度再比。線性空間的誤差會被畫面亮的部分主導，只出現在陰影裡的差異容易被蓋過去，所以兩個指標都要過。</li><li><strong>Visual</strong>：OIDN 降噪後、顯示出來的圖對參考圖的色差（dE2000，先模糊 1 px），兩項門檻都要低於：dE p99 0.360、dE&gt;2 的像素比例 0.100%。它代表的意思是：與參考圖來回切換時，差異很小、小到不在意。</li></ul>
+<p>兩者量的東西不同，所以同一組值可能通過其中一個、沒通過另一個。</p>
+<p>Visual 那兩項門檻是校準來的，條件照實列在這裡：一位受過訓練的觀察者、靜態圖、對最高設定來回切換，取他判斷「從這一格起差異小到不在意」的那一格（2026-10-04；標記時看得到格數，不是盲測）。同一位觀察者同一天另做了一輪盲測：82 個試次，其中 12 個是兩張相同的對照題，被答成「兩張不同」的是 0 個。動畫不在這次校準的範圍內：逐幀之間的變化沒有量。Visual 的適用範圍就是這些條件：一位觀察者、靜態圖。</p>
+<p><strong>怎麼量、量到哪裡。</strong></p>
+<ul><li>從你的設定往上量。你場景用的值高於某個通道的梯頂時，階梯會加長到那個值，對的參考值至少是它的兩倍（最高 128）。</li><li>掃到梯頂還沒收斂的通道，會把參考值加倍、重算一張參考圖，再往上多量幾階——最多 2 輪，參考值不超過 128。被測值一定不超過參考值的一半（否則量到的會是自己、誤差假性歸零），所以 64 是量得到的最高值。仍不收斂就標成 NOT converged。</li><li>沒收斂的通道，報告會說接下來可以怎麼做（措辭依情況不同）。量到的最高值還不到 64 時，動作都一樣：把場景裡這一項的值調高再分析一次，分析器會量到你的設定為止，最高量到 64（對參考 128）。高於 64 的值請用眼睛判斷。</li><li>連續兩階都在門檻內，這一梯就停下，剩下的階不算；報告會寫出沒算的是哪幾階。</li><li>這一幀沒有用到的光路——反彈 0 次的那張圖對參考圖的兩個誤差都在 1e-05 以內——只算那一張。有體積的場景會先用一張圖一起檢查 Diffuse、Glossy、Transmission、Transparent 四項。</li><li>沒偵測到 volume（world／材質的 Volume 都沒接，也沒有 Volume 物件）時，volume 那一梯整個跳過，Volume 維持原值不動。</li><li>分析用的小圖把貼圖限制在 1K（1024 px）。只限這次分析，場景沒有改動，正式算圖用的仍是場景原本的貼圖設定。面板上沒有這個開關。</li></ul>
+<p><strong>兩組值都會合起來再驗一次。</strong> 每一項是單獨量的；合起來會不會互相加成，只有一起渲才知道。</p>
+<ul><li><strong>Strict 聯合驗證</strong>：把 Strict 這一組值一起套上實際渲一張。高於門檻時，還有更高一階的通道各升一階、再整組算一張；這一組通過就採用它（ESCALATED）。升階後仍沒過時結果是 FAILED：誤差（tm.RMSE）下降不到 10% 的話升階不採用，報告列的是第一組。已經在上限、無法再升的是哪幾項，報告會寫出來。</li><li><strong>Visual 整組驗證</strong>：把各通道各自的 Visual 值一起套上算一張，量降噪後的色差。沒通過時，所有低於 Strict 值的通道一起升一階再算一張；升階後仍沒通過，這份報告的 Visual 值就是 Strict 值。Visual 設定與 Strict 設定相同時不另外算。</li></ul>
+<p>「一起升一階」這條規則對照過一位觀察者（作者）在五個場景設定上的判斷：四個相同，一個（廚房場景的酒瓶鏡位）外掛比他多升一階，沒有比他鬆的。</p>
+<p><strong>沒把握就不調低你的設定。</strong></p>
+<ul><li>Strict 在量測範圍內沒有收斂的通道（報告標「量到的最高值，未收斂」）：你的設定比較高時保留你的設定。Visual 不另外給值，沿用 Strict 的值。</li><li>Strict 只在梯頂一階達標、上面沒有可以確認的階的通道（報告標「只在梯頂一階達標，未確認」）：Visual 同樣沿用 Strict 的值。</li><li>這一幀沒有用到的光路，以及沒偵測到煙霧或霧氣時的 Volume：維持你原本的設定，不寫入。</li><li>Max Bounces 不會被調低。寫入的各值總和高於你現在的 Max Bounces 時才改成那個總和。</li></ul>
+<p><strong>兩顆套用按鈕。</strong> <strong>套用 Strict</strong> 把 Strict 那一組填進 Render Properties &gt; Light Paths，<strong>套用 Visual</strong> 填 Visual 那一組。按鈕上括號裡的數字是套用後的 Max Bounces，例如「套用 Strict (116)」；滑鼠停在按鈕上會列出各通道的值。兩顆按鈕在寫入前都會先問一聲。報告沒有 Visual 結果時，<strong>套用 Visual</strong> 不能按，面板會寫「這份報告沒有 Visual 結果——請重新分析」。</p>
+<p>實測的例子（廚房場景、酒瓶鏡位）：場景原本是 Diffuse 32／Glossy 64／Transmission 32／Transparent 16／Max Bounces 112。套用 Strict 之後是 24／64／24／4／Max Bounces 116；套用 Visual 之後是 12／64／24／4／Max Bounces 112。</p>
+<p><strong>看報告</strong>在畫面上跳重點：列的是按套用會寫入的值（不是量到的膝點）、兩種整組驗證的結果、要注意的項目。逐階數字印在主控台，也存成 <code>&lt;blend&gt;.fqp_lightpath_report.txt</code>。</p>
+<p><strong>報告怎麼讀。</strong> 報告開頭、「三個數字各是什麼」那幾行的下面，有一段「Strict 與 Visual：」，用幾行說明這兩個結果各量什麼、各對哪個門檻。下面節錄自同一個廚房場景的報告（中文模式）。先是一個通道的階梯：</p>
+<pre><code>TRANSPARENT   （scene.cycles.transparent_max_bounces，參考圖用的是 32）
+   secs = 這一格小測試圖花的秒數（25% 解析度，含量測開銷）；
+   只供同一條階梯內互相比較
+   bounces |   rel.RMSE |    tm.RMSE |    p99(tm) |   secs | 說明
+   --------+------------+------------+------------+--------+-------------
+         0 |   1.209767 |   0.629958 |   2.065150 |    1.8 | 
+         4 |   0.001582 |   0.001808 |   0.000000 |    1.8 | &lt;== knee
+         8 |   0.000000 |   0.000000 |   0.000000 |    1.8 | 
+   在這裡停下：連續兩階都在門檻內，所以這一梯剩下的階（16, 24）沒有算
+   判定：已收斂（兩個指標都低於門檻）
+   視覺檢查（OIDN 降噪後的顯示值，dE2000 對參考 32，模糊 1 px）
+   bounces |   dE p99 |  dE&gt;2 % | 說明
+         0 |   45.980 |  93.199 | 
+         4 |    0.059 |   0.000 | &lt;== Visual：從這一階起差異很小
+         8 |    0.051 |   0.000 | </code></pre>
+<ul><li><code>secs</code> 是那一格小測試圖花的秒數，只供同一條階梯內互相比較。它不是你正式算圖的時間。</li><li><code>&lt;== knee</code> 是 Strict 的膝點；<code>&lt;== Visual：從這一階起差異很小</code> 是這個通道單獨看時的 Visual 階。</li><li>Visual 表的兩欄印到小數三位，對的就是那兩項門檻（dE p99 0.360、dE&gt;2 0.100%）。</li></ul>
+<p>接著是兩組設定：</p>
+<pre><code> 建議的 Light Path 設定
+   Max Bounces (Total)       : 116   &lt;- 下列各值的總和
+   Diffuse                   : 24   （你的場景：32）
+   Glossy                    : 64   （量到的最高值，未收斂；你的場景：64）
+   Transmission              : 24   （你的場景：32）
+   Transparent               : 4   （你的場景：16）
+   Volume                    : (未測，維持你原本的設定)
+   時間代價：量得到的 3 組比較（Strict 值對你的設定 2 組、
+   Visual 值對 Strict 值 1 組），每張測試圖的時間都差不多。另有 1 個通道
+   （Transparent）的 Strict 值沒有與你的設定比：你的設定那一格沒有算到
+   （階梯提早停了）。這是從小測試圖反推的粗略級距，不是你正式算圖的時間；
+   你知道自己一張圖要算多久的話，可以用表裡的秒數自行換算。
+
+ Visual 設定
+   Max Bounces (Total)       : 112   &lt;- 保留你的設定（下列各值的總和是 104）
+   Diffuse                   : 12   （Strict 24；你的場景：32）
+   Glossy                    : 64   （與 Strict 相同：量到的最高值，未收斂；你的場景：64）
+   Transmission              : 24   （與 Strict 相同；你的場景：32）
+   Transparent               : 4   （與 Strict 相同；你的場景：16）
+   Volume                    : (未測，維持你原本的設定)</code></pre>
+<ul><li>「建議的 Light Path 設定」是 Strict 那一組，「Visual 設定」是 Visual 那一組。每一行括號裡的「你的場景」是分析開始時場景原本的值。</li><li>「時間代價」：量得到的比較全部「差不多」時，只印這樣一句總結，並寫明有幾組比得到、哪些通道沒比到；只要有一組不是，就改成每個通道各印一行。兩張測試圖的秒數相差不到 10%、或不到 0.5 秒，算差不多。報告不印百分比：那是從小測試圖反推的粗略級距。</li><li>「與 Strict 相同」：這個通道的 Visual 值就是 Strict 值。</li><li>「量到的最高值，未收斂」：Strict 在量測範圍內沒有收斂。</li><li>「只在梯頂一階達標，未確認」：Strict 只靠最高一階達標，上面沒有可以確認的階。</li><li>「這一幀沒有用到——保留你的設定，不計入總和」：這條光路不會被寫入。</li><li>Strict 聯合驗證的表裡有一欄 <code>total</code>：那是每張圖算圖時用的 Max Bounces——該列的各個值，加上沒有量測的光路在那張圖裡的值。上面這份報告沒有量 Volume（那張圖裡是 8），所以表裡的 <code>total</code> 比該列各值的總和多 8；「建議的 Light Path 設定」的 Max Bounces 那一行只加它列出的值，不含這 8。</li><li>Visual 整組驗證的結果印在「Visual 設定」段的最後，連同門檻與校準條件。</li></ul>
+<p>自己寫程式讀 <code>.json</code> 的人：請讀結構欄位（數值與狀態）。裡面的說明文字（<code>visual_note</code>、<code>verification.note</code>、<code>verification.reference_note</code> 等）會隨措辭與語言改變，不保證穩定。</p>
+<p><strong>Strict 聯合驗證沒過時。</strong> 報告最後會多一段，列出要手動調高的項目，每一行列的是「套用 Strict」會寫入的值。一般經驗（不是這次量到的）：這在玻璃、金屬、鏡面多的場景很常見——光在裡面反覆反射，要很多次才走完。經驗法則（不是量測）：加完再看一次畫面，玻璃後面、反射裡的東西如果不再偏暗，就可以了。64 是分析器量得到的最高值；超過它的值請用眼睛判斷。</p>
+<p>還有一個值得知道的細節：建議值出現 0 會被單獨標出來。那對「現在的場景」是對的，但你之後加了會用到那條光路的材質（例如透明貼圖的樹葉）就不對了。</p>
+<h3 id="採樣分析器">採樣分析器</h3>
+<p>它先渲一張「採樣開很高、完全不設門檻」的標準答案，再用一組由鬆到緊的門檻各渲一張（一定包含最緊的 0.002），每一張都計時。</p>
+<p>關鍵的設計決定：<strong>每一張都先降噪過</strong>，比的是完成的畫面。拿沒降噪的原圖來量是套套邏輯——適應性採樣留下的殘噪本來就差不多等於門檻自己，那等於拿門檻量門檻。而且你最後看的本來就是降噪後的畫面。</p>
+<p>每一階都拿去跟最緊的那一階比。建議值是「成品與最緊一階相差 10% 以內」的最便宜一階——純數學誤差和模擬人眼看暗部的誤差都要在 10% 以內。這支的梯子方向跟光線路徑那支相反（由鬆到緊），所以是從最緊那端往鬆走，遇到第一個差超過 10% 的階就停；鬆端某一階運氣好也搶不走。報告的寫法是「建議 Noise Threshold X：在本次分析中，成品誤差與最緊一階（0.002）相差 Y% 以內」。</p>
+<p>25% 的小圖可能漏看高光，所以小圖選到比最緊一階鬆的階時，會再用 50% 跑一輪，取兩者較緊的那一個。場景真的需要最緊一階時，報告會寫「這個場景需要最緊一階（暗部或高光還在變）」，套用建議門檻填的就是這一階。</p>
+<p>最緊的兩階（0.005 與 0.002）成品幾乎一樣——最後一輪兩個誤差都相差 0.1% 以內——代表兩階都被 Max Samples 卡住，報告和套用時都會多一行提示（WARNING）。選到最緊一階時，提示寫：限制這個場景的多半是 Max Samples；若仍嫌噪，可提高 Max Samples 後重新分析。選到較鬆一階時，提示寫：較緊的幾檔被 Max Samples 上限卡住、成品幾乎一樣，所以選了這一檔；想要更乾淨請調高 Max Samples 後重新分析。選「首中尾三幀」（見下）時，三幀任一幀撞到就會提示，並列出是哪幾幀。這個提示不會改變選擇。</p>
+<p>分析時一律用 CPU 降噪、關掉 persistent data，同一個場景每次都得到同一個答案；你的設定在分析結束後都會還原，中途出錯也一樣。</p>
+<p>限制：分析時不渲動態模糊，動態模糊鏡頭的結果不含它；攝影機開景深時會自動再收緊一檔（報告與 Info 那行會寫出分析原本建議的那一階）；自訂鏡頭（例如 OSL 鏡頭外掛）的景深 Analyzer 無法判斷，請自行評估。另外，分析目前這一幀約需 10～50 秒；同一鏡頭分析一次即可一直沿用。算動畫請改選下面的「首中尾三幀」。</p>
+<p><strong>分析幀數</strong>（在「分析採樣門檻」按鈕正上方）決定分析要看哪幾幀。預設的<strong>目前這一幀</strong> 只分析場景現在停的那一幀，做法就是上面講的那樣。<strong>首中尾三幀</strong>用同樣的步驟分析幀範圍的首、中、尾三幀（1～48 就是 1、25、48），取其中最嚴的選擇；景深那一步放在這之後，三幀裡任一幀攝影機開了景深就收緊一檔。報告會逐幀列出各幀的選擇，並寫明決定結果的是哪一幀，「相差 Y% 以內」用的是那一幀的數字。算動畫時建議選它：只看一幀可能選到比整個鏡頭需要的還鬆的階——暗的一段撞到 Max Samples，看起來 0.02 就夠，亮的一段卻需要 0.01。面板在這個選項旁邊也會提醒。限制：分析時間約 3 倍（約 30～150 秒），目的是避免選錯，不一定省時；亮段很短且不在這三幀時仍可能漏掉；未烘焙的模擬在跳幀分析時可能與實際渲染不同，請先烘焙。幀範圍只有一幀時，效果等同「目前這一幀」。</p>
+<p><strong>套用建議門檻</strong>只設 <code>adaptive_threshold</code>。Max Samples 刻意不動：這次分析就是拿你現在的值當天花板量出來的。</p>
+<hr>
+<h2 id="8-背景算圖">8. 背景算圖</h2>
+<figure class="shot" id="shot-cli_render"><div class="shot-frame" style="max-width:871px"><a href="img/zh/cli_render.png"><img src="img/zh/cli_render.png" width="871" height="148" alt="面板的背景算圖區：背景渲這一幀、背景渲整段動畫，以及乾淨啟動的勾選框" loading="lazy"></a><span class="shot-dot" style="left:19.52%;top:69.59%" aria-hidden="true">1</span><span class="shot-dot" style="left:65.90%;top:69.59%" aria-hidden="true">1</span><span class="shot-dot" style="left:23.65%;top:88.51%" aria-hidden="true">2</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">背景渲這一幀／背景渲整段動畫</strong> 把工作交給第二個沒有介面的 Blender，它自己開一個主控台視窗。介面完全不佔 VRAM、照樣能用，你甚至可以把它關掉——算圖會自己跑完。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">乾淨啟動（factory startup）</strong> 分析器和背景算圖都會另外開一個 Blender。開著時（預設開），那個 Blender 不會載入你裝的其他外掛。</span></li></ol></figure>
+<p><strong>背景渲這一幀</strong>和<strong>背景渲整段動畫</strong>會把工作交給第二個沒有介面的 Blender，它自己開一個主控台視窗。介面完全不佔 VRAM、照樣能用，你甚至可以把它關掉——算圖會自己跑完。</p>
+<p>那個視窗會即時報：</p>
+<pre><code>[FQP] 幀 12/240 完成 | 這幀 41.3s | 平均 39.8s/幀 | 剩 228 幀 ~= 2 小時 31 分 | 預計 18:42 完成</code></pre>
+<p>第一幀渲完就開始估，之後一直用「到目前為止的平均」重算，所以場景後半變重會自己反映出來。「這幀幾秒」用的是 Blender 自己印的 <code>Time:</code>，不含開檔載場景的時間——這就是為什麼第一次的估算就能用。總幀數會照你的 Frame Step 算。</p>
+<p>Blender 原本的輸出一行不少地照印在下面。全部跑完會給你總幀數、總耗時、最快與最慢的一幀，還有 Blender 的結束代碼。</p>
+<p>兩個提醒：它渲的是<strong>磁碟上</strong>那份，所以先存檔；還有 GPU 一次只夠一個算圖用，所以別又去按 F12。</p>
+<p>Overwrite 關著（Output Properties &gt; Output）接著續渲動畫時：總幀數和預計完成時間只算還要渲的幀，視窗也會說跳過了幾張已經存在的幀。</p>
+<p>萬一機器上找不到 python，進度摘要會停用，按鈕就退回直接開 Blender。算圖本身完全不受影響。</p>
+<p>給自己手動啟動分析器或監看器腳本的人：參數必須是 JSON 物件，數字要寫成數字（寫 <code>16</code>，不要寫 <code>&quot;16&quot;</code>）。不符合的話，工作會以「失敗」結束，並用一句話說明哪裡不對。</p>
+<hr>
+<h2 id="9-動畫出片完整流程">9. 動畫出片完整流程</h2>
+<p><strong>渲之前</strong></p>
+<ol><li>引擎設成 Cycles、指定一顆相機、存檔。</li><li>建立管線 → 套用出片採樣設定 → 設成 32-bit EXR 輸出。</li><li>把動態模糊<strong>關掉</strong>。Frame Step 留在 1。</li><li>選好 Beauty 來源，按準備動畫素材輸出。</li><li>按健康檢查，把每一行讀完。</li></ol>
+<p><strong>渲</strong> —— 只做一次，而且這是最花錢的一段。Ctrl+F12，或用背景渲整段動畫那顆。</p>
+<p><strong>渲完之後</strong> —— 很便宜，想重試幾次都行：</p>
+<ol start="6"><li>建立跨幀場景 → 執行跨幀穩定。</li><li>看成品。會動的東西後面拖殘影，代表夾擠寬容度太高或半徑太寬；還在浮動就相反。改完再跑一次——完全不用重渲。跨幀穩定在鎖定機位或慢速鏡頭效果最好；快速推軌或橫移時，也要看在背景前移動的物體輪廓，它可能比不開跨幀穩定稍差（見「已知限制」）。</li></ol>
+<p>幀範圍是看磁碟上真的有哪些檔案決定的，不是看場景的幀範圍；序列中間有破洞會直接停下，而不是默默渲出一批讀錯鄰幀的成品。破洞間隔一致時，訊息會提醒你看 Frame Step、或命令列的 <code>-j</code> 參數。從第 0 幀開始的序列，第 1 幀也會被穩定化。落在準備範圍之外、或比最後一次準備還舊的幀，會被當成殘留幀報出來，不會被混進去。</p>
+<p><strong>Placeholders</strong> 開著、<strong>Overwrite</strong> 關著（Output Properties &gt; Output）時，中斷再續渲會留下 0 byte 的檔，續渲時會跳過那些幀。執行跨幀穩定會停下並點名它們：把 0 byte 的檔刪掉（素材資料夾和你的 Output 資料夾都要），再把那幾幀重渲。動畫的話，關掉 Placeholders、或打開 Overwrite 會比較省事。</p>
+<h3 id="補渲幾幀">補渲幾幀</h3>
+<p>跨幀穩定跑完了，結果有幾幀要重渲——或有幾幀缺了？不用整段重渲。</p>
+<ol><li>修好場景。幀範圍維持按準備時的範圍，Frame Step 留在 1。</li><li>按<strong>準備（保留已算好的幀）</strong>（在準備動畫素材輸出下方；素材資料夾裡有這個場景、同一段幀範圍的準備紀錄時才會出現）。狀態列會說保留了幾幀、還缺哪幾幀。</li><li>只渲需要的幀：把 Frame Start／End 設成那幾幀，用 Render Animation 渲（單張 F12 不會寫出帶幀號的素材）。重渲的幀會取代舊檔。渲完把幀範圍改回來。</li><li>按<strong>執行跨幀穩定</strong>。所有檢查照做——0 byte、尺寸不同、壞掉的檔一樣會擋下。</li></ol>
+<p>保留下來的幀<strong>不會</strong>檢查是否過期。渲完之後改過場景、燈光、材質或渲染設定的話，請用一般的準備動畫素材輸出，整段重渲。幀範圍不同、Frame Step 不是 1、或資料夾是別的場景準備的，這顆按鈕會拒絕並說明原因。另外兩件事：一般的準備按完、還沒開始渲之前，這顆按鈕就會出現——這時按下去會把舊幀全部保留，確定它們還能用才按；不同資料夾裡同檔名的 .blend 會被當成同一個檔，共用同一個素材資料夾時可以互相補渲。</p>
+<hr>
+<h2 id="10-常見問題">10. 常見問題</h2>
+<p><strong>合成變得好慢。</strong> 這棵樹裡有很多降噪節點。先確認合成器跑在 GPU 上（健康檢查會報）。「先清乾淨引導圖」預設關；如果你為了很暗、噪點很多的鏡頭把它打開，會多兩顆降噪節點。</p>
+<p><strong>準備動畫素材輸出按不下去，說要我關動態模糊。</strong> 動態模糊開著的時候 Cycles 不輸出 Vector pass，而跨幀那一段的對齊完全靠它。你不會少掉任何東西：模糊最後由 Vector Blur 補回來，快門值直接用場景自己的設定。</p>
+<p><strong>動畫成品頭尾少了幾幀。</strong> 故意的。頭尾那幾幀有一邊沒有鄰居，沒有東西可以拿來穩定它們。兩端各多渲幾幀當緩衝就好。</p>
+<p><strong>穩定後會動的東西拖著殘影。</strong> 把夾擠寬容度調低、或半徑縮小、或深度容許差調低。有殘影就代表鄰幀被信任得超過它應得的程度。在背景前移動的物體輪廓上出現一列細細的點（快速推軌或橫移）是另一回事：跨幀穩定在鎖定機位或慢速鏡頭效果最好，上面這些設定修不掉它。那一段改用逐幀的結果（見「已知限制」）。</p>
+<p><strong>可以用 EEVEE 嗎？</strong> 不行。這條管線吃的是只有 Cycles 才生得出來的 per-pass 與 denoising 資料。</p>
+<p><strong>我建完樹之後才加 Glare，重建會不會弄丟？</strong> 不會。建立管線會把你整條濾鏡鏈走完，然後把自己插在最前頭；鏈尾如果沒接到 Group Output，它會幫你接上（移除時這條線會留著）。吃算圖原圖的平行分支——例如把 Glare 疊回原圖的那種——也會一併改吃降噪後的圖，不會有哪條分支偷偷把有雜訊的原圖帶回來。</p>
+<p><strong>Transparent Film 有什麼要注意的？</strong> 它開著的時候「包含環境背景」會自動跳過，面板上會寫。不然 HDRI 會從透明的地方漏回來。建完之後才改 Transparent Film，要按一次重建——面板會提醒你。跨幀那一段會把透明通道一路保留到成品。</p>
+<p><strong>一個 .blend 裡有好幾個 scene？</strong> 每個場景都有自己的節點群組——用 Full Copy 或 Linked Copy 複製出來的場景，第一次在那裡動滑桿時也會拿到自己的一份。但兩個場景如果指向「同一棵」合成樹，樹裡的東西（包括 FQP）就是共用的。遇到這種情況，建立管線和健康檢查都會告訴你；想讓兩邊各自設定，請給其中一個場景一棵自己的合成樹（Compositor 標題列的節點樹選單），再在那裡按建立管線。想讓副本回到共用，Undo 也會把分家一起復原。</p>
+<p><strong>有好幾個 view layer？</strong> 建立管線會用「接到最終輸出」的那顆 Render Layers 節點，並讓它讀你目前所在的 view layer（那一層不會被渲染的話，改讀第一個會渲染的）。按移除會切回來。</p>
+<p><strong>Render Layers 讀的是別的場景，或一個合成裡有好幾個 layer？</strong> FQP 只處理「按建立管線的那個場景」。Render Layers 節點讀別的場景（跨場景合成）不支援：請在實際渲染的場景裡建立管線，再到合成用的場景疊它的結果。每個場景只會對一個 view layer 降噪；要合成多個 layer，請讓每個 layer 各自用一個場景。</p>
+<p><strong>滑桿可以做動畫嗎？</strong> 不行。FQP 的滑桿與各項設定都不能做動畫：它們的值存在合成節點裡，或在你按按鈕時才讀取，算圖時不會重讀。右鍵不會出現 Insert Keyframe；想在鏡頭中途換樣子，請分段算。舊檔若在這些設定上留有 keyframe，不會生效，健康檢查會列出來。到 Dope Sheet 或 Graph Editor 把它們刪掉，再把那幾個設定各動一次，面板和節點才會一致。</p>
+<p><strong>Shadow Catcher 呢？</strong> Shadow Catcher 必須搭配透明背景。背景不透明時，FQP 是用光 pass 重組畫面，接住的影子會消失；請打開 Film &gt; Transparent，再疊到你的背景底片上。遇到這種情況，建立管線和健康檢查都會跳警告。</p>
+<p><strong>我的 Group Output 有好幾個輸入。</strong> Blender 算圖只用作用中那顆 Group Output 的第一個輸入，所以 FQP 也只接、只讀第一個。</p>
+<p><strong>重按準備之後，執行跨幀穩定把我所有的幀都當成殘留幀。</strong> 準備代表開始新的一輪，在它之前渲的幀就算殘留。那些幀如果還能用，請改按 <strong>準備（保留已算好的幀）</strong>，只補渲缺的——見<a href="#補渲幾幀">補渲幾幀</a>。</p>
+<p><strong>把反彈調高，要多花多少算圖時間？</strong> 光線路徑報告會給一個從 25% 小測試圖反推的粗略級距（讀法見<a href="#光線路徑分析器">光線路徑分析器</a>）；正式算圖的時間它沒有量。下面是另外在幾個場景量到的數字，不是保證（RTX 4090）。表面的反彈（Diffuse／Glossy／Transmission／Transparent），量到的增加幅度如下：把反彈全部開到最高、對 Blender 出廠值比，廚房場景最多慢約 9–11%（兩份量測的最大值是 +11.3% 與 +9.07%），樹葉場景最多約 6%（+5.6%）。體積的反彈影響很大：一朵雲的場景（640×960、256 samples），Volume 0／16／32／64 分別是 30／183／216／215 秒。</p>
+<p><strong>雲或煙的 Volume 反彈要設多少？</strong> 讓分析器量。Blender 的出廠值是 0。量到的例子（只代表這一個場景）：一朵雲的場景原本設 32，Strict 與 Visual 的值都是 48——32 那一階對參考圖的色差 dE p99 是 4.075，48 那一階是 0.033（門檻 0.360）。濃密的雲可能算很久，另見<a href="#6-健康檢查">健康檢查</a>的體積提示。</p>
+<p><strong>有透明貼圖的樹葉，Transparent 要設多少？</strong> 讓分析器量。Blender 的出廠值是 8。量到的例子（只代表這一個場景）：一個樹葉場景，Diffuse／Glossy／Transmission 的 Visual 值是 1／1／2（Strict 3／2／4），Transparent 是 16（Strict 24）——這條光路需要的值比其他幾項高很多。</p>
+<p><strong>改壞了想回去？</strong> 按移除就會還原你原本的合成器接線，以及它打開過的 passes，並把建立時改過的其他東西（它新建的樹、補上的節點、Compositing 與合成器裝置）改回來；移除動畫輸出節點對跨幀那顆節點做一樣的事。除了合成器、render passes、Light Paths 和採樣設定以外，它什麼都不碰；而後面那兩項也只有在你按下明講會改它們的按鈕時才會變——那些按鈕都會先問你一聲。</p>
+<hr>
+<h2 id="11-各平台行為差異">11. 各平台行為差異</h2>
+<p>Windows 會為每個背景工作開一個真正的主控台視窗。macOS 用 <code>osascript</code> 請 Terminal.app 開。Linux 依序找 <code>x-terminal-emulator</code>、<code>gnome-terminal</code>、<code>konsole</code>、<code>xterm</code>，用第一個找得到的。</p>
+<p>開不了終端機時——機器上沒裝，或 macOS 不允許 Blender 控制 Terminal——工作照跑：它會脫離父行程到背景執行，輸出寫進 .blend 旁邊的 log 檔（分析器寫 <code>&lt;報告&gt;.log</code>，背景算圖寫帶時間戳的 <code>fqp_&lt;工作&gt;_&lt;時間&gt;.log</code>）。警告訊息會把路徑講出來，用文字編輯器開，或 <code>tail -f</code> 它。</p>
+<p>測試狀態：</p>
+<ul><li><strong>Windows</strong>——真機測試過；平常實際拿來幹活的就是這個平台。</li><li><strong>macOS</strong>——作者已在真機測試過（MacBook Pro M1，2026-10-07），沒有發現問題。</li><li><strong>Linux</strong>——有測試套件涵蓋，尚未在真機上測過。</li></ul>
+<hr>
+<h2 id="12-已知限制">12. 已知限制</h2>
+<ul><li><strong>只支援 Cycles。</strong> 這不是偏好，是相依。</li><li><strong>跨幀那一段需要連續幀。</strong> Frame Step 大於 1 產生的序列它用不了，而且它會直接說，不會自己亂猜。</li><li><strong>跨幀穩定在鎖定機位或慢速鏡頭效果最好。</strong> 快速推軌或橫移時，在背景前移動的物體輪廓可能比不開跨幀穩定稍差，有時是一列細細的點：深度檢查是逐像素的，而反鋸齒的輪廓像素一部分是物體、一部分是背景。整段開渲前先檢查會動的輪廓；輪廓比閃爍更要緊的那一段，改用逐幀的結果（素材資料夾裡的 <code>beauty####.exr</code>）。</li><li><strong>物體自轉、燈光不動的鏡頭，跨幀穩定可能比逐幀降噪差。</strong> 例如轉台上的產品。這是另一個研究（跨幀降噪）量到的，條件照抄：扭蛋機場景，相機固定，機台每幀自轉 7°，燈光固定；16 samples、adaptive 關、animated seed 開、960×480、32 幀，評估第 4–29 幀；參考圖每幀 2×2048 samples。量到的數字（越小越好；tonemap 空間 ×1000），前者是 Cycles 內建 OIDN 逐幀、後者是 FQP 1.2.9 加執行跨幀穩定：逐像素時間誤差（閃爍）全圖 2.03 對 2.75；邊緣區時間誤差 21.3 對 29.5；對參考圖的誤差（tm-RMSE）全圖 5.72 對 7.97。這是單一場景、16 samples 的量測，不是普遍結論。同一批測試裡，室內的快速橫搖與推軌鏡頭上，執行跨幀穩定是贏逐幀的：全圖的時間誤差，同樣逐幀在前、跨幀穩定在後，橫搖鏡頭 19.62 對 17.71，推軌鏡頭 15.73 對 14.79。這類鏡頭整段開渲前，先拿幾幀，把跨幀穩定的結果與不做跨幀穩定的結果並排比過再決定。上面的數字比的是 Cycles 內建降噪的逐幀結果，不是 FQP 自己的逐幀結果。</li><li><strong>兩支分析器要先花一點時間。</strong> 同一鏡頭分析一次即可一直沿用，所以在一整段序列、或一個會反覆重渲的場景上最划得來。</li><li><strong>採樣分析器量的是代理。</strong> 它用 Cycles 內建的降噪器代替這條管線的 per-pass 降噪，兩者的偏差方向不固定。分析時不渲動態模糊，攝影機開景深時會自動再收緊一檔（自訂鏡頭例如 OSL 鏡頭外掛的景深無法判斷，請自行評估）；景深、動態模糊或毛髮較重的場景，可能要比報告再收緊一檔——整段序列開渲前先檢查一幀。</li><li><strong>光線路徑分析器只量一個鏡頭的一幀；採樣分析器在預設的「目前這一幀」也一樣。</strong> 動畫裡反射和打光會變，換鏡頭的時候多留一階的餘裕很便宜；或把「分析幀數」改成「首中尾三幀」，看幀範圍的首、中、尾三幀（亮段很短、落在三幀之間時仍可能漏掉）。</li><li><strong>Visual 只以一位觀察者、靜態圖校準。</strong> 動畫裡逐幀之間的變化沒有量；其他觀察者、並排或單張觀看也沒有量。</li><li><strong>暗場景的 Strict 可能差一兩格。</strong> Strict 的誤差是除以整張圖的平均亮度算的，畫面很暗時，一個像素就可能決定結果。量到的例子：一個暗巷場景（貼圖限制 1K），只換 seed（算圖用的亂數起點；分析固定用 seed 0），Diffuse 第一個低於門檻的階在 seed 0／1／2 分別是 12／8／6，差異來自單一個像素。另一個例子：同一份程式重跑暗版的廚房場景，Glossy 梯頂那一階的 tm.RMSE 有一次差了 8.4e-4（門檻 0.002 的 42%），判定沒有變。1.3 沒有改 Strict 的量法。這一條說的是同一個 Blender 版本重跑；換了版本不在此限，見下面「換 Blender 版本」那一條——那裡有一個暗場景，兩個版本連 Strict 的結論都不同。</li><li><strong>Visual 的數字每次重跑有小幅浮動。</strong> 分析時的降噪用 GPU。量到的：暗版廚房場景的酒瓶鏡位，同一組設定（Diffuse 8／Glossy 64／Transmission 12／Transparent 4）的整組驗證跑了兩次，dE p99 是 0.2970 與 0.2866，相差約 0.01（門檻 0.360，兩次都通過）。GPU 降噪對 CPU 降噪，在靠近門檻的整組回合相差 0.0001–0.0044，那幾組對照的判定沒有因此不同。</li><li><strong>換 Blender 版本，結果可能不同：多半是差一階，暗的場景可能連 Strict 的結論都不同。</strong> 下面是八個場景設定在 Blender 5.1.2 與 5.2.1 各跑一次的結果，不是保證。<ul><li>樹葉、一朵雲、扭蛋機：兩個版本的判定與建議值都相同。暗版廚房的酒瓶鏡位：判定與套用的值兩版相同。</li><li>廚房、暗巷：有通道差一階。廚房酒瓶鏡位的 Transparent 是 4（5.1.2）對 8（5.2.1）。廚房的另一個鏡位（全景），Diffuse 膝點（Strict）是 24 對 16，Visual 值有三個通道各低一階（Diffuse 12 對 8、Transmission 12 對 8、Transparent 8 對 4）。暗巷的 Diffuse 是 8（5.1.2）對 12（5.2.1）。</li><li>暗版廚房的全景鏡位：5.1.2 的 Glossy 只在梯頂一階達標（算收斂，未確認），Strict 聯合驗證升一階後通過；5.2.1 把同一個通道判為未收斂，Strict 聯合驗證升階後仍沒過、升階不採用。套用 Strict 會寫入的值因此不同（Diffuse／Glossy／Transmission／Transparent：32／64／24／8 對 24／64／16／4）。在這個場景，兩個版本的 Visual 值相同（8／64／6／4）。</li></ul><p>這與上面「暗場景的 Strict」那一條是同一類現象（原因沒有另外量）。所以在一個版本看到「未收斂」加上「Strict 聯合驗證沒過」、另一個版本卻沒有，是已知的行為，不是工具壞了：報告對沒把握的通道不會調到比你的設定低，要手動調高哪幾項列在報告最後一段（見<a href="#光線路徑分析器">光線路徑分析器</a>的「Strict 聯合驗證沒過時」）。建議：換了 Blender 版本就重新分析，不要沿用另一個版本的報告。</p></li><li><strong>貼圖限制 1K 的依據只有三個場景。</strong> 扭蛋機、廚房、樹葉三個場景，在不限制／2048／1024／512 四種設定下判定全部相同。受益的是顯示卡記憶體裝不下的場景：一個 2.5 GB 的暗巷場景，整個分析在 1.2.9 是 1273 秒，1.3 開發期間量到 239 秒與 181 秒（RTX 4090）。本來就裝得下的場景不會因此變快；1K 限制下仍然裝不下的場景，目前沒有答案。</li><li><strong>顯示卡記憶體溢出時，分析仍會跑，但變慢。</strong> 量到的例子：同一個暗巷場景不限制貼圖時每張測試圖 16–26 秒，限制 1K 時每張 3.8–4.0 秒。1.3 沒有另外處理溢出的情況。</li><li><strong>分析要多久，下面是量到的數字，不是保證</strong>（RTX 4090）：樹葉場景約 10 秒、廚房約 85 秒、暗巷（2.5 GB）約 181 秒、一朵雲約 400 秒。主控台印的預估時間是粗估，最後一次預估對實際秒數：樹葉 9.7 對 10.1、廚房 83 對 85、暗巷 180 對 181、雲 339 對 400（低 15%）。</li><li><strong>乾淨啟動關著時，光線路徑分析有停住的風險</strong>——見<a href="#乾淨啟動">乾淨啟動</a>。</li><li><strong>面板很窄時，兩顆套用按鈕的字會被縮短。</strong> Blender 會把按鈕文字縮成「套用 Stric...」（英文介面是「Apply Str...」），括號裡的數字就看不到了。量到的：Properties 編輯器寬 339 px 時文字完整，寬 225 px 時被縮短。把 Properties 編輯器拉寬，或把滑鼠停在按鈕上看 tooltip。</li><li><strong>彈出視窗裡過長的行會自動折成多行，但仍有折不到的情況。</strong> 健康檢查、光線路徑的「看報告」、「看採樣報告」這三個彈出視窗都一樣：過長的行折成多行，續行比原行多往內縮一點；系統主控台與報告檔的內容保持原樣、不折。仍然成立的限制：視窗很窄、或介面縮放（Resolution Scale）很大時，行尾仍可能被切掉；彈出視窗比 Blender 視窗還高時，Blender 會顯示捲動箭頭。完整內容永遠在系統主控台（Window &gt; Toggle System Console）；兩支分析器的報告另有報告檔。</li><li><strong>背景工作讀的是磁碟上的檔案。</strong> 你還沒存的修改它們看不到，這也是為什麼檔案是髒的時候它們會拒絕啟動。</li><li><strong>一個場景、一個 view layer。</strong> 不支援跨場景合成，每個場景也只會對一個 view layer 降噪——見<a href="#10-常見問題">常見問題</a>。</li><li><strong>Shadow Catcher 必須搭配透明背景。</strong> 背景不透明時，接住的影子會消失。</li><li><strong>設定不能做動畫。</strong> 鏡頭中途要換樣子，請分段算。</li><li><strong>執行跨幀穩定的檔案檢查有極限。</strong> 大小正常但內容壞掉的 pass 檔、或只被截掉一點點的檔，抓不到。多 part 的 EXR——Blender 5.1 寫出的 multilayer EXR 就是——會跳過解析度檢查並跳警告。FQP 自己寫的檔是單層的，一定會被檢查。</li><li><strong>保留下來的幀是被信任的。</strong> 準備（保留已算好的幀）不會檢查保留的幀是否過期。</li><li><strong>全黑檢查看的是算圖結果本身。</strong> Color Management 的 view Exposure 沒有算進去，所以只靠很大的 view Exposure 撐亮的場景會被當成全黑拒絕——請改用燈光或 Film exposure 調亮。參考圖採樣數極低（1，只有自己手寫分析器參數時才可能；面板一律用 2048）時，全黑場景可能不會被拒絕。</li></ul>
+<hr>
+<h2 id="13-疑難排解">13. 疑難排解</h2>
+<div class="table-wrap"><table><thead><tr><th>症狀</th><th>可能原因</th><th>怎麼做</th></tr></thead><tbody><tr><td>面板沒出現</td><td>外掛沒打勾、Blender 版本低於 5.1、或裝了兩份</td><td>看 Edit &gt; Preferences &gt; Add-ons。面板在 Properties &gt; <strong>Render</strong> 的最上方。清單裡出現兩份就移除其中一份。</td></tr><tr><td>霧、煙、光束在成品裡不見了</td><td>建立之後 Volume passes 被關掉了——預設集、別的外掛、或換了 view layer</td><td>按 <strong>重建管線</strong>，它會把 passes 打開回來。</td></tr><tr><td>建立後畫面有部分是黑的</td><td>Render Layers 節點讀的那一層 view layer 沒開 passes</td><td>看建立時跳的警告；切到你實際要渲的 view layer 再重建。</td></tr><tr><td>分析視窗不見了、或好像什麼都沒發生</td><td>工作當掉或被關掉；狀態行會顯示<strong>失敗</strong></td><td>打開 .blend 旁邊的 <code>&lt;blend&gt;.fqp_*_report.log</code>。看不懂就在 Superhive 的商品頁傳訊息給我，或寄 email 到 jerrythepopper@gmail.com（要附什麼見下方<a href="#回報問題時附什麼">回報問題時附什麼</a>）。</td></tr><tr><td>套用被拒：報告屬於別的檔案或場景</td><td>.blend 旁邊那份報告是別的 .blend 或別的場景做的</td><td>對這個檔案、這個場景重新按一次分析。</td></tr><tr><td>穩定後會動的東西拖著殘影</td><td>鄰幀被信任得太多</td><td>調低 <strong>夾擠寬容度</strong>。還不夠就縮小半徑，或調低深度容許差。</td></tr><tr><td>在背景前移動的輪廓上有一列細細的點（快速推軌或橫移）</td><td>跨幀穩定在移動輪廓上的已知限制；它在鎖定機位或慢速鏡頭效果最好</td><td>調設定去不掉。那一段改用逐幀的結果，或只在鎖定機位的段落用跨幀穩定。</td></tr><tr><td>「找不到幀」，或找不到成品</td><td>用預設資料夾時，所有東西都在 <code>&lt;blend&gt;_&lt;scene&gt;</code> 子資料夾裡</td><td>到 <code>//fqp_frames/&lt;blend&gt;_&lt;scene&gt;/</code> 和 <code>//fqp_final/&lt;blend&gt;_&lt;scene&gt;/</code> 裡找。面板上有寫子資料夾名。</td></tr><tr><td>執行跨幀穩定回報有殘留幀</td><td>資料夾裡還有上一輪渲的幀</td><td>清空資料夾，或重按準備動畫素材輸出再重渲。那些幀還能用、只有幾幀要重渲的話，改用<strong>準備（保留已算好的幀）</strong>（見<a href="#補渲幾幀">補渲幾幀</a>）。</td></tr><tr><td>執行跨幀穩定停下：解析度改變、0 byte 或檔案壞掉</td><td>序列有一段用別的尺寸渲、渲到一半被中斷、或續渲跳過了 placeholder 幀</td><td>刪掉它點名的檔（0 byte 的檔在你的 Output 資料夾也要刪），用同樣的解析度把那幾幀重渲，再執行跨幀穩定。</td></tr><tr><td>準備動畫素材輸出：資料夾寫不進去</td><td>外接碟或網路磁碟沒接上、路徑超過 260 個字元、或資料夾唯讀</td><td>接上磁碟，或改用短一點的路徑、你有寫入權限的資料夾，再按一次準備。</td></tr><tr><td>切離 Cycles 之後 F12 變黑或不對</td><td>這條管線只在 Cycles 生效</td><td>切回 Cycles，或切換引擎前先按<strong>移除</strong>。</td></tr><tr><td>分析器拒絕：參考圖幾乎整片黑</td><td>沒有光照到鏡頭：燈關了、不渲染或被排除，曝光或 world 強度太低——少數情況是 GPU 出錯</td><td>先查燈光和曝光，再查 GPU。調亮請用燈光或 Film exposure，不要用 view Exposure。</td></tr><tr><td>macOS：按分析沒有開出 Terminal</td><td>macOS 還沒允許 Blender 控制 Terminal</td><td>macOS 跳出詢問時按允許，或到 System Settings &gt; Privacy &amp; Security &gt; Automation 打開。在那之前工作會改在背景跑，警告訊息會寫出 log 檔的位置。</td></tr><tr><td>背景工作報錯，或渲出來跟 F12 不一樣</td><td>場景需要第三方外掛，而<strong>乾淨啟動</strong>開著</td><td>到外掛偏好設定把乾淨啟動關掉，再跑一次。</td></tr></tbody></table></div>
+<h3 id="回報問題時附什麼">回報問題時附什麼</h3>
+<p>在 Superhive 的商品頁傳訊息給我，或寄 email 到 jerrythepopper@gmail.com。請附這三樣：</p>
+<ol><li><strong>Blender 版本</strong>——Help &gt; About，或開場畫面上就有。</li><li><strong>健康檢查的輸出</strong>——按一次健康檢查，把系統主控台裡那幾行複製下來（Windows 是 Window &gt; Toggle System Console）。</li><li><strong><code>.log</code> 檔</strong>——分析器的是 <code>&lt;blend&gt;.fqp_*_report.log</code>，背景算圖的是 <code>fqp_&lt;工作&gt;_&lt;時間&gt;.log</code>。</li></ol>
+<p>log 和報告裡有檔案路徑，路徑裡通常有你的使用者名稱。寄出去之前先看一眼。</p>
+<hr>
+<h2 id="14-與其他降噪外掛共存">14. 與其他降噪外掛共存</h2>
+<p>同時開著兩套合成器降噪，效果會疊加：畫面被降噪兩次，細節被抹掉。一個場景挑一套就好。</p>
+<p>這個外掛只在你按建立管線（或移除）的時候改合成器。它不會在背景跑任何東西，開檔時也不會碰合成器。如果你建好之後，別的外掛又重建了合成器，健康檢查第 9 項會告訴你，再按一次建立管線就會把它插回最前面。</p>
+<p>建立管線不會去找你自己鏈上原本就有的 Denoise 節點。如果有，請自己把它 mute 或刪掉。</p>
+<hr>
+<h2 id="15-解除安裝">15. 解除安裝</h2>
+<ol><li>在每個建過管線的場景按 <strong>移除</strong>（用過跨幀流程的話，也按 <strong>移除動畫輸出節點</strong>），然後存檔。</li><li>Edit &gt; Preferences &gt; Add-ons（或 Get Extensions），把它的勾拿掉。</li><li>展開它那一列，移除／解除安裝。</li></ol>
+<p>沒清理過的檔案也沒關係。管線本身就是一般的 Blender 合成節點，所以那種檔案沒有這個外掛也照樣能開、照樣能渲——只是滑桿不再是即時的。建過的 <code>FQP_Temporal</code> 輔助場景會留在檔案裡，不要的話從場景選單刪掉就好。</p>
+  </main>
+</div>
+
+<footer class="page-footer">
+  Final Quality Pipeline &middot; 由 MANUAL_ZH.md 產生
+</footer>
+<script>
+(function () {
+  var btn = document.getElementById('jtpThemeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var root = document.documentElement;
+    var current = root.getAttribute('data-theme');
+    if (current !== 'dark' && current !== 'light') {
+      current = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    var next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('jtpTheme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>

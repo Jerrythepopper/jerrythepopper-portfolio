@@ -17,3 +17,6 @@ backups/
 
 # 真機除錯信標（preview-server.js 的 POST /debug-log 落地檔，只在本機/區網測試時產生）
 _review-uiux-*/phone-debug.log
+
+# FQP 商品頁原型＝工作區（含備份與 35 MB 沒用到的圖），不進版控；上線的來源是 static/3daddon/fqp/
+_proto-fqp/

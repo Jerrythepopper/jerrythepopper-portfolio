@@ -22,6 +22,7 @@
 | D15 | Work 磚 13 案例代表圖 | **已裁（08-08）：不抓 IG（登入牆/限流/畫質劣化三重坑）,改本機原檔**——每案例挑一張丟 `originals\work\`,動畫案例挑劇照;僅存在 IG 者本人手動存檔 | ✅已裁,等回家供圖 |
 | D13 | 產線升級「高畫質快載」 | **已裁（08-08）：做**。AVIF+WebP 雙格式×800/1600/2560 三尺寸＋燈箱載 2560＋blur-up;原檔永不上網 | ✅已裁→S11 |
 | D14 | 燈箱放大看細節 | **已裁（08-08）：做**。①標配縮放（點擊放大/平移/雙指,上限 2560）＝全站 ②Deep Zoom（sharp 切片＋OpenSeadragon 內嵌）＝**限哈蘇系列**,放一億畫素超大檔——本人已知悉磚塊可被拼回,明言「本來就有心都抓得下來」接受 | ✅已裁→S11 |
+| D29 | `3daddon/fqp` 上線（FQP 手冊＋商品頁,10-08） | 來源在 `static\3daddon\fqp\`（手冊 `index.html`／`zh.html`／`img\`＋商品頁 `product\`,共 88 檔 10.8 MB）;`build-site.js` 已會把 `static\` 原樣複製進 `dist\`（不進 sitemap／llms.txt）;`dist\3daddon\` 已建出但**尚未 commit／push**;等 Jerry 檢查後由主審推;Cloudflare 對 `/3daddon/fqp/product/` 開放 Superhive 嵌入的規則待 Jerry 設定（規則住 Cloudflare 不在 repo,同 S46） | 待 Jerry 檢查→主審推 |
 
 ## 待解決
 

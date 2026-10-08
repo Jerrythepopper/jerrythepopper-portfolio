@@ -1496,6 +1496,36 @@ async function build() {
     console.warn('! 找不到 video\\ —— hero 影片不會進 dist，首頁會停在海報靜圖');
   }
 
+  /* static\ 整棵原樣複製（W3d-1a 2026-10-08）：不經模板的獨立頁面住這裡，路徑照搬
+     （static\3daddon\fqp\… → dist\3daddon\fqp\…＝FQP 手冊與商品頁）。
+     這些頁面不進 sitemap.xml／llms.txt，也不參與字型子集與 ?v= 指紋。
+     不可覆蓋 dist 既有的任何檔：先整批查衝突，有就中止；複製再用 COPYFILE_EXCL 保一層。
+     static\ 不存在就整段跳過，build 不失敗。 */
+  let staticBytes = 0, staticFiles = 0;
+  const staticDir = path.join(ROOT, 'static');
+  if (fs.existsSync(staticDir)) {
+    const staticList = [];
+    const collect = (dir) => {
+      for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, f.name);
+        if (f.isDirectory()) collect(p);
+        else staticList.push(p);
+      }
+    };
+    collect(staticDir);
+    const clash = staticList.filter((p) => fs.existsSync(path.join(DIST, path.relative(staticDir, p))));
+    if (clash.length) {
+      throw new Error('static\\ 與 dist 既有檔案衝突，中止（不覆蓋）：\n  '
+        + clash.map((p) => path.relative(ROOT, p).replace(/\\/g, '/')).join('\n  '));
+    }
+    for (const p of staticList) {
+      const out = path.join(DIST, path.relative(staticDir, p));
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      fs.copyFileSync(p, out, fs.constants.COPYFILE_EXCL);
+      staticBytes += fs.statSync(out).size; staticFiles++;
+    }
+  }
+
   // 報告
   console.log('dist 產出：');
   let total = 0;
@@ -1508,6 +1538,7 @@ async function build() {
   console.log(`  ${String((photoBytes / 1024).toFixed(1)).padStart(8)} KB  photos/ (${nPhotos} 檔，含 dz 切片)`);
   if (vendorFiles) console.log(`  ${String((vendorBytes / 1024).toFixed(1)).padStart(8)} KB  vendor/ (${vendorFiles} 檔，按需載入不計首屏)`);
   if (videoFiles) console.log(`  ${String((videoBytes / 1024).toFixed(1)).padStart(8)} KB  video/ (${videoFiles} 檔，hero 影片，load 之後才拉不計首屏)`);
+  if (staticFiles) console.log(`  ${String((staticBytes / 1024).toFixed(1)).padStart(8)} KB  static/ (${staticFiles} 檔，原樣複製；獨立頁面，不進 sitemap／llms.txt)`);
   console.log(`合計（不含照片）${total.toFixed(1)} KB；含照片 ${((total * 1024 + photoBytes) / 1048576).toFixed(1)} MB`);
   console.log(`SITE_ORIGIN = ${SITE_ORIGIN}`);
 }
