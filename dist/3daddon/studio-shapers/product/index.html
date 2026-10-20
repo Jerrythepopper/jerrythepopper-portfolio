@@ -12,7 +12,7 @@
 <meta name="description" content="Real studio light gear for Cycles: softboxes, grids, snoots, barn doors, umbrellas, flags and scrims built as real meshes.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="assets/ss.css">
 <script src="assets/manifest.js" defer></script>
 <script src="assets/ss.js" defer></script>
@@ -31,7 +31,7 @@
 
 <main>
 
-<header class="hero">
+<header class="hero" id="hero">
   <div class="wrap">
     <div class="head">
       <p class="eyebrow"><span class="n">00</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Studio Shapers</span></p>
@@ -52,17 +52,38 @@
     </ul>
     <div class="prose opening">
       <p>Nobody needs another lighting setup. I made one anyway, and it’s made of gear: a softbox has a box, a grid has walls, a snoot is a tube, a flag is a board. Cycles traces the light through all of it, so the gear blocks, bounces and shapes light the way the real thing does.</p>
-      <p>You set brightness in stops (<span class="num">1</span> stop = double the light), tint lights with gels, and start from one of <span class="num">14</span> setups with names you can look up, like Rembrandt. Cycles only, Blender <span class="num">5.1</span> and newer.</p>
+      <p>You set <strong>brightness in stops</strong> (<span class="num">1</span> stop = double the light), tint lights with gels, and start from one of <span class="num">14</span> setups with names you can look up, like Rembrandt. Cycles only, Blender <span class="num">5.1</span> and newer.</p>
     </div>
   </div>
 </header>
+
+<nav class="chapters" id="chapters" aria-label="Chapters">
+  <div class="wrap">
+    <p class="chapters-title" aria-hidden="true">Chapters</p>
+    <ol class="chapters-list">
+      <li><a href="#types" data-jump><span class="n">01</span><span class="nm">Light Types</span></a></li>
+      <li><a href="#topmap" data-jump><span class="n">02</span><span class="nm">Top Map</span></a></li>
+      <li><a href="#gear" data-jump><span class="n">03</span><span class="nm">Gear</span></a></li>
+      <li><a href="#setups" data-jump><span class="n">04</span><span class="nm">Setups</span></a></li>
+      <li><a href="#shell" data-jump><span class="n">05</span><span class="nm">Shell</span></a></li>
+      <li><a href="#floor" data-jump><span class="n">06</span><span class="nm">Floor</span></a></li>
+      <li><a href="#group" data-jump><span class="n">07</span><span class="nm">Group</span></a></li>
+      <li><a href="#stops" data-jump><span class="n">08</span><span class="nm">Brightness</span></a></li>
+      <li><a href="#color" data-jump><span class="n">09</span><span class="nm">Color</span></a></li>
+      <li><a href="#roles" data-jump><span class="n">10</span><span class="nm">Roles</span></a></li>
+      <li><a href="#vis" data-jump><span class="n">11</span><span class="nm">Visible</span></a></li>
+      <li><a href="#fine" data-jump><span class="n">12</span><span class="nm">Fine print</span></a></li>
+    </ol>
+  </div>
+</nav>
 
 <section class="block" id="types" aria-labelledby="h-types">
   <div class="wrap">
     <div class="head">
       <p class="eyebrow"><span class="n">01</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>12 Light Types</span></p>
       <h2 id="h-types">Twelve kinds of gear, one head</h2>
-      <p class="lede">Here is the gear I was going on about: twelve types in three groups, as in Blender’s <b>Add Light</b> menu. Pick one to see the gear standing in the set and what the camera sees. The nine lights stand in the same place at the same power, seen by the same camera, so any difference comes from the gear alone. Light lost inside the gear isn’t made up for (an umbrella, for one, loses some in the bounce), so some types come out darker than others.</p>
+      <p class="lede">Here is the gear I was going on about: <strong>twelve types</strong> in three groups, as in Blender’s <b>Add Light</b> menu. Pick one to see the gear standing in the set and what the camera sees. Light lost inside the gear isn’t made up for (an umbrella, for one, loses some in the bounce), so some types come out darker than others.</p>
+      <p class="takeaway">The nine lights: same place, same power, same camera, so any difference comes from the gear alone.</p>
     </div>
     <figure class="gl" data-gearloop>
       <div class="frame gl-frame">
@@ -156,6 +177,7 @@
       <p class="nojs">The pictures here need JavaScript.</p>
     </div>
     <p class="caption"><span class="plain">Flag, Reflector and Diffusion Scrim give no light; their pictures come from Gear, below, with another camera.</span></p>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -164,7 +186,8 @@
     <div class="head">
       <p class="eyebrow"><span class="n">02</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Top Map</span></p>
       <h2 id="h-topmap">Move the light from above</h2>
-      <p class="lede">Click <b>Open Top Map</b> and a small map opens in the viewport: you look straight down at the subject, and the orange dot is your light. Drag the dot around the ring to move the light; its height stays put. Drag the bar on the right to raise or lower it; its spot on the map stays put. I got tired of orbiting the viewport to find my own lights.</p>
+      <p class="lede">Click <b>Open Top Map</b> and a small map opens in the viewport: you look <strong>straight down at the subject</strong>, and the orange dot is your light. I got tired of orbiting the viewport to find my own lights.</p>
+      <p class="takeaway">Drag the dot and the light circles the subject at the same height; drag the bar and only the height changes.</p>
     </div>
 
     <div class="tm" data-topmap>
@@ -217,8 +240,9 @@
     </figure>
 
     <div class="prose after-figures">
-      <p>In Blender, the white dot in the middle is the aim point, the small blue triangle at the bottom is the camera side, and <b>Back</b> is at the top. The bottom-left corner reads the light’s height and elevation, and other visible lights show as faint white dots. There, the mouse wheel over the map nudges the height by <span class="num">5</span> cm (<span class="num">1</span> cm with Shift). Each drag is one Undo step, and Esc cancels a drag.</p>
+      <p>In Blender, the white dot in the middle is the aim point, the small blue triangle at the bottom is the camera side, and <b>Back</b> is at the top. The bottom-left corner reads the light’s height and elevation, and other visible lights show as faint white dots. There, the mouse wheel over the map nudges the height by <span class="num">5</span> cm (<span class="num">1</span> cm with Shift). Each drag is <strong>one Undo step</strong>, and Esc cancels a drag.</p>
     </div>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -227,7 +251,8 @@
     <div class="head">
       <p class="eyebrow"><span class="n">03</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Gear</span></p>
       <h2 id="h-gear">Real gear, real shadows</h2>
-      <p class="lede">Six pieces of gear up close, each with one setting to drag. Grids, snoots and barn doors control light only by blocking it with geometry, and light the gear blocks is not added back. Change a size or a grid and the gear rebuilds on the spot; every value is live, and there is no Apply button for me to forget.</p>
+      <p class="lede">Six pieces of gear up close, each with one setting to drag. Grids, snoots and barn doors control light only by blocking it with geometry, and light the gear blocks is not added back.</p>
+      <p class="takeaway">Change a size or a grid and the gear rebuilds on the spot; every value is live, and there is no Apply button for me to forget.</p>
     </div>
 
     <div data-gear>
@@ -276,7 +301,7 @@
 
         <div class="gear-panel" data-gear-panel="flag" hidden>
           <h3>Flag</h3>
-          <p>Select a light, then add a <b>Flag</b>: it hangs beside the beam, its lower edge on the line from the top of the light’s lit face to the center of the subject, so it blocks spill going up without shading the subject. It goes wherever the light goes.</p>
+          <p>Select a light, then add a <b>Flag</b>: it hangs beside the beam, its lower edge on the line from the top of the light’s lit face to the center of the subject, so it blocks spill going up without shading the subject. It goes <strong>wherever the light goes</strong>.</p>
           <div class="gp" data-gp="flag">
             <figure class="gp-cell">
               <div class="frame gp-frame" data-gp-gear>
@@ -309,7 +334,7 @@
 
         <div class="gear-panel" data-gear-panel="scrim" hidden>
           <h3>Diffusion Scrim</h3>
-          <p>Select a light, then add a <b>Diffusion Scrim</b>: it hangs on the line from the light to the subject, facing the light, and softens the shadows it covers. Like the real cloth it costs light, and a button works out how much and brightens that one light to match.</p>
+          <p>Select a light, then add a <b>Diffusion Scrim</b>: it hangs on the line from the light to the subject, facing the light, and softens the shadows it covers. Like the real cloth it costs light, and a button works out how much and <strong>brightens that one light to match</strong>.</p>
           <div class="gp" data-gp="scrim">
             <figure class="gp-cell">
               <div class="frame gp-frame" data-gp-gear>
@@ -442,6 +467,7 @@
       </div>
     </div>
 
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -450,7 +476,8 @@
     <div class="head">
       <p class="eyebrow"><span class="n">04</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Lighting Setups</span></p>
       <h2 id="h-setups">14 setups you can look up</h2>
-      <p class="lede">Select your subject, open <b>Setups</b> and pick one. The lights are built around it and scaled to it, with the main light already chosen and the other lights set in stops against it.</p>
+      <p class="lede">Select your subject, open <b>Setups</b> and pick one.</p>
+      <p class="takeaway">One click builds the lights around your subject, scaled to it, with the main light chosen and the others set in stops against it.</p>
     </div>
     <div class="pick" data-pick>
       <div class="seg pick-seg" role="radiogroup" aria-label="Subject">
@@ -492,8 +519,8 @@
 
     <div class="prose after-figures">
       <p><b>Portrait:</b> Rembrandt, Loop, Butterfly, Clamshell, Split, Three-Point, Low-Key, High-Key. <b>Product:</b> Top Light, Dual Rim, Flat Lay, White Background, and two for glass, Bright Field and Dark Field, where the lit panel or the black flag is in the picture on purpose.</p>
-      <p>Angles and ratios come from common photography teaching material. Where the sources disagreed, I took a middle value. Distances are multiples of the subject’s size, so a subject four times bigger gets four times the distance and gear, <span class="num">16</span> times the power, and the same light on it.</p>
-      <p>The menu’s top line, <b>Main Light: Left</b>, picks the camera side for the main light, and <b>Swap Left and Right</b> flips the lights already built. Lights the subject already had are hidden, not deleted; <b>Show All</b> brings them back. Broad and short lighting have no setup of their own: apply Loop, then turn the head.</p>
+      <p>Angles and ratios come from common photography teaching material. Where the sources disagreed, I took a middle value. Distances are multiples of the subject’s size, so a subject four times bigger gets four times the distance and gear, <span class="num">16</span> times the power, and <strong>the same light on it</strong>.</p>
+      <p>The menu’s top line, <b>Main Light: Left</b>, picks the camera side for the main light, and <b>Swap Left and Right</b> flips the lights already built. Lights the subject already had are <strong>hidden, not deleted</strong>; <b>Show All</b> brings them back. Broad and short lighting have no setup of their own: apply Loop, then turn the head.</p>
     </div>
 
     <figure class="ui-shot mt">
@@ -505,6 +532,7 @@
       <h3>Save your own</h3>
       <p><b>Save as My Setup...</b> stores the visible lights on a subject as a small file, role lights included, and applies it to any other subject, scaled to fit. Angles are kept relative to the camera, so the main light comes back on the same side in another scene. Save twice under one name and you get <b>Name (2)</b>, not a lost setup.</p>
     </div>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -513,7 +541,8 @@
     <div class="head">
       <p class="eyebrow"><span class="n">05</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Let Other Lights Through</span></p>
       <h2 id="h-shell">A box casts a shadow. Unless you ask it not to.</h2>
-      <p class="lede">A softbox is a real box, so it casts a shadow when another light shines past it, just as it would in a studio. When a box stands between a light and the background, as the stripbox does in Three-Point, that shadow can show as a darker band on the background.</p>
+      <p class="lede">A softbox is a real box, so it casts a shadow when another light shines past it, just as it would in a studio. When a box stands between a light and the background, as the stripbox does in Three-Point, that shadow can show as <strong>a darker band on the background</strong>.</p>
+      <p class="takeaway">Tick Let Other Lights Through and the box stops blocking the other lights; its own light stays unchanged.</p>
     </div>
     <div class="bx-row">
       <button type="button" class="bx" aria-pressed="mixed" data-bx="S1"><span class="bx-box" aria-hidden="true"><svg viewBox="0 0 12 12"><path class="bx-check" d="M2.5 6.2 5 8.6 9.6 3.6"/><path class="bx-dash" d="M3 6h6"/></svg></span><span class="bx-label">Let Other Lights Through</span></button>
@@ -528,8 +557,9 @@
     </div>
     <p class="caption"><span class="plain">Three-Point. Tick the box, or drag the divider to compare.</span></p>
     <div class="prose after-figures">
-      <p><b>Let Other Lights Through</b> is the last line of <b>Brightness</b> on a Softbox, Stripbox or Octabox. Ticked, the box stops blocking the other lights, and its own light is unchanged: in my test renders it matched pixel for pixel. A <b>Honeycomb Grid</b> still blocks. It’s off by default, and the setups leave it off, because a box that blocks light is what real gear does.</p>
+      <p><b>Let Other Lights Through</b> is the last line of <b>Brightness</b> on a Softbox, Stripbox or Octabox. Ticked, the box stops blocking the other lights, and its own light is unchanged: in my test renders it <strong>matched pixel for pixel</strong>. A <b>Honeycomb Grid</b> still blocks. It’s off by default, and the setups leave it off, because a box that blocks light is what real gear does.</p>
     </div>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -538,7 +568,8 @@
     <div class="head">
       <p class="eyebrow"><span class="n">06</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Keep Gear Above Floor</span></p>
       <h2 id="h-floor">Gear that stays out of the floor</h2>
-      <p class="lede">The setups are written for a subject with room below it. Put one right on the floor and a low or far light can end up partly under it. <b>Keep Gear Above Floor</b> (on by default) turns such a light up, only in elevation and around its own aim point, until it clears the floor by <span class="num">1</span> cm, at most <span class="num">20°</span> higher than the setup said (a background light may go up to <span class="num">50°</span>).</p>
+      <p class="lede">The setups are written for a subject with room below it. Put one right on the floor and a low or far light can end up partly under it. <b>Keep Gear Above Floor</b> (on by default) turns such a light up, <strong>only in elevation</strong> and around its own aim point, until it clears the floor by <span class="num">1</span> cm, at most <span class="num">20°</span> higher than the setup said (a background light may go up to <span class="num">50°</span>).</p>
+      <p class="takeaway">A light that would end up under the floor is turned up until it clears it, within a limit. On by default.</p>
     </div>
     <div class="bx-row">
       <button type="button" class="bx" aria-pressed="mixed" data-bx="F1"><span class="bx-box" aria-hidden="true"><svg viewBox="0 0 12 12"><path class="bx-check" d="M2.5 6.2 5 8.6 9.6 3.6"/><path class="bx-dash" d="M3 6h6"/></svg></span><span class="bx-label">Keep Gear Above Floor</span></button>
@@ -562,8 +593,9 @@
     </div>
     <p class="caption"><span class="plain">The same two setups, seen from the side with the gear made visible, at the same exposure.</span></p>
     <div class="prose after-figures">
-      <p>It works for the built-in setups, My Setups and role lights, and the message names what was raised. A light still too low at that limit stays there, and the message says so: with the subject right on the floor, that can happen to Dual Rim and Dark Field. A table or a pedestal under the subject gives the lights room.</p>
+      <p>It works for the built-in setups, My Setups and role lights, and the message <strong>names what was raised</strong>. A light still too low at that limit stays there, and the message says so: with the subject right on the floor, that can happen to Dual Rim and Dark Field. A table or a pedestal under the subject gives the lights room.</p>
     </div>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -572,7 +604,8 @@
     <div class="head">
       <p class="eyebrow"><span class="n">07</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Group Distance</span></p>
       <h2 id="h-group">Move the whole setup at once</h2>
-      <p class="lede">Above the light list, <b>Group Distance</b> reads how far the main light stands from its aim point. Change it and every light on the subject moves nearer or farther by the same factor, each along its own direction, angles kept. With <b>Keep Brightness</b> on, power follows the square of the distance, so the subject stays as bright and the ratios hold.</p>
+      <p class="lede">Above the light list, <b>Group Distance</b> reads how far the main light stands from its aim point. Change it and every light on the subject moves nearer or farther by the same factor, each along its own direction, angles kept. With <b>Keep Brightness</b> on, power follows the square of the distance, so the subject stays as bright and <strong>the ratios hold</strong>.</p>
+      <p class="takeaway">Change Group Distance and every light moves nearer or farther together, angles kept; with Keep Brightness on, the subject stays as bright.</p>
     </div>
     <div class="stp" data-stepper="M1" data-start="0">
       <div class="duo wide-sq">
@@ -598,7 +631,7 @@
 
     <div class="prose sub">
       <h3>Pick Group Aim Point</h3>
-      <p>Click <b>Pick Group Aim Point</b>, then click the subject. Every light moves to aim at the new point, keeping its angle and its distance, and scrims and flags that follow a light come along. The point lands inside the subject, halfway to the far side, so a light from any side aims into it rather than at one spot of its skin. <b>Ctrl+Z</b> undoes either one.</p>
+      <p>Click <b>Pick Group Aim Point</b>, then click the subject. Every light moves to aim at the new point, keeping its angle and its distance, and <strong>scrims and flags that follow a light come along</strong>. The point lands inside the subject, halfway to the far side, so a light from any side aims into it rather than at one spot of its skin. <b>Ctrl+Z</b> undoes either one.</p>
     </div>
     <div class="stp mt" data-stepper="A1" data-start="0">
       <div class="duo wide-sq">
@@ -617,6 +650,7 @@
       <img src="assets/img/ui/UI_3.webp" width="915" height="830" loading="lazy" decoding="async" alt="The viewport during Pick Group Aim Point: a green disc on the bust’s face labeled “Click: all lights aim at this point inside the subject”, with the instructions in a bar across the top.">
       <figcaption class="caption"><span class="plain">Pick Group Aim Point in the viewport: the green disc marks the point all the lights will aim at. Esc or a right click cancels.</span></figcaption>
     </figure>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -626,14 +660,14 @@
       <p class="eyebrow"><span class="n">08</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Brightness</span></p>
       <h2 id="h-stops">Brightness in stops</h2>
       <p class="lede">One stop = double the light. I never learned watts.</p>
+      <p class="takeaway">The light list shows every light’s stops against the main light, so you can read your ratios at a glance.</p>
     </div>
     <div class="prose">
       <p>Under <b>Power</b> there are <b>-1</b>, <b>-1/3</b>, <b>+1/3</b> and <b>+1</b> buttons. One light is the main light, and every other light picks how it’s set:</p>
       <ul>
-        <li><b>Compared to Main:</b> type <span class="num">-2</span> in <b>vs Main</b> and it drops to a quarter of the main light, and the panel says so in words: <i>1/4 as bright</i>. With <b>Follow the Main Light</b> on, turn the main light up or down and it keeps the ratio.</li>
+        <li><b>Compared to Main:</b> type <span class="num">-2</span> in <b>vs Main</b> and it drops to a quarter of the main light, and the panel says so in words: <i>1/4 as bright</i>. With <b>Follow the Main Light</b> on, turn the main light up or down and <strong>it keeps the ratio</strong>.</li>
         <li><b>On Its Own:</b> <b>Level</b> <span class="num">0</span> = <span class="num">100</span> W, with the watts shown next to it. The main light leaves it alone.</li>
       </ul>
-      <p>The light list shows every light’s stops against the main light, so you can read your ratios at a glance.</p>
     </div>
     <div class="side2 mt">
       <div class="stp solo-sq" data-stepper="M2" data-start="4">
@@ -653,6 +687,7 @@
     <div class="prose after-figures">
       <p>It’s an estimate: power after the gel over distance squared. Light lost inside the gear isn’t counted, so a softbox against a softbox compares well, and an umbrella against a softbox is a starting point. Your render gets the final word.</p>
     </div>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -661,7 +696,8 @@
     <div class="head">
       <p class="eyebrow"><span class="n">09</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Color</span></p>
       <h2 id="h-color">Color temperature &amp; gels</h2>
-      <p class="lede">Both live in the <b>Color</b> sub-panel. Tick <b>Color Temperature</b> and set <b>Kelvin</b>: lower is warmer, higher is cooler. <span class="num">5600</span> K, the default, is daylight or flash, and <span class="num">3200</span> K is a warm tungsten studio light.</p>
+      <p class="lede">Both live in the <b>Color</b> sub-panel. Tick <b>Color Temperature</b> and set <b>Kelvin</b>: <strong>lower is warmer, higher is cooler</strong>. <span class="num">5600</span> K, the default, is daylight or flash, and <span class="num">3200</span> K is a warm tungsten studio light.</p>
+      <p class="takeaway">Like a real gel, it changes the color and passes only part of the light, and the panel tells you how much.</p>
     </div>
     <div class="pair">
       <div class="pair-col">
@@ -699,6 +735,7 @@
     <div class="prose after-figures">
       <p>A gel is a sheet of colored filter that photographers clip in front of a light. <b>CTO</b> makes the light warmer and <b>CTB</b> cooler, in Full, <span class="num">1/2</span>, <span class="num">1/4</span> and <span class="num">1/8</span>; <b>Plus Green</b> and <b>Minus Green (Magenta)</b> add or take away a green tint. Like a real gel, it changes the color and passes only part of the light, and the panel tells you how much: <i>After the gel: 3196 K, lets 55% through (-0.9 stops)</i>. The shifts and how much light gets through are LEE Filters’ published values.</p>
     </div>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -708,10 +745,11 @@
       <p class="eyebrow"><span class="n">10</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Lights by Role</span></p>
       <h2 id="h-roles">Lights by role, already in stops</h2>
       <p class="lede">Sometimes you want a job done, not a light type. At the bottom of <b>Add Light</b>, <b>Lights by Role</b> has Rim Light, Hair Light, Kicker, Cross Rim (2 Lights), Background Light and Negative Fill.</p>
+      <p class="takeaway">Pick a role and the light lands where that role usually stands, already set in stops against the main light.</p>
     </div>
     <div class="prose sub">
       <h3>Solo: one light at a time</h3>
-      <p><b>Solo</b> (the star in the light list) switches off every other light, in the viewport and the render, and a red bar at the top of the list says which one is on its own. End it with the star again, <b>End</b>, or <b>Show All</b>. Handy when the question is: whose shadow is that?</p>
+      <p><b>Solo</b> (the star in the light list) <strong>switches off every other light</strong>, in the viewport and the render, and a red bar at the top of the list says which one is on its own. End it with the star again, <b>End</b>, or <b>Show All</b>. Handy when the question is: whose shadow is that?</p>
     </div>
     <div class="solo" data-solo>
       <div class="frame sq" data-solo-frame><span class="ph-tag" data-ph-tag hidden>Placeholder</span><span class="plate" data-solo-plate></span></div>
@@ -745,8 +783,9 @@
     <div class="prose after-figures">
       <p>Pick a role and it lands where that role usually stands, on the side your <b>Main Light: Left / Right</b> choice says, already set in stops against the main light: Rim Light and Cross Rim one stop brighter, Hair Light and Kicker one stop under. It follows the main light from there. Want a different ratio? Change <b>Stops vs Main</b> in F9 right after adding it.</p>
       <p><b>Background Light</b> looks straight behind the subject, away from the camera, finds the first wall or backdrop, and lights it from between the two.</p>
-      <p>New lights share the main light’s aim point: pick a spot on the face for the main light, and the next lights aim there too. The line under <b>Add Light</b> tells you what the next light will aim at before you click; with no subject it turns orange and says the 3D Cursor.</p>
+      <p>New lights <strong>share the main light’s aim point</strong>: pick a spot on the face for the main light, and the next lights aim there too. The line under <b>Add Light</b> tells you what the next light will aim at before you click; with no subject it turns orange and says the 3D Cursor.</p>
     </div>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -755,7 +794,8 @@
     <div class="head">
       <p class="eyebrow"><span class="n">11</span><span class="rule" aria-hidden="true"></span><span class="sr"> — </span><span>Visible to Camera</span></p>
       <h2 id="h-vis">In the frame, out of the picture</h2>
-      <p class="lede">Real gear often has to sit just outside the frame. Here it can sit inside the frame and still not show up. <b>Visible to Camera</b> is off by default: the gear doesn’t appear in the camera image, and it still blocks, shapes and bounces light.</p>
+      <p class="lede">Real gear often has to sit just outside the frame. Here it can sit inside the frame and still not show up.</p>
+      <p class="takeaway">Visible to Camera is off by default: the gear stays out of the camera image and still blocks, shapes and bounces light.</p>
     </div>
     <div class="bx-row">
       <button type="button" class="bx" aria-pressed="mixed" data-bx="VIS"><span class="bx-box" aria-hidden="true"><svg viewBox="0 0 12 12"><path class="bx-check" d="M2.5 6.2 5 8.6 9.6 3.6"/><path class="bx-dash" d="M3 6h6"/></svg></span><span class="bx-label">Visible to Camera</span></button>
@@ -770,8 +810,9 @@
     </div>
     <p class="caption"><span class="plain">Three-Point, seen from farther back. The rim light’s stripbox stands in the frame, above and behind the head. Off, you can’t see it, but the dark band it casts on the wall is still there. On, its lit face shows at the top.</span></p>
     <div class="prose after-figures">
-      <p>Turn it on only when you want to photograph the gear itself; the front of a softbox then reads as a glowing panel. Two setups turn it on for you, because the gear is the picture there: the lit panel in <b>Bright Field</b> and the black flag in <b>Dark Field</b>.</p>
+      <p>Turn it on only when you want to photograph the gear itself; the front of a softbox then reads as a glowing panel. Two setups <strong>turn it on for you</strong>, because the gear is the picture there: the lit panel in <b>Bright Field</b> and the black flag in <b>Dark Field</b>.</p>
     </div>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -794,6 +835,7 @@
       </ul>
       <p>Also in the box: <b>Duplicate Light</b>, and deletes that take the gear and aim point along. A note when Cycles’ Clamp Indirect is eating an umbrella’s light. And an English / Traditional Chinese UI.</p>
     </div>
+    <p class="to-chapters"><a href="#chapters" data-jump aria-label="Back to chapters"><span aria-hidden="true">↑</span> Chapters</a></p>
   </div>
 </section>
 
@@ -826,7 +868,7 @@
           <dt>Can’t I just make a softbox from an area light?</dt>
           <dd>You can. Mine kept turning into glowing rectangles, so here the box, the grid and the flag are geometry Cycles actually traces. That’s the whole idea.</dd>
           <dt>Will it change my scene settings?</dt>
-          <dd>It never changes unit settings, samples or Filter Glossy. It changes the render engine only when you click <b>Switch to Cycles</b>, and Clamp Indirect only when you click <b>Set Clamp Indirect to 0</b>. A setup can hide the subject’s current lights and switch off ordinary Blender lights; it never deletes them, and <b>Show All</b> brings them back.</dd>
+          <dd>It never changes unit settings, samples or Filter Glossy. It changes the render engine only when you click <b>Switch to Cycles</b>, and Clamp Indirect only when you click <b>Set Clamp Indirect to 0</b>. A setup can hide the subject’s current lights and switch off ordinary Blender lights; <strong>it never deletes them</strong>, and <b>Show All</b> brings them back.</dd>
           <dt>Does a setup fit a ring or a sofa?</dt>
           <dd>Yes. Distances and power follow the subject’s size, so the light on it stays the same. Gear sizes stop scaling below <span class="num">1/4</span> and above <span class="num">5</span> times the reference size, so on a ring the softbox is relatively bigger and the light softer.</dd>
           <dt>There’s a darker band on my background.</dt>

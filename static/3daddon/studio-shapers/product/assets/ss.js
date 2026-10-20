@@ -687,4 +687,71 @@
     set(-1);
     whenNear(box, function () { live = true; set(solo); idle(function () { stack.preload([S.all].concat(S.rows.map(function (r) { return r.image; }))); }); });
   })();
+  (function () {
+    var nav = document.getElementById('chapters');
+    if (!nav) return;
+    document.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var a = e.target && e.target.closest && e.target.closest('a[data-jump], a[href^="#"]');
+      if (!a) return;
+      var t = document.getElementById((a.getAttribute('href') || '').slice(1));
+      if (!t) return;
+      e.preventDefault();
+      t.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+      if (!t.hasAttribute('tabindex')) t.setAttribute('tabindex', '-1');
+      try { t.focus({ preventScroll: true }); } catch (err) {}
+    });
+    if (embed) return;
+    var links = $$('.chapters-list a[data-jump]', nav);
+    var secs = links.map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); });
+    var rail = document.createElement('nav');
+    rail.className = 'rail';
+    rail.setAttribute('aria-label', 'Chapter progress');
+    var ol = document.createElement('ol');
+    var dots = links.map(function (a) {
+      var n = $('.n', a).textContent, nm = $('.nm', a).textContent;
+      var li = document.createElement('li');
+      var d = document.createElement('a');
+      d.href = a.getAttribute('href');
+      d.setAttribute('data-jump', '');
+      d.setAttribute('aria-label', n + ' ' + nm);
+      d.innerHTML = '<span class="rail-dot" aria-hidden="true"></span><span class="rail-name" aria-hidden="true"><span class="n"></span></span>';
+      $('.rail-name .n', d).textContent = n;
+      $('.rail-name', d).appendChild(document.createTextNode(nm));
+      li.appendChild(d); ol.appendChild(li);
+      return d;
+    });
+    rail.appendChild(ol);
+    var bar = document.createElement('div');
+    bar.className = 'readbar';
+    bar.setAttribute('aria-hidden', 'true');
+    var fill = document.createElement('span');
+    bar.appendChild(fill);
+    document.body.appendChild(rail);
+    document.body.appendChild(bar);
+    var cur = -2, inBand = secs.map(function () { return false; });
+    function setCur(k) {
+      if (k === cur) return;
+      cur = k;
+      dots.forEach(function (d, i) { if (i === k) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); });
+    }
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (es) {
+        es.forEach(function (e) { var i = secs.indexOf(e.target); if (i >= 0) inBand[i] = e.isIntersecting; });
+        setCur(inBand.indexOf(true));
+      }, { rootMargin: '-45% 0px -54% 0px' });
+      secs.forEach(function (s) { if (s) io.observe(s); });
+    }
+    var raf = 0;
+    function progress() {
+      raf = 0;
+      var max = root.scrollHeight - window.innerHeight;
+      var p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      fill.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+    }
+    function queue() { if (!raf) raf = requestAnimationFrame(progress); }
+    window.addEventListener('scroll', queue, { passive: true });
+    window.addEventListener('resize', queue);
+    progress();
+  })();
 })();
