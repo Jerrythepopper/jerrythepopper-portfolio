@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<script>
+(function () {
+  try {
+    var root = document.documentElement;
+    var hash = window.location.hash;
+    if (hash === '#dark') {
+      root.setAttribute('data-theme', 'dark');
+    } else if (hash === '#light') {
+      root.setAttribute('data-theme', 'light');
+    } else {
+      var stored = localStorage.getItem('jtpTheme');
+      if (stored === 'dark' || stored === 'light') {
+        root.setAttribute('data-theme', stored);
+      }
+    }
+  } catch (e) {}
+})();
+</script>
+<title>Who Needs Another Lighting Setup? — 使用手冊</title>
+<meta name="description" content="Studio Shapers 給 Cycles 加上攝影用的控光器材，而且是真的幾何體。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --bg: #f7f7f7;
+  --bg-alt: #f1f1ef;
+  --text: #111112;
+  --muted: #6a6c74;
+  --faint: #c8c8cb;
+  --line: #1d1d1f;
+  --line-faint: rgba(17, 17, 18, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15161d;
+    --bg-alt: #28292d;
+    --text: #e4e6ea;
+    --muted: #83858d;
+    --faint: #5c5e66;
+    --line: #e4e6ea;
+    --line-faint: rgba(228, 230, 234, .14);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15161d;
+  --bg-alt: #28292d;
+  --text: #e4e6ea;
+  --muted: #83858d;
+  --faint: #5c5e66;
+  --line: #e4e6ea;
+  --line-faint: rgba(228, 230, 234, .14);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-weight: 400;
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line-faint);
+  text-underline-offset: 3px;
+  transition: color .15s ease;
+}
+a:hover { color: var(--muted); }
+
+.ui-label {
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400;
+  letter-spacing: .06em;
+}
+body.lang-zh .ui-label {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+}
+
+/* ---------------------------------------------------------------- header */
+.page-head {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 64px) clamp(20px, 4vw, 64px) clamp(40px, 6vw, 72px);
+  border-bottom: 1px solid var(--line-faint);
+}
+.page-head-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: clamp(24px, 4vw, 40px);
+}
+.eyebrow {
+  margin: 0;
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400;
+  font-size: .75rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+body.lang-zh .eyebrow {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .06em;
+  text-transform: none;
+}
+.head-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: .78rem;
+  letter-spacing: .06em;
+}
+body.lang-zh .head-controls {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+}
+.lang-switch { display: inline-flex; align-items: center; gap: 8px; }
+.lang-switch a { text-decoration: none; color: var(--muted); }
+.lang-switch a:hover { color: var(--text); }
+.lang-switch .is-current { color: var(--text); }
+.lang-switch .sep { color: var(--faint); }
+.theme-toggle {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--muted);
+}
+.theme-toggle .tt-light, .theme-toggle .tt-dark { color: var(--faint); }
+.theme-toggle .tt-sep { color: var(--faint); padding: 0 .35em; }
+:root:not([data-theme="dark"]) .theme-toggle .tt-light { color: var(--text); }
+:root[data-theme="dark"] .theme-toggle .tt-dark { color: var(--text); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .theme-toggle .tt-dark { color: var(--text); }
+  :root:not([data-theme]) .theme-toggle .tt-light { color: var(--faint); }
+}
+
+.page-title {
+  margin: 0 0 16px;
+  font-weight: 600;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1.2;
+  color: var(--text);
+}
+.page-subtitle {
+  margin: 0;
+  max-width: 680px;
+  font-weight: 400;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------- hero grid */
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line-faint);
+  max-width: 1280px;
+  margin: clamp(32px, 5vw, 56px) auto 0;
+}
+.hero-grid img { display: block; width: 100%; height: 100%; object-fit: cover; background: var(--bg-alt); }
+@media (max-width: 680px) {
+  .hero-grid { grid-template-columns: 1fr; }
+}
+
+/* ------------------------------------------------------------ toc + main */
+.content-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(48px, 8vw, 96px) clamp(20px, 4vw, 64px) clamp(64px, 10vw, 128px);
+}
+@media (min-width: 1024px) {
+  .content-shell {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 64px;
+    align-items: start;
+  }
+}
+
+.toc-label {
+  margin: 0 0 14px;
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 400;
+  font-size: .7rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+body.lang-zh .toc-label {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .04em;
+  text-transform: none;
+}
+.toc {
+  border-top: 1px solid var(--line-faint);
+  padding-top: 20px;
+  margin-bottom: clamp(40px, 6vw, 64px);
+}
+.toc-list { list-style: none; margin: 0; padding: 0; }
+.toc-link { display: inline-flex; gap: 10px; align-items: baseline; text-decoration: none; }
+.toc-num {
+  font-family: Lustria, "Noto Serif JP", serif;
+  font-size: .8rem;
+  color: var(--faint);
+}
+.toc-text {
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: .82rem;
+  letter-spacing: .02em;
+  color: var(--text);
+}
+body.lang-zh .toc-text {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: .88rem;
+  letter-spacing: 0;
+}
+.toc-link:hover .toc-text { color: var(--muted); }
+@media (min-width: 1024px) {
+  .toc { position: sticky; top: clamp(20px, 4vw, 64px); margin-bottom: 0; }
+  .toc-list { display: flex; flex-direction: column; gap: 10px; }
+}
+@media (max-width: 1023px) {
+  .toc-list { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .toc-item { flex: 0 0 auto; }
+  .toc-link { padding: 6px 16px 6px 0; margin-right: 16px; border-right: 1px solid var(--line-faint); white-space: nowrap; }
+  .toc-item:last-child .toc-link { border-right: none; margin-right: 0; }
+}
+
+main { min-width: 0; max-width: 780px; }
+main h1, main h2, main h3 { scroll-margin-top: 24px; line-height: 1.35; font-weight: 600; color: var(--text); }
+main h2 {
+  margin-top: clamp(64px, 10vw, 128px);
+  padding-top: clamp(24px, 4vw, 40px);
+  border-top: 1px solid var(--line-faint);
+  font-size: 1.5rem;
+}
+main h2:first-child { margin-top: 0; }
+main h3 { margin-top: 2.2em; font-weight: 500; font-size: 1.15rem; }
+main p { margin: 0.9em 0; }
+main ul, main ol { padding-left: 1.4em; }
+main li { margin: 0.35em 0; }
+main blockquote {
+  margin: 1.6em 0;
+  padding: .2em 0 .2em 20px;
+  border-left: 1px solid var(--line);
+  color: var(--muted);
+  font-style: italic;
+}
+main hr { border: none; border-top: 1px solid var(--line-faint); margin: 3em 0; }
+main a { color: var(--text); }
+
+code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  background: var(--bg-alt);
+  padding: 0.15em 0.4em;
+  font-size: 0.88em;
+  color: var(--text);
+}
+pre {
+  background: var(--bg-alt);
+  padding: 20px 24px;
+  overflow-x: auto;
+  margin: 1.6em 0;
+}
+pre code { background: none; padding: 0; font-size: 0.85em; line-height: 1.6; }
+
+.table-wrap { overflow-x: auto; margin: 2em 0; }
+table { border-collapse: collapse; width: 100%; min-width: 480px; }
+th, td {
+  text-align: left;
+  padding: 10px 20px 10px 0;
+  border-bottom: 1px solid var(--line-faint);
+  vertical-align: top;
+  font-size: .92rem;
+}
+th {
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 500;
+  font-size: .72rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+body.lang-zh th {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+  text-transform: none;
+}
+
+/* ------------------------------------------- panel screenshots (figures) */
+/* The picture is a dark Blender screenshot in both themes, so the dots use
+   fixed colours (yellow, dark digit, dark + light ring) and stay visible on
+   it whatever the page theme is.  Positions are percentages of the picture;
+   the dot size follows the picture's width (cqw), so on a narrow screen the
+   dots shrink with it instead of covering the neighbouring rows. */
+figure.shot { margin: 1.8em 0 2.4em; }
+.shot-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  container-type: inline-size;
+  line-height: 0;
+  background: #1d1d1d;
+  outline: 1px solid var(--line-faint);
+}
+.shot-frame a { display: block; }
+.shot-frame img { display: block; width: 100%; max-width: 100%; height: auto; }
+.shot-dot, .shot-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7em;
+  height: 1.7em;
+  border-radius: 50%;
+  background: #ffd23f;
+  color: #111112;
+  border: 1.5px solid #111112;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .9);
+  font-family: Jost, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.shot-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  font-size: clamp(6.5px, 1.45cqw, 12px);
+  pointer-events: none;
+}
+.shot-legend { list-style: none; margin: 1em 0 0; padding: 0; font-size: .92rem; line-height: 1.65; }
+.shot-legend li { display: flex; align-items: baseline; gap: .8em; margin: .45em 0; }
+.shot-num { flex: 0 0 auto; font-size: .72rem; box-shadow: 0 0 0 1px var(--line-faint); }
+.shot-text { min-width: 0; }
+.shot-label { font-weight: 600; margin-right: .35em; }
+
+footer.page-footer {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px clamp(20px, 4vw, 64px) 64px;
+  border-top: 1px solid var(--line-faint);
+  font-family: Jost, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-size: .75rem;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+body.lang-zh footer.page-footer {
+  font-family: "Noto Serif JP", YuMincho, "Yu Mincho", "Hiragino Mincho ProN", serif;
+  letter-spacing: .02em;
+}
+
+@media (max-width: 600px) {
+  .page-head { padding-bottom: clamp(28px, 6vw, 48px); }
+}
+
+</style>
+</head>
+<body class="lang-zh">
+<header class="page-head">
+  <div class="page-head-top">
+    <p class="eyebrow">手冊 · v1.0.1</p>
+    <div class="head-controls">
+      <span class="lang-switch"><a href="index.html">EN</a><span class="sep">／</span><span class="is-current">中文</span></span>
+      <button type="button" class="theme-toggle" id="jtpThemeToggle" aria-label="Toggle light or dark theme">
+        <span class="tt-light">Light</span><span class="tt-sep">／</span><span class="tt-dark">Dark</span>
+      </button>
+    </div>
+  </div>
+  <h1 class="page-title">Who Needs Another Lighting Setup? — 使用手冊</h1>
+  <p class="page-subtitle">Studio Shapers 給 Cycles 加上攝影用的控光器材，而且是真的幾何體。</p>
+</header>
+
+<!-- HERO_IMAGES -->
+<!-- Drop 3-5 render screenshots into a seamless 3-column grid, e.g.:
+     <div class="hero-grid">
+       <img src="hero-1.jpg" alt="...">
+       <img src="hero-2.jpg" alt="...">
+       <img src="hero-3.jpg" alt="...">
+     </div>
+     .hero-grid already ships in the stylesheet (gap:1px, background:var(--line-faint),
+     collapses to a single column under 680px). Keep it above the TOC as a preview strip. -->
+
+<div class="content-shell">
+  <nav class="toc" aria-label="目錄">
+    <p class="toc-label">目錄</p>
+    <ol class="toc-list"><li class="toc-item"><a class="toc-link" href="#目錄"><span class="toc-num">01</span><span class="toc-text">目錄</span></a></li><li class="toc-item"><a class="toc-link" href="#1-這是什麼"><span class="toc-num">02</span><span class="toc-text">1. 這是什麼</span></a></li><li class="toc-item"><a class="toc-link" href="#2-需求與安裝"><span class="toc-num">03</span><span class="toc-text">2. 需求與安裝</span></a></li><li class="toc-item"><a class="toc-link" href="#3-快速上手"><span class="toc-num">04</span><span class="toc-text">3. 快速上手</span></a></li><li class="toc-item"><a class="toc-link" href="#4-12-種燈型"><span class="toc-num">05</span><span class="toc-text">4. 12 種燈型</span></a></li><li class="toc-item"><a class="toc-link" href="#5-照哪裡"><span class="toc-num">06</span><span class="toc-text">5. 照哪裡</span></a></li><li class="toc-item"><a class="toc-link" href="#6-燈放哪裡"><span class="toc-num">07</span><span class="toc-text">6. 燈放哪裡</span></a></li><li class="toc-item"><a class="toc-link" href="#7-場景裡的燈清單"><span class="toc-num">08</span><span class="toc-text">7. 場景裡的燈清單</span></a></li><li class="toc-item"><a class="toc-link" href="#8-跟著燈走的柔光布與黑旗"><span class="toc-num">09</span><span class="toc-text">8. 跟著燈走的柔光布與黑旗</span></a></li><li class="toc-item"><a class="toc-link" href="#9-色溫與色紙"><span class="toc-num">10</span><span class="toc-text">9. 色溫與色紙</span></a></li><li class="toc-item"><a class="toc-link" href="#10-亮度與主燈"><span class="toc-num">11</span><span class="toc-text">10. 亮度與主燈</span></a></li><li class="toc-item"><a class="toc-link" href="#11-一鍵布光"><span class="toc-num">12</span><span class="toc-text">11. 一鍵布光</span></a></li><li class="toc-item"><a class="toc-link" href="#12-別讓器材入鏡"><span class="toc-num">13</span><span class="toc-text">12. 別讓器材入鏡</span></a></li><li class="toc-item"><a class="toc-link" href="#13-物理說明與誠實的限制"><span class="toc-num">14</span><span class="toc-text">13. 物理說明與誠實的限制</span></a></li><li class="toc-item"><a class="toc-link" href="#14-疑難排解與常見問題"><span class="toc-num">15</span><span class="toc-text">14. 疑難排解與常見問題</span></a></li><li class="toc-item"><a class="toc-link" href="#15-詞彙對照"><span class="toc-num">16</span><span class="toc-text">15. 詞彙對照</span></a></li></ol>
+  </nav>
+
+  <main>
+<h1 id="who-needs-another-lighting-setup--使用手冊">Who Needs Another Lighting Setup? — 使用手冊</h1>
+<blockquote><p>版本 1.0.1 · Blender 5.1 以上 · <strong>只支援 Cycles</strong></p><p>這個 addon 叫 <strong>Studio Shapers</strong>，側欄分頁和面板都用這個名字（中文介面也一樣）。附加元件清單裡寫的是 <em>Who Needs Another Lighting Setup? (Studio Shapers)</em>。</p></blockquote>
+<p>Studio Shapers 給 Cycles 加上攝影用的控光器材，而且是真的幾何體：柔光箱有箱體、格柵有格壁、束光筒是一根筒、黑旗是一塊板。它們會像實體器材一樣擋光、反光、塑形，因為 Cycles 是真的讓光線穿過它們去算，而不是事後假裝出效果。</p>
+<p>本手冊把這些東西一律叫「<strong>器材</strong>」。Blender 自己的修改器功能，手冊會寫成「<strong>Blender 的修改器（Modifier）</strong>」，兩者沒有關係。</p>
+<hr>
+<h2 id="目錄">目錄</h2>
+<ol><li><a href="#1-這是什麼">這是什麼</a></li><li><a href="#2-需求與安裝">需求與安裝</a></li><li><a href="#3-快速上手">快速上手</a></li><li><a href="#4-12-種燈型">12 種燈型</a></li><li><a href="#5-照哪裡">照哪裡</a></li><li><a href="#6-燈放哪裡">燈放哪裡</a></li><li><a href="#7-場景裡的燈清單">場景裡的燈清單</a></li><li><a href="#8-跟著燈走的柔光布與黑旗">跟著燈走的柔光布與黑旗</a></li><li><a href="#9-色溫與色紙">色溫與色紙</a></li><li><a href="#10-亮度與主燈">亮度與主燈</a></li><li><a href="#11-一鍵布光">一鍵布光</a></li><li><a href="#12-別讓器材入鏡">別讓器材入鏡</a></li><li><a href="#13-物理說明與誠實的限制">物理說明與誠實的限制</a></li><li><a href="#14-疑難排解與常見問題">疑難排解與常見問題</a></li><li><a href="#15-詞彙對照">詞彙對照</a></li></ol>
+<hr>
+<h2 id="1-這是什麼">1. 這是什麼</h2>
+<p>Blender 裡多數「攝影棚燈」預設，其實只是換了個好聽名字的區光（Area）。Studio Shapers 把器材做成實體 Mesh 包在燈的周圍，Cycles 自己就會算出物理效果：</p>
+<ul><li>柔光箱加上<strong>格柵</strong>，光束會變窄，因為格壁真的擋住了斜向的光線。</li><li><strong>四葉遮光片</strong>能切出硬邊，因為四片實體擋板就在光路上。</li><li><strong>束光筒</strong>打出一小圈光，因為光必須穿過一根筒子。</li><li><strong>黑旗</strong>會投出陰影、<strong>反光板</strong>會把光彈回去，雖然兩者自己都不發光。</li><li>在硬光前面放一塊<strong>柔光布</strong>，它蓋到的範圍陰影會變柔，同時也會吃掉光——跟真的布一樣。</li></ul>
+<p>在這個 addon 裡，每一盞<strong>燈</strong>其實是一整組物件：一個主控制點、器材的 Mesh、藏在器材裡的 Cycles 光源，以及主體上的一個<strong>受光點</strong>。本手冊說「燈」時，指的都是這一整組；「<strong>光源</strong>」是裡面真正發光的 Cycles 燈（<strong>雷達罩</strong> 則是碗的發光內面）；「<strong>器材</strong>」是包在光源外面的 Mesh。黑旗、反光板、柔光布是沒有光源的器材，選單裡把它們歸在「<strong>不發光器材</strong>」。</p>
+<p>操作面板用攝影師的說法——在相機哪一側、多高、多遠、比別盞亮或暗幾級——而不是 XYZ 座標。<strong>1 級</strong>＝光量加倍或減半：+1 級是兩倍亮，−1 級是一半，−2 級是四分之一。</p>
+<p><strong>本手冊常用的三個詞。</strong></p>
+<ul><li><strong>主燈</strong>（攝影書常叫「主光」）是最亮、決定主體陰影落在哪裡的那盞燈。面板上用 <strong>主燈</strong> 欄位或 <strong>設成主燈</strong> 按鈕指定（見<a href="#10-亮度與主燈">第 10 節</a>）。</li><li><strong>補光</strong>是放在另一側、比較弱的燈（或反光板），用來把陰影提亮。</li><li><strong>輪廓光</strong>（也叫背光）在主體後方，替主體勾出一圈亮邊，讓它跟背景分開。</li></ul>
+<p>它<strong>不是</strong>品牌型錄。這些器材是常見外形的工程近似，不是任何廠牌產品的量測複製（見<a href="#13-物理說明與誠實的限制">第 13 節</a>）。</p>
+<hr>
+<h2 id="2-需求與安裝">2. 需求與安裝</h2>
+<figure class="shot" id="shot-language_menu"><div class="shot-frame" style="max-width:356px"><a href="img/zh/01_language_menu.png"><img src="img/zh/01_language_menu.png" width="356" height="136" alt="Studio Shapers 面板標題列，地球選單打開：附加元件語言、自動、English、中文" loading="lazy"></a><span class="shot-dot" style="left:52.25%;top:12.50%" aria-hidden="true">1</span><span class="shot-dot" style="left:60.39%;top:12.50%" aria-hidden="true">2</span><span class="shot-dot" style="left:84.27%;top:65.44%" aria-hidden="true">3</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">附加元件語言</strong> 切換方式是面板標題列最右邊的地球圖示。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">打開使用手冊</strong> 地球旁邊的 <strong>?</strong> 會用面板目前的語言打開這份手冊。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong>自動</strong>：Blender 真的把介面顯示成中文時才用中文，其他情況用英文。<strong>English</strong>、<strong>中文</strong>：不論 Blender 設什麼語言，都固定用這一種。</span></li></ol></figure>
+<p><strong>需求</strong></p>
+<ul><li><strong>Blender 5.1 以上</strong>（5.1、5.2 實測）。</li><li>算繪引擎（Render Engine）用 <strong>Cycles</strong>。不是 Cycles 時，面板會顯示「這個 addon 是為 Cycles 打光（算繪屬性 &gt; 算繪引擎，繁中介面顯示為「循環」）」，並附一個 <strong>切換到 Cycles</strong> 按鈕，按下就替這個場景換成 Cycles。EEVEE 不會讓光線穿過器材幾何去追蹤，所以本 addon 賴以成立的物理效果大多在那裡不會發生。箱型燈、四葉遮光片與格柵在 EEVEE 的影子已接近 Cycles（addon 會打開燈的影子抖動；EEVEE 視窗在很低的 samples 下顆粒會多一點）。傘類與 <strong>雷達罩</strong> 在 EEVEE 下完全照不亮主體，<strong>柔光布</strong> 會讓那盞燈整個變黑，<strong>反光板</strong> 也沒有補光效果，這些請用 Cycles。</li><li><strong>單位規模 = 1</strong>（場景屬性 &gt; 單位 &gt; 單位規模；Scene Properties &gt; Units &gt; Unit Scale）。所有尺寸單位都是公尺。addon 不會替你改單位設定；單位規模不是 1 時，面板會顯示「把場景屬性 &gt; 單位 &gt; 單位規模設成 1 就能用」。</li><li>燈本身必須保持 <strong>Scale 1</strong>。要改大小請用面板上的尺寸欄位，不要縮放物件（見<a href="#14-疑難排解與常見問題">第 14 節</a>）。</li></ul>
+<p><strong>安裝</strong></p>
+<p>這個 .zip 可以用 extension 或傳統 add-on 兩種方式安裝，擇一即可，不要兩種都裝。</p>
+<ul><li><strong>以 extension 安裝：</strong>把 .zip 拖進 Blender 視窗，或到 編輯 &gt; 偏好設定 &gt; 取得擴充套件（Edit &gt; Preferences &gt; Get Extensions），打開右上角下拉選單選 <strong>從磁碟安裝...</strong>（Install from Disk...）。</li><li><strong>以傳統 add-on 安裝：</strong>編輯 &gt; 偏好設定 &gt; 附加元件（Edit &gt; Preferences &gt; Add-ons），打開右上角下拉選單選 <strong>從磁碟安裝...</strong>，選取 .zip 後勾選啟用。</li></ul>
+<p>兩種方式在清單裡的名稱都是 <em>Who Needs Another Lighting Setup? (Studio Shapers)</em>，搜尋其中任一個名字都找得到。</p>
+<p>裝好後在 3D 檢視（3D Viewport）按 <strong>N</strong> 打開側欄，選 <strong>Studio Shapers</strong> 分頁。從舊版更新時，請<strong>重新啟動 Blender</strong>——只重新安裝不一定能換掉 Blender 已經載入的舊模組。版號在編輯 &gt; 偏好設定 裡這個 addon 的項目上可以看到。</p>
+<p><strong>語言</strong></p>
+<p>addon 的文字有英文與繁體中文。切換方式是面板標題列最右邊的地球圖示，或 addon 自己的偏好設定（編輯 &gt; 偏好設定 &gt; 附加元件 &gt; Studio Shapers，<strong>附加元件語言</strong>）。地球旁邊的 <strong>?</strong>（<strong>打開使用手冊</strong>）會用面板目前的語言打開這份手冊。</p>
+<div class="table-wrap"><table><thead><tr><th>設定</th><th>意思</th></tr></thead><tbody><tr><td><strong>自動</strong></td><td>Blender 真的把介面顯示成中文時（語言是中文、而且 <strong>翻譯</strong> 裡的 <strong>介面</strong> 有勾）才用中文，其他情況用英文</td></tr><tr><td><strong>English</strong></td><td>不論 Blender 設什麼語言都是英文：在日文或中文 Blender 裡，面板、按鈕、下拉選單、面板標題、對話框和 <strong>調整最後的操作</strong>（Adjust Last Operation）面板都維持英文，不會變成中英混雜</td></tr><tr><td><strong>中文</strong></td><td>一律繁體中文</td></tr></tbody></table></div>
+<p><strong>自動</strong> 在你選它的時候、以及 addon 啟動時判斷。之後改了 Blender 的語言或 <strong>翻譯</strong> 裡的 <strong>介面</strong> 勾選，請重選一次 addon 語言（或重開 Blender）。滑鼠提示不在這條規則的範圍內。中文是繁體。手冊提到 Blender 畫面上的字（選單、分頁、面板、欄位、路徑）時，用 Blender 5.1 繁體中文介面上的字，每一節第一次出現時在括號附上英文介面的字，例如算繪屬性 &gt; 光徑 &gt; 限定 &gt; 間接照明（Render Properties &gt; Light Paths &gt; Clamping &gt; Indirect Light）；同一節後面只寫中文。一般敘述沿用 addon 的說法「物件」「相機」「算圖」，Blender 畫面上對應的字多半是「物體」「攝影機」「算繪」。全部對照列在手冊最後的<a href="#15-詞彙對照">詞彙對照</a>。簡體中文 Blender 的名稱不同（例如 渲染属性），這時請看詞彙對照的英文欄，或對照英文版。</p>
+<p>選擇會在重開 Blender 後保留。切換時面板文字、按鈕、滑鼠提示、選單與俯視圖文字會立刻換，而且<strong>不會移動或改變任何燈</strong>。以下幾項維持原樣：</p>
+<ul><li>物件與集盒（Collection）名稱不會隨語言切換，一律是英文，例如 <code>Studio Softbox</code>、<code>Studio Shapers</code>；受光點叫 <code>SS Aim Point</code>（燈打在 3D 游標時叫 <code>SS Free Aim Point</code>）。用本 addon 較早版本做的檔案，受光點可能是中文名稱；開檔時會自動改成上述英文名稱。</li><li>場景裡已經存成文字的狀態訊息，維持當時的語言，直到那盞燈下次更新。</li><li>切換時若俯視圖開著會關閉，重新打開即可。</li><li>偏好設定視窗裡語言選項本身的名稱與提示，要下次重開 Blender 才換（按鈕文字會立刻換）。</li></ul>
+<hr>
+<h2 id="3-快速上手">3. 快速上手</h2>
+<figure class="shot" id="shot-panel_overview"><div class="shot-frame" style="max-width:250px"><a href="img/zh/02_panel_overview.png"><img src="img/zh/02_panel_overview.png" width="250" height="606" alt="整個 Studio Shapers 面板由上到下，場景是三點布光、選著補光" loading="lazy"></a><span class="shot-dot" style="left:74.80%;top:2.48%" aria-hidden="true">1</span><span class="shot-dot" style="left:2.80%;top:7.43%" aria-hidden="true">2</span><span class="shot-dot" style="left:2.80%;top:11.39%" aria-hidden="true">3</span><span class="shot-dot" style="left:2.80%;top:16.50%" aria-hidden="true">4</span><span class="shot-dot" style="left:2.80%;top:53.30%" aria-hidden="true">5</span><span class="shot-dot" style="left:2.80%;top:67.49%" aria-hidden="true">6</span><span class="shot-dot" style="left:2.80%;top:76.73%" aria-hidden="true">6</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">標題列</strong> 語言切換與 <strong>打開使用手冊</strong>，按了會打開這份手冊。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">新增一盞燈・一鍵布光</strong> 兩個選單：加一盞燈，或一次布好整組。兩個選單右邊各有一顆圖片按鈕，用縮圖顯示同樣的選項。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">提示列</strong> 下一盞燈會打在哪裡。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong class="shot-label">燈清單</strong> 場景裡所有 Studio Shapers 的燈，還有看光的按鈕。燈列上方的整組控制會把主體上的燈一起移動。</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">小提示</strong> 清單下方的小框：怎麼看到光，以及畫面不對時該去調哪裡。</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">名稱、燈型與各子面板</strong> 選了燈才會出現：<strong>燈放哪裡</strong>、<strong>亮度</strong>、<strong>尺寸（影子軟硬）</strong>、<strong>顏色</strong>、<strong>照哪裡</strong>、<strong>進階設定</strong>。</span></li></ol></figure>
+<p>面板位置：3D 檢視（3D Viewport）&gt; 側欄（<strong>N</strong>）&gt; <strong>Studio Shapers</strong> 分頁。由上到下：</p>
+<div class="table-wrap"><table><thead><tr><th>列</th><th>是什麼</th></tr></thead><tbody><tr><td>標題列：地球、<strong>?</strong></td><td>語言切換（<a href="#2-需求與安裝">第 2 節</a>）與 <strong>打開使用手冊</strong>，按了會打開這份手冊。</td></tr><tr><td><strong>切換到 Cycles</strong></td><td>場景不是用 Cycles 算圖時才出現。</td></tr><tr><td><strong>新增一盞燈</strong>・<strong>一鍵布光</strong></td><td>兩個選單：加一盞燈，或一次布好整組（<a href="#11-一鍵布光">第 11 節</a>）。兩個選單最上面都是一行子選單 <strong>主燈在：左</strong> ▸：滑鼠移過去選 <strong>左</strong> 或 <strong>右</strong>，決定新增的燈與內建一鍵布光把主燈放在相機哪一邊（從相機看）。目前是哪一邊直接寫在這一行上；預設是 <strong>左</strong>。兩個選單右邊各有一顆圖片按鈕，用縮圖顯示同樣的選項（<a href="#看圖挑選">見下方</a>）。</td></tr><tr><td>提示列</td><td>下一盞燈會打在哪裡（見下方）。有主體時是灰字；沒有主體時寫「新燈會打在 3D 游標」，前面有橘色警示三角，下一行是「先選一個 Mesh 當主體，新燈就會打在它上面」。</td></tr><tr><td>燈清單</td><td>場景裡所有 Studio Shapers 的燈，還有看光的按鈕（<a href="#7-場景裡的燈清單">第 7 節</a>）。燈列上方的整組控制 <strong>整組距離</strong>、<strong>補亮度</strong>、<strong>點選整組受光點</strong> 會把主體上的燈一起移動（<a href="#整組移動">第 7 節</a>）。</td></tr><tr><td><strong>小提示</strong></td><td>清單下方的小框：怎麼看到光，以及畫面不對時該去調哪裡（<a href="#7-場景裡的燈清單">第 7 節</a>）。</td></tr><tr><td><strong>名稱</strong>、<strong>燈型</strong> 與各子面板</td><td>選了燈才會出現：<strong>燈放哪裡</strong>、<strong>跟隨燈光</strong>（只有柔光布與黑旗）、<strong>亮度</strong>、<strong>尺寸（影子軟硬）</strong>、<strong>顏色</strong>、<strong>照哪裡</strong>、<strong>進階設定</strong>（<a href="#4-12-種燈型">第 4 節</a>）。</td></tr></tbody></table></div>
+<h3 id="一次加一盞">一次加一盞</h3>
+<figure class="shot" id="shot-add_light_menu"><div class="shot-frame" style="max-width:376px"><a href="img/zh/03_add_light_menu.png"><img src="img/zh/03_add_light_menu.png" width="376" height="550" alt="新增一盞燈選單打開，主燈在：左 的子選單顯示 左、右" loading="lazy"></a><span class="shot-dot" style="left:29.79%;top:8.55%" aria-hidden="true">1</span><span class="shot-dot" style="left:29.79%;top:16.91%" aria-hidden="true">2</span><span class="shot-dot" style="left:29.79%;top:40.00%" aria-hidden="true">2</span><span class="shot-dot" style="left:29.79%;top:59.45%" aria-hidden="true">2</span><span class="shot-dot" style="left:29.79%;top:75.27%" aria-hidden="true">3</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">主燈在：左 ▸</strong> 滑鼠移過去選 <strong>左</strong> 或 <strong>右</strong>，決定新增的燈把主燈放在相機哪一邊（從相機看）。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">選單分成 <strong>會發光的燈</strong>、<strong>傘與雷達罩</strong>、<strong>不發光器材</strong> 三組；滑鼠停在項目上會先顯示該項的一句說明。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">依角色加燈</strong> 選單最下面還有 <strong>依角色加燈</strong>（見下方的「依角色加燈」）。</span></li></ol></figure>
+<figure class="shot" id="shot-hint_line"><div class="shot-frame" style="max-width:250px"><a href="img/zh/04_hint_line.png"><img src="img/zh/04_hint_line.png" width="250" height="216" alt="還沒有主體時的面板：橘色三角與「新燈會打在 3D 游標」，燈清單是空的" loading="lazy"></a><span class="shot-dot" style="left:2.80%;top:32.41%" aria-hidden="true">1</span><span class="shot-dot" style="left:40.80%;top:75.46%" aria-hidden="true">2</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">提示列</strong> 沒有主體時寫「新燈會打在 3D 游標」，前面有橘色警示三角，下一行是「先選一個 Mesh 當主體，新燈就會打在它上面」。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">清單還是空的時候會寫「還沒有燈；先點選主體，再按上面的鈕」。</span></li></ol></figure>
+<ol><li>在視窗裡選取主體（Mesh）。</li><li>打開 <strong>新增一盞燈</strong> 選一種燈型。選單分成 <strong>會發光的燈</strong>、<strong>傘與雷達罩</strong>、<strong>不發光器材</strong> 三組，最下面還有 <strong>依角色加燈</strong>（<a href="#依角色加燈">見下方</a>）；滑鼠停在項目上會先顯示該項的一句說明。</li><li>燈會出現在以<strong>場景相機</strong>為準的經典燈位，已經對準主體（主體中心；主體已經有主燈時改對主燈的受光點，見下方），功率也會配合距離自動設好。</li><li>想看到光，就按 <strong>看光</strong>：清單標題列右邊的圖示，或 <strong>小提示</strong> 框裡的 <strong>看光（切到「算繪」著色）</strong>。視窗的著色會切到「算繪」（Rendered），邊調邊看得到光和影子。</li><li>在清單下方的子面板調整：<strong>燈放哪裡</strong>（燈的位置）、<strong>亮度</strong>、<strong>尺寸（影子軟硬）</strong>、<strong>顏色</strong>、<strong>照哪裡</strong>（對準什麼）。所有數值即時生效，沒有「套用」按鈕。</li><li>用同樣方式繼續加燈。每盞新燈會自動找下一個空的經典燈位，不會疊在第一盞上。</li></ol>
+<p><strong>新燈放在哪裡。</strong>同一個主體上的新燈，會依序放進下面第一個空著的燈位（跟同一個主體上既有燈的方位差不到 25° 就算被佔用）。角度沿用 <strong>燈放哪裡</strong> 的慣例（− 是相機左邊、+ 是相機右邊），下表以主燈在 <strong>左</strong> 為準（預設值，在 <strong>新增一盞燈</strong> 選單最上面那一行 <strong>主燈在：左</strong> ▸ 選）；改成 <strong>右</strong> 時，所有角度左右對調（−45° 變成 +45°，依此類推）。</p>
+<ol><li>主燈：−45°（相機左前）、仰角 35°</li><li>補光：+45°（相機右前）、仰角 20°</li><li>右後：+150°、仰角 30°</li><li>左後：−150°、仰角 30°</li><li>左：−90°、仰角 25°</li><li>右：+90°、仰角 25°</li></ol>
+<p>六個燈位都被佔用時，新燈放在第 1 個燈位。有幾種燈型的起點不同：</p>
+<ul><li><strong>反光板</strong> 會先試 +60°、−60°、+90°、−90°（低位補光反射，從主燈的另一側開始），都被佔用才用上面的清單。仰角至少 5°，並抬到板子下緣剛好和主體底部齊平，不會插進地板。</li><li><strong>長條箱</strong> 先試兩個後方燈位（先 +150°，再 −150°），因為長條箱通常當輪廓光用。</li><li>選著一盞會發光的燈時加 <strong>柔光布</strong> 或 <strong>黑旗</strong>，它會改成掛在那盞燈上（<a href="#8-跟著燈走的柔光布與黑旗">第 8 節</a>）。</li></ul>
+<p>新燈放在離受光點「主體最長邊 × 1.5」的地方，至少 1.5 m，最遠到主體最外緣再往外 8 m（所以建築的燈會放在建築外面，功率也跟著距離加大）；沒有主體時是 3 m。新<strong>反光板</strong> 放在尺寸 × 2.5 的距離，介於 0.5～1.5 m，而且一定在主體外緣再往外至少 0.3 m（沒有主體時是 1.5 m）。受光點在大主體的邊角附近、新燈仍會落進主體裡時，燈會沿同一個方向往外退，直到在主體外面。新的發光燈在 1.5 m 時是 100 W，距離越遠功率越大，依距離平方換算，讓打到主體上的光大致一樣：3 m 是 400 W、6 m 是 1600 W。這只影響新加的燈，已存在的燈不會被搬動，功率也不變。</p>
+<p><strong>新燈打在哪裡。</strong>按下之前，<strong>新增一盞燈</strong> 下方的提示就會告訴你，例如「新燈會打在：Head」。判斷順序：</p>
+<ol><li>選取的是 Studio Shapers 的燈 → 新燈沿用它的主體（與受光點）。</li><li>選取了一個 Mesh → 打在那個 Mesh。</li></ol>
+<p>只有 Mesh 可以當主體。文字、曲線、容體（Volume）、點雲和 collection instance（例如 link 進來的車）會被當成沒選，燈會打到上一個主體或 3D 游標。遇到這些物件，請加一個簡單的 Mesh（把方塊縮放到物件大小）當替身主體。</p>
+<ol start="3"><li>什麼都沒選、或選的是相機／一般 Blender 燈 → 打在這個場景最近一次用過的主體。</li><li>以上都沒有 → 打在 <strong>3D 游標</strong>。</li></ol>
+<p>所以擺好第一盞之後，中間點空白處、選相機都沒關係，繼續加的燈都會打在同一個主體。只有明確選取另一個 Mesh 才會換主體。提示寫「新燈會打在 3D 游標」（前面有橘色三角）時，表示還沒找到主體：燈要打在物件上，就先選一個 Mesh。</p>
+<p><strong>打在主體的哪裡。</strong>主體上的第一盞燈對準它 bounding box 的中心。主體有了主燈之後，新燈改成跟主燈共用同一個受光點；所以你替主燈在臉上點了一個點（<a href="#5-照哪裡">第 5 節</a>），接下來的燈也會打在那裡。<strong>新增一盞燈</strong> 與 <strong>依角色加燈</strong> 都是這樣（<strong>背景光</strong> 除外，它打在背景上）。只有會發光、沒被關掉、而且受光點在這個主體上的主燈才算；不然新燈照舊對準中心。一鍵布光是自己建整組燈，不受影響。</p>
+<h3 id="一鍵布好整組">一鍵布好整組</h3>
+<figure class="shot" id="shot-setups_menu"><div class="shot-frame" style="max-width:454px"><a href="img/zh/05_setups_menu.png"><img src="img/zh/05_setups_menu.png" width="454" height="566" alt="一鍵布光選單打開：主燈在：左、左右對調、器材避開地板、套用到、人像與產品兩組、我的布光" loading="lazy"></a><span class="shot-dot" style="left:24.45%;top:8.30%" aria-hidden="true">1</span><span class="shot-dot" style="left:22.91%;top:13.07%" aria-hidden="true">2</span><span class="shot-dot" style="left:45.37%;top:21.38%" aria-hidden="true">3</span><span class="shot-dot" style="left:16.30%;top:26.15%" aria-hidden="true">4</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">主燈在：左 ▸</strong> 最上面一行是主燈在哪一側，滑鼠移過去選 <strong>左</strong> 或 <strong>右</strong>。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">左右對調</strong> 會把整組翻過去。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">再往下有一行會確認對象（「套用到：Head 周圍」）。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text">選一組，例如 <strong>林布蘭光</strong> 或 <strong>三點布光</strong>。</span></li></ol></figure>
+<ol><li>選取主體。</li><li>打開 <strong>一鍵布光</strong>。最上面一行 <strong>主燈在：左</strong> ▸ 是主燈在哪一側，滑鼠移過去選 <strong>左</strong> 或 <strong>右</strong>；再往下有一行會確認對象（「套用到：Head 周圍」）。</li><li>選一組，例如 <strong>林布蘭光</strong> 或 <strong>三點布光</strong>。（想看樣子挑，<strong>一鍵布光</strong> 旁邊的圖片按鈕會用縮圖列出內建的各組。）</li><li>整組燈會依主體大小縮放建立，主燈已經指定好，其他燈也照設定跟主燈差幾級。主體原本的燈會被隱藏，不會刪除；場景裡一般的 Blender 燈也會被關掉；按 <strong>全部顯示</strong> 就能叫回來。會低於地板的燈會先往上抬到地板以上（<a href="#器材避開地板">第 11 節</a>）。</li><li>按 <strong>看光</strong>，在「算繪」著色下看看效果。想讓主燈換到另一邊？同一個選單最上面的 <strong>左右對調</strong> 會把整組翻過去。</li></ol>
+<p>完整清單與選項見<a href="#11-一鍵布光">第 11 節</a>。</p>
+<h3 id="依角色加燈">依角色加燈</h3>
+<p><strong>新增一盞燈</strong> 選單最下面的 <strong>依角色加燈</strong> 這一組，是照「燈的工作」加燈，而不是照燈型：你選這盞燈要做什麼，addon 就幫你擺好位置，並把亮度設成跟主燈比幾級。</p>
+<div class="table-wrap"><table><thead><tr><th>項目</th><th>放在哪裡</th><th>燈</th><th>一開始的亮度</th></tr></thead><tbody><tr><td><strong>輪廓光</strong></td><td>主體後方、主燈的另一側，稍微偏高：沿著肩膀和下巴勾出一條亮邊。</td><td>長條箱</td><td>比主燈亮 1 級（+1）</td></tr><tr><td><strong>髮光</strong></td><td>主燈同一側的主體後上方，從上面打亮頭髮。</td><td>橫放的長條箱</td><td>比主燈暗 1 級（−1）</td></tr><tr><td><strong>側逆光</strong></td><td>主燈另一側的主體側後方、位置偏低，掠過臉的側面。</td><td>長條箱</td><td>比主燈暗 1 級（−1）</td></tr><tr><td><strong>交叉輪廓光（兩盞）</strong></td><td>主體後方左右各一盞：兩側都有亮邊。</td><td>兩支長條箱</td><td>兩盞都比主燈亮 1 級（+1）</td></tr><tr><td><strong>背景光</strong></td><td>主體後方偏低處，打亮主體後面的背景（見下方）。</td><td>柔光箱</td><td>打在背景上的亮度和主燈打在主體上一樣（0）</td></tr><tr><td><strong>負補光</strong></td><td>主體暗側、主燈的另一側，和主體同高（見下方）。</td><td>黑旗，不發光</td><td>—（它是把光拿掉）</td></tr></tbody></table></div>
+<p>輪廓光、髮光、側逆光、交叉輪廓光放在離受光點「主體最長邊 × 1.5」的地方。主體有主燈時它們對準主燈的受光點，沒有主燈時對準主體中心（<a href="#一次加一盞">見上方</a>）。</p>
+<p>攝影上輪廓光通常比主燈亮一點，所以 <strong>輪廓光</strong> 與 <strong>交叉輪廓光</strong> 從 +1 級起跳。在霧面主體上，輪廓光看起來仍然只是一條細亮邊：它的光大多打在主體背面。</p>
+<ul><li><strong>左右看的是選單，不是主燈。</strong>「主燈的另一側」是指選單最上面那一行 <strong>主燈在：左</strong> ▸ 所選那一側的另一邊。在那裡改選 <strong>右</strong>，所有角色燈都會左右對調。addon 不會去看你的主燈實際放在哪裡。</li><li><strong>亮度用級數。</strong>新燈直接設成跟主燈比幾級（在主體上量，和 <strong>比主燈</strong> 一樣），之後也跟著主燈變（<strong>跟主燈比</strong>，並勾選 <strong>主燈變亮變暗時一起跟著</strong>，<a href="#10-亮度與主燈">第 10 節</a>）。想要別的光比，加燈之後立刻打開 Blender 的 <strong>調整最後的操作</strong>（Adjust Last Operation）面板（視窗左下角，或按 <strong>F9</strong>），改 <strong>比主燈級數</strong>：輸入 −2，這盞燈就是主燈的四分之一亮。下一次再加角色燈時，又會從該角色的預設值開始。之後要改，就跟其他燈一樣在 <strong>亮度</strong> 裡調。</li><li>加好之後會選取新燈（交叉輪廓光是兩盞都選）。主燈、主燈的功率和你其他的燈都不會被改動。訊息會說做了什麼，例如「已在「Head」周圍加入輪廓光 - 已設成比主燈 +1.0 級，之後亮度會跟著主燈調整」。</li></ul>
+<p><strong>沒有東西可以比的時候</strong>，燈照樣會加進來，訊息會說明原因：</p>
+<ul><li><strong>還沒有主燈。</strong>新燈暫時當主燈，功率跟一般新燈一樣（<a href="#一次加一盞">見上方</a>）：「目前沒有主燈，這盞暫時當主燈」。<strong>交叉輪廓光</strong> 的兩盞中，第一盞當主燈，第二盞設成比它 0 級。</li><li><strong>主燈是 0 W，而且記得它上次的功率。</strong>新燈照那個功率設定，所以主燈調回來時光比就對了：「主燈目前是 0 W：已照它上次的功率設成比主燈 -1.0 級，主燈調回來就是這個光比」。</li><li><strong>主燈是 0 W，而且沒有記錄到之前的功率</strong>（例如它在 0 W 時被設成主燈）。新燈保留預設功率：「主燈是 0 W，尚無可比較的亮度，先用預設功率」。</li><li><strong>主燈在別的主體上</strong>（主燈的受光點離新燈的受光點超過 0.5 m，<a href="#10-亮度與主燈">第 10 節</a>）。新燈保留預設功率，也不跟主燈比：「主燈在別的主體上，無法比較，先用預設功率」。</li></ul>
+<p>這幾種情況保留的預設功率，是一般新燈在主體旁邊原本那個位置會拿到的功率，不是照角色的位置算的：主體小於大約 1 m 時，以及背景光，請看算圖結果再調。</p>
+<p><strong>背景光</strong></p>
+<ul><li>它會從主體往正後方、遠離相機的方向找背景，取遇到的第一個表面：牆、背景紙、任何 Mesh 都可以；主體本身和 Studio Shapers 的燈與器材會被跳過。受光點就放在那個表面上。</li><li>燈放在主體和背景之間，比受光點稍低一點，距離是「主體背面到背景的間距 × 0.4」（至少 0.3 m、最多 3 m）。燈一定在兩者之間；背景很近時，就放在正中間。</li><li>主體後方什麼都找不到時，受光點是主體後方的一個自由點：主體背面再往後 1 m，主體比較大時改成主體的尺寸。</li><li>背景幾乎貼著主體（大約 1 mm）時沒有空間放燈：燈不會加進來，訊息會說燈離受光點太近。</li><li>它的亮度也跟其他角色一樣用級數設定與顯示。<strong>比主燈</strong> 比的是打在背景上的光和主燈打在主體上的光。這盞燈屬於加燈時的那個主體，所以雖然受光點離主體很遠，仍會跟那個主體的主燈比較、也會跟著主燈變（<a href="#10-亮度與主燈">第 10 節</a>的 0.5 m 規則不適用於它）。</li><li>選著背景光時，下一盞燈、一鍵布光和角色燈都會以它的主體為準，灰色提示也會寫那個主體。一鍵布光的 <strong>隱藏目前的燈</strong> 與 <strong>左右對調</strong> 都會把背景光算進去。</li></ul>
+<p><strong>負補光</strong></p>
+<ul><li>這一組的最後一項。它不是燈，而是一塊放在主體暗側的正方形黑旗，用來吸掉反彈進暗面的光。</li><li>「暗側」和其他角色一樣，是選單上 <strong>主燈在：左</strong> ▸ 那一行所選那一側的另一邊。它繞到多遠看你的主燈：主燈繞主體轉了多少角度，它就轉多少，但限制在 45° 到 100° 之間。它和受光點（主體中心）同高、直立、面向主體。</li><li>邊長是「主體最長邊 × 4」，至少 0.6 m、最多 2.0 m。它離受光點半個邊長；如果「主體最遠的角再往外 0.25 m」比較遠，就放在那裡。</li><li>沒有主燈時分不出暗側：黑旗會放在一般新燈會去的位置，訊息會說明（「沒有主燈，無法判斷暗側：黑旗先放在預設位置」）。</li><li>它只擺一次，之後主燈怎麼動它都不跟。</li><li>和所有器材一樣，一開始不入鏡。如果你打開 <strong>器材入鏡</strong>，而黑旗在相機畫框裡，<strong>進階設定</strong> 子面板會提醒：「這面黑旗在相機畫面內，會被算進畫面。把它移出畫框，或關掉「器材入鏡」。」addon 不會幫你搬。</li><li>黑旗只能吸掉本來就在的光。在什麼都沒有、光無處反彈的暗房裡，它幾乎沒有作用；牆、地板或反光板把暗面打亮時，才看得出它的效果。</li><li>它不算在 <strong>整組距離</strong>（<a href="#整組移動">第 7 節</a>）裡，<strong>器材避開地板</strong>（<a href="#器材避開地板">第 11 節</a>）也不會抬它。</li></ul>
+<p>已知限制：</p>
+<ul><li><strong>髮光</strong> 和其他角色燈一樣，對準主燈的受光點，沒有主燈時對準主體中心。全身像（例如 1.8 m 高）可能就打在身體中段，不是頭部；請用 <strong>點選受光點</strong>（<a href="#5-照哪裡">第 5 節</a>）把它對高一點。</li><li>交叉輪廓光、<strong>雙長條箱輪廓光（產品）</strong> 這類成對的燈，名稱裡的「左」「右」是從相機看，加燈時照 <strong>主燈在：左</strong>／<strong>右</strong> 放好、取好名字。之後按 <strong>左右對調</strong>，它們會連名字一起換邊（你自己改過名的燈不會被改名）。例外：我的布光裡的燈按 <strong>左右對調</strong> 時只換位置、不改名；1.0.0 擺好或存下的燈，名字可能本來就和位置相反。遇到這兩種情況，自己改名即可。</li><li><strong>角色燈會連同角色存進我的布光</strong>，背景光和負補光也一樣，套用後回來仍是同一個角色（<a href="#我的布光">第 11 節</a>）。</li><li>選著背景光時新增 <strong>柔光布</strong> 或 <strong>黑旗</strong>，不會掛在背景光上，而是改打在主體上。</li><li><strong>複製這盞燈</strong> 會保留角色：角色燈的複本是同一個角色；背景光的複本仍屬於同一個主體，所以會跟主燈比較、也會跟著主燈變。</li><li>背景光所屬的主體被刪掉或移出場景時，這盞燈就不再跟主燈比較，也不跟著主燈變；<strong>亮度</strong> 子面板會顯示「這盞背景光所屬的主體不見了（被刪除或不在這個場景），無法和主燈比較」。</li><li>燈的集盒（Collection）被隱藏時，不會提醒你看不到新燈（一般燈型那幾組會提醒）。</li><li><strong>用舊版開檔。</strong>1.0.0 以前的版本不認得角色：角色燈在那裡是一般的燈（中文介面會把髮光、側逆光顯示成英文 Hair、Kicker）。背景光是一盞打在牆上的一般燈，會顯示「這個主體上沒有主燈可以比」，也不跟著主燈變。</li></ul>
+<h3 id="看圖挑選">看圖挑選</h3>
+<figure class="shot" id="shot-gallery_lights"><div class="shot-frame" style="max-width:508px"><a href="img/zh/06_gallery_lights.png"><img src="img/zh/06_gallery_lights.png" width="508" height="482" alt="看圖選燈，會發光的燈分頁：從柔光箱到雷達罩九張縮圖" loading="lazy"></a><span class="shot-dot" style="left:10.24%;top:4.98%" aria-hidden="true">1</span><span class="shot-dot" style="left:7.87%;top:9.96%" aria-hidden="true">2</span><span class="shot-dot" style="left:5.91%;top:35.27%" aria-hidden="true">3</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">看圖選燈</strong> 三個分頁：<strong>會發光的燈</strong>、<strong>不發光器材</strong>、<strong>依角色加燈</strong>。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">一顆蛋和一顆小球，只被這盞燈照亮。左上角的小圖是從主體看過去，這盞燈的發光面。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">按圖下面的名稱，效果和按選單裡同一項完全一樣。</span></li></ol></figure>
+<figure class="shot" id="shot-gallery_setups"><div class="shot-frame" style="max-width:504px"><a href="img/zh/07_gallery_setups.png"><img src="img/zh/07_gallery_setups.png" width="504" height="738" alt="看圖選布光：14 組內建一鍵布光的縮圖" loading="lazy"></a><span class="shot-dot" style="left:14.68%;top:7.59%" aria-hidden="true">1</span><span class="shot-dot" style="left:5.95%;top:19.24%" aria-hidden="true">2</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">被這組燈照亮的範例主體，左上角是一張從上往下看的燈位小圖。燈位圖上，灰點是主體，下方的三角形指向相機；暖色大點是主燈，白點是其他燈。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">看圖選布光</strong> 列出 14 組內建一鍵布光。我的布光仍然在 <strong>一鍵布光</strong> 選單裡。</span></li></ol></figure>
+<p>主面板上 <strong>新增一盞燈</strong> 和 <strong>一鍵布光</strong> 右邊各有一顆圖片按鈕。按下去會用小圖列出同樣的選項，每列三格；按圖下面的名稱，效果和按選單裡同一項完全一樣。</p>
+<ul><li><strong>看圖選燈</strong> 有三個分頁：<strong>會發光的燈</strong>、<strong>不發光器材</strong>、<strong>依角色加燈</strong>。<strong>依角色加燈</strong> 這一頁最上面和選單一樣有兩行：<strong>主燈在：左</strong> ▸ 和 <strong>器材避開地板</strong>（<a href="#器材避開地板">第 11 節</a>）。</li><li><strong>看圖選布光</strong> 列出 14 組內建一鍵布光。我的布光仍然在 <strong>一鍵布光</strong> 選單裡。</li></ul>
+<p>圖上畫的是：</p>
+<ul><li><strong>會發光的燈</strong>：一顆蛋和一顆小球，只被這盞燈照亮。左上角的小圖是從主體看過去，這盞燈的發光面。</li><li><strong>不發光器材</strong> 和 <strong>負補光</strong>：整格都是從上往下看的燈位圖（它們的效果放在打亮的主體圖上本來也看不出來）。</li><li>其他角色燈與一鍵布光：被它們照亮的範例主體，左上角是一張從上往下看的燈位小圖。</li></ul>
+<p>燈位圖上，灰點是主體，下方的三角形指向相機。暖色大點是主燈，白點是其他燈，白條是反光板，灰條是柔光布，空心框是黑旗（和負補光），黃色空心圈是關掉的主燈，上緣的灰線是背景牆。</p>
+<p><strong>輪廓光</strong>、<strong>髮光</strong>、<strong>側逆光</strong>、<strong>交叉輪廓光</strong> 這四張是示意圖，顯示這盞燈會打亮哪裡：主燈關掉、角色燈調亮 8 倍。實際加進場景時，它從自己跟主燈比的級數起跳，看起來會比圖上含蓄。</p>
+<h3 id="算圖之前">算圖之前</h3>
+<ul><li>用 Cycles 算圖。器材與發光面預設不入鏡（<strong>器材入鏡</strong> 關閉），但器材仍會擋光與反光。</li><li>傘類（含拋物線深傘）可能比單純的區光（Area）需要更高的取樣數（算繪屬性 &gt; 取樣 &gt; 算繪 &gt; 最大樣本數；Render Properties &gt; Sampling &gt; Render &gt; Max Samples）。<strong>雷達罩</strong> 算起來跟 <strong>八角箱</strong> 差不多乾淨。見<a href="#13-物理說明與誠實的限制">第 13 節</a>。</li></ul>
+<hr>
+<h2 id="4-12-種燈型">4. 12 種燈型</h2>
+<h3 id="燈的設定">燈的設定</h3>
+<p>選取一盞燈（例如在清單點它的名字）。主面板的清單下方會多出兩列：</p>
+<div class="table-wrap"><table><thead><tr><th>控制</th><th>作用</th></tr></thead><tbody><tr><td><strong>名稱</strong></td><td>這盞燈的名字。預設名會跟著燈型（見下方）。右邊的小按鈕是 <strong>複製這盞燈</strong>（見下方）。</td></tr><tr><td><strong>燈型</strong></td><td>切換燈型。燈位、對準、顏色與功率保留，新器材原地重建。</td></tr></tbody></table></div>
+<p>再下面是依序排好的子面板，點標題就能收起或展開；<strong>尺寸（影子軟硬）</strong>、<strong>顏色</strong>、<strong>照哪裡</strong>、<strong>進階設定</strong> 預設是收合的。</p>
+<div class="table-wrap"><table><thead><tr><th>子面板</th><th>內容</th></tr></thead><tbody><tr><td><strong>燈放哪裡</strong></td><td>燈的位置：俯視圖、方向按鈕、<strong>距離</strong>、<strong>精確數字</strong>、<strong>相機與診斷</strong>。見<a href="#6-燈放哪裡">第 6 節</a>。</td></tr><tr><td><strong>跟隨燈光</strong></td><td>只有柔光布與黑旗才有。見<a href="#8-跟著燈走的柔光布與黑旗">第 8 節</a>。</td></tr><tr><td><strong>亮度</strong></td><td><strong>功率 (W)</strong>、<strong>-1 / -1/3 / +1/3 / +1</strong> 按鈕，以及這盞燈跟主燈怎麼比。見<a href="#10-亮度與主燈">第 10 節</a>。柔光箱、長條箱、八角箱的最後一行是 <strong>外殼不擋其他燈</strong>（<a href="#外殼不擋其他燈">第 10 節</a>）。</td></tr><tr><td><strong>尺寸（影子軟硬）</strong></td><td>這種燈型的尺寸欄位（見下方），可加格柵的燈型還有 <strong>蜂巢格柵</strong>。尺寸欄位的提示一句話講完：「大又近＝影子軟」。</td></tr><tr><td><strong>顏色</strong></td><td><strong>光色</strong>、<strong>色溫</strong>、<strong>K 值</strong>、<strong>色紙</strong>。見<a href="#9-色溫與色紙">第 9 節</a>。</td></tr><tr><td><strong>照哪裡</strong></td><td>燈對準什麼。燈沒有受光點時，標題列會出現警告圖示。見<a href="#5-照哪裡">第 5 節</a>。</td></tr><tr><td><strong>進階設定</strong></td><td><strong>器材入鏡</strong>、<strong>Viewport 線框</strong>、<strong>重建幾何</strong>、<strong>尺寸重設</strong>、<strong>刪除燈</strong>。</td></tr></tbody></table></div>
+<p>不發光器材（黑旗、反光板、柔光布）沒有 <strong>亮度</strong> 與 <strong>顏色</strong> 子面板，<strong>燈型</strong> 下方會顯示「這個器材不發光，只負責遮光、反光或柔光」。</p>
+<p><strong>功率 (W)</strong> 是 Cycles 光源功率，單位瓦。這不是攝影閃燈上標示的 Ws（瓦秒），兩者沒辦法換算。器材內部造成的光損<strong>不會</strong>自動補償。</p>
+<p><strong>單位。</strong>尺寸欄位與俯視圖下方的高度，會用場景的長度單位（場景屬性 &gt; 單位；Scene Properties &gt; Units）顯示：公尺照舊；固定的公制單位例如公分（俯視圖寫「172.00 cm」）；英制場景用英尺（「5.65'」）；單位系統是 <strong>None</strong> 時只寫數字（「H 1.72」）。存的值仍是公尺，所以切換單位系統不會改到燈，也不會改到舊檔。錯誤訊息裡的長度也用場景單位；套用一鍵布光後的調整清單，數字仍是公尺值。</p>
+<p><strong>進階設定</strong> 裡：</p>
+<ul><li><strong>器材入鏡</strong>、<strong>Viewport 線框</strong> —— 見<a href="#12-別讓器材入鏡">第 12 節</a>。</li><li><strong>重建幾何</strong> —— 重新建立器材。燈位與受光點不變。</li><li><strong>尺寸重設</strong> —— 把這種燈型的尺寸、格柵、遮光片與反射面設定改回預設。功率、顏色和位置不變。</li><li><strong>刪除燈</strong> —— 跟清單上的 ✕ 一樣：刪除這盞燈（含器材與受光點），可 <strong>Ctrl+Z</strong> 復原。</li></ul>
+<p><strong>複製這盞燈</strong>（<strong>名稱</strong> 旁邊的按鈕）會做出一盞設定相同的燈——燈型、尺寸、功率、亮度模式、顏色與色紙都一樣——放在主體周圍再轉 20° 的位置（<strong>水平環繞</strong> ＋20°），<strong>上下角度</strong> 與 <strong>距離</strong> 不變。複製正在跟隨燈光的柔光布或黑旗時，新的那片也跟隨同一盞燈。請用這個按鈕，不要用 Blender 的 Shift+D，後者做出的副本 addon 無法編輯（<a href="#14-疑難排解與常見問題">第 14 節</a>）。有錯誤訊息的燈不會被複製（請先修好）；複製到一半失敗時什麼都不會留下，場景和按之前一樣。角色燈的複本會保留角色（<a href="#依角色加燈">第 3 節</a>）。</p>
+<p>尺寸依燈型分別記住：柔光箱切成束光筒再切回來，柔光箱會恢復原本的尺寸。燈名還是預設名時（例如 <code>Studio Softbox</code> 或 <code>Studio Softbox.002</code>），切換燈型會跟著改名（改成 <code>Studio Snoot</code>），它的集盒（Collection）也一起改。只要你自己改過名字（例如 <code>Hair Light</code>），就不會再被自動改。</p>
+<p>若某個數值會做出無效幾何（格柵太密、擋片碰到碗……），面板會顯示「未更新：保留最後有效造型」與原因。燈照常運作——功率、顏色、可見性仍可調——數值修正後造型就會更新。</p>
+<p>如果某盞燈的任何一個器材零件或光源被手動刪掉了（例如在視窗裡選到它按了 X），面板會顯示「這盞燈有器材零件被刪掉了；按「重建幾何」可以補回來」，正下方就有 <strong>重建幾何</strong> 按鈕。這個檢查是逐個零件比對，所以手動複製出來的零件（例如對一片遮光片按 Shift+D），或刪掉一個零件再拿別的零件複本頂替，也會被抓到；按 <strong>重建幾何</strong> 就會恢復正確的器材。</p>
+<h3 id="會發光的燈">會發光的燈</h3>
+<p><strong>柔光箱</strong> — 矩形箱體，外黑內白；正面是均勻的矩形區光（Area）。<strong>尺寸（影子軟硬）</strong>：<strong>寬度</strong>、<strong>高度</strong>（預設 0.6 × 0.9 m）、<strong>箱體深度</strong>，可加 <strong>蜂巢格柵</strong>。要橫放柔光箱，把寬高對調即可。</p>
+<p><strong>長條箱</strong> — 細長的柔光箱（預設 0.25 × 1.0 m）。控制同柔光箱，另有 <strong>旋轉角度</strong>：0° 直立、90° 橫放，中間是斜放。旋轉時燈位與對準不變。</p>
+<p><strong>八角箱</strong> — 圓盤形的區光，配實體八角罩體與開口。<strong>尺寸（影子軟硬）</strong>：<strong>直徑</strong>（預設 0.8 m）、<strong>箱體深度</strong>，可加 <strong>蜂巢格柵</strong>。</p>
+<p><strong>蜂巢格柵</strong>（柔光箱、長條箱、八角箱、束光筒）— 勾選後，就會在開口前加上一片實體蜂巢格。每個小格只讓方向比較正的光通過，所以光束會變窄。<strong>格柵形狀</strong> 可選 <strong>矩形</strong> 或 <strong>六角</strong>。<strong>格子尺度</strong> 在矩形是相鄰兩格中心的距離，在六角是單一格子對角的寬度。<strong>格柵深度</strong> 與 <strong>格壁厚度</strong> 會真的改 Mesh：格子越深，光束越窄。開口邊緣的格子會被裁切，邊緣還有一圈周邊牆。柔光箱、長條箱、八角箱的格柵緊貼發光面，光不會從格柵和箱子之間的縫斜漏出去。新格柵的預設是格子 4 cm、深 5 cm、格壁 1 mm；<strong>進階設定</strong> 裡的 <strong>尺寸重設</strong> 會回到這組值。限制：<strong>格壁厚度</strong> 必須小於 <strong>格子尺度</strong> 的 40%；超過 100,000 面的格柵會被拒絕（保留原造型）。用預設格子尺度的六角格柵，連 1.2 × 1.8 m 的柔光箱都在上限內。很密的格柵重建需要一點時間。0.9.9 以前存的檔案，格柵會保留原本的尺寸（見<a href="#14-疑難排解與常見問題">第 14 節</a>）。</p>
+<p><strong>束光筒</strong> — 圓盤光源在一根厚壁、中空、吸光的筒子後端。<strong>尺寸（影子軟硬）</strong>：<strong>直徑</strong>（光源，預設 0.12 m）、<strong>筒長</strong>（預設 0.35 m）、<strong>出口直徑</strong>（預設 0.07 m），可加 <strong>蜂巢格柵</strong>。</p>
+<p><strong>四葉遮光片</strong> — 矩形區光配四片獨立遮光片。<strong>尺寸（影子軟硬）</strong>：光源的 <strong>寬度</strong>、<strong>高度</strong>（預設 0.3 × 0.3 m）、<strong>遮光片長度</strong>，以及每片的角度：<strong>左片</strong>、<strong>右片</strong>、<strong>上片</strong>、<strong>下片</strong>（0°～140°，預設 45°）。0° 向外平展，90° 正對前方，超過 90° 向內折、切進光束。</p>
+<h3 id="傘與雷達罩">傘與雷達罩</h3>
+<p><strong>反射傘</strong> — 光源朝<strong>傘內</strong>打，打到主體的是反射回來的光。傘外是暗的，往後方幾乎不漏光。<strong>尺寸（影子軟硬）</strong>：<strong>直徑</strong>（預設 1.0 m）、<strong>反射罩深度</strong>、<strong>光源／擋片距離</strong>、<strong>反射面</strong>（<strong>白色</strong> 或 <strong>銀色</strong>）。在反射傘上，<strong>光源／擋片距離</strong> 是光源在傘口前方多遠（跟透射傘的 <strong>燈到傘口距離</strong> 是同一個概念）。</p>
+<p><strong>透射傘</strong> — 單層半透明白傘布，光源在傘布<strong>後方</strong>，穿過傘布打向主體。大約一半的光穿過、其餘反射回來，所以燈的周圍與後方也會被照亮——這就是真實透射傘的特性。<strong>尺寸（影子軟硬）</strong>：<strong>直徑</strong>、<strong>傘深</strong>、<strong>燈到傘口距離</strong>。</p>
+<p><strong>拋物線深傘</strong> — 深拋物面反射傘（預設 1.3 m、深 0.55 m、光滑銀面），點光源在焦點，前方有一小片黑擋片擋掉直射光。反射面由 24 瓣組成，背後有傘骨；中心軸會跟著焦點位置伸縮。<strong>尺寸（影子軟硬）</strong>：<strong>直徑</strong>、<strong>傘深</strong>、<strong>焦點偏移</strong>、<strong>反射面</strong>。<strong>焦點偏移</strong> 0＝光源在焦點（光束最集中）；正值往傘口、負值往傘底，光束都會擴散變柔。評估這個控制之前，<strong>請先看<a href="#13-物理說明與誠實的限制">第 13 節</a>關於過濾光澤（Filter Glossy）的說明</strong>：Cycles 的預設設定會把它的效果抹掉大半。</p>
+<p><strong>雷達罩</strong>（英文 Beauty Dish，也有人叫美顏罩）— 一個內面會發光的深金屬碗，碗中央有一片小圓盤叫<strong>擋片</strong>，由三支細撐桿固定。碗裡沒有燈物件：碗的內面本身就是光源，碗口外緣一圈細環和擋片外圍一圈最亮，擋片在正中央形成暗點——就是真實雷達罩的樣子。<strong>尺寸（影子軟硬）</strong>：<strong>直徑</strong>（碗的外徑，預設 0.55 m）、<strong>反射罩深度</strong>、<strong>光源／擋片距離</strong>、<strong>擋片直徑</strong>、<strong>反射面</strong>。在雷達罩上：</p>
+<ul><li><strong>光源／擋片距離</strong> 決定擋片的位置：從碗底往前 2 cm 那一點（舊版放燈的位置）沿著碗的中軸量，數值越大，擋片越往碗口移。</li><li><strong>反射面</strong>（<strong>白色</strong> 或 <strong>銀色</strong>）只改擋片的表面，在光亮的反射裡看得到的是中央暗點的顏色；碗內的發光不受影響。</li><li><strong>功率 (W)</strong> 不變時，改 <strong>直徑</strong> 或 <strong>擋片直徑</strong>，主體亮度大致不變，跟其他燈一樣。</li><li>擋片必須小於碗口直徑的 90%，且不能碰到碗。</li></ul>
+<p>0.9.9 以前建的雷達罩，碗裡的舊燈會保留到重建為止（見<a href="#14-疑難排解與常見問題">第 14 節</a>）。</p>
+<p>拋物線深傘與雷達罩的面數比其他燈型多，拖它們的滑桿時造型更新會慢一點；算圖時間沒有明顯差別。</p>
+<h3 id="不發光器材">不發光器材</h3>
+<p>這些器材沒有光源，要有別的燈打到它們才有作用。</p>
+<p><strong>黑旗</strong> — 擋光的黑板（預設 0.6 × 0.9 m）。<strong>尺寸（影子軟硬）</strong>：<strong>寬度</strong>、<strong>高度</strong>、<strong>板厚</strong>、<strong>保持直立</strong>。黑旗可以掛在燈上——見<a href="#8-跟著燈走的柔光布與黑旗">第 8 節</a>。</p>
+<p><strong>反光板</strong> — 白色或銀色的反光板（預設 0.6 × 0.9 m）。<strong>尺寸（影子軟硬）</strong>：<strong>寬度</strong>、<strong>高度</strong>、<strong>反射面</strong>、<strong>板厚</strong>、<strong>保持直立</strong>。</p>
+<p><strong>柔光布</strong> — 單層半透明白布（與透射傘同材質：一半穿透、一半反射），放在燈與主體之間，把硬光打柔。預設 1 × 1 m、直立、相機看不到。<strong>尺寸（影子軟硬）</strong>：<strong>寬度</strong>、<strong>高度</strong>、<strong>保持直立</strong>。<strong>跟隨燈光</strong> 子面板：<strong>跟隨燈光</strong>、<strong>與燈距離</strong>——見<a href="#8-跟著燈走的柔光布與黑旗">第 8 節</a>。</p>
+<p><strong>保持直立</strong>（預設開）讓板子與地板保持垂直，只左右轉向受光點，像架在燈架上一樣——燈架再高也不會往下斜。關掉則整片斜向直接對準受光點。如果你用 <strong>R</strong> 手動把直立的板子轉歪，下次燈位改變時它會自動扶正。</p>
+<hr>
+<h2 id="5-照哪裡">5. 照哪裡</h2>
+<p><strong>照哪裡</strong> 子面板（預設收合）決定燈對準什麼。改對準<strong>永遠不會搬動燈</strong>——只改燈的朝向與受光點。這是刻意的：你放在左後方的燈，不應該因為換了一個點就跳到左前方。</p>
+<div class="table-wrap"><table><thead><tr><th>控制</th><th>作用</th></tr></thead><tbody><tr><td><strong>主體</strong></td><td>燈要對準的 Mesh。選好後對準該物件 bounding box 的中心。</td></tr><tr><td>「受光點：…」</td><td>顯示燈現在對準的對象。</td></tr><tr><td><strong>點選受光點</strong></td><td>只讓這盞燈轉去對準主體表面上的一個精確點（見下方）。<strong>主體</strong> 選了 Mesh 才能按；還沒選時按鈕是灰的，下面會寫「先在上面的「主體」欄位選一個 Mesh，才能點表面」。</td></tr><tr><td><strong>建立／修復受光點</strong></td><td>只有燈沒有受光點時才出現（例如舊檔案裡的燈），同時顯示「還沒有受光點；按「建立／修復受光點」即可建立」。建立受光點，燈不會移動。受光點被 X 刪掉時，<strong>照哪裡</strong> 會說受光點不在場景裡，按這個按鈕就會放回來。</td></tr></tbody></table></div>
+<p><strong>點選受光點</strong> 的步驟：</p>
+<ol><li>按 <strong>點選受光點</strong>。視窗標頭會顯示「點選受光點：點主體表面確認／Esc 或右鍵取消／燈的位置不動」，游標變成滴管，視窗最下方的狀態列會列出滑鼠按鍵：<strong>確認</strong>、<strong>取消</strong>、<strong>轉視角</strong>。</li><li>滑鼠移到主體上，一個綠色圓盤標出命中點，滑鼠旁的標籤寫「點一下：這盞燈瞄準表面的這一點」。離開主體時，圓盤停在上一個點並變成橘色，標籤改寫「移到主體上」。</li><li>左鍵確認，訊息會寫「受光點已設定：這盞燈改看這一點」；Esc 或右鍵取消。中鍵與滾輪仍可操作視角。</li><li>沒點中主體時，不會改去拾取背景；受光點維持原本的位置。</li></ol>
+<p>注意事項：</p>
+<ul><li>選好的點跟隨物件的變換（移動／旋轉／縮放），<strong>不</strong>跟隨變形。如果 Blender 的修改器（Modifier，例如 Subdivision、Displace）或骨架改變了形狀，請重新選點。</li><li>點到物件背面，不代表燈能穿過物件照到那裡。實體物件仍會擋光。</li><li>改對準之後燈位不變，但 <strong>燈放哪裡</strong> 裡的 <strong>水平環繞</strong>、<strong>上下角度</strong>、<strong>距離</strong> 數字可能會變，因為它們改從新的中心量起。</li></ul>
+<hr>
+<h2 id="6-燈放哪裡">6. 燈放哪裡</h2>
+<figure class="shot" id="shot-position_panel"><div class="shot-frame" style="max-width:250px"><a href="img/zh/10_position_panel.png"><img src="img/zh/10_position_panel.png" width="250" height="472" alt="燈放哪裡子面板，精確數字與相機與診斷都展開" loading="lazy"></a><span class="shot-dot" style="left:2.80%;top:9.53%" aria-hidden="true">1</span><span class="shot-dot" style="left:2.80%;top:18.43%" aria-hidden="true">2</span><span class="shot-dot" style="left:2.80%;top:27.33%" aria-hidden="true">3</span><span class="shot-dot" style="left:2.80%;top:31.99%" aria-hidden="true">4</span><span class="shot-dot" style="left:2.80%;top:56.14%" aria-hidden="true">5</span><span class="shot-dot" style="left:2.80%;top:78.18%" aria-hidden="true">6</span><span class="shot-dot" style="left:2.80%;top:97.46%" aria-hidden="true">7</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">打開俯視圖</strong> 會在視窗裡開一張小小的俯視圖，按鈕變成 <strong>關閉俯視圖</strong>。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">方向按鈕</strong> 3 × 3 的捷徑格。它們是起點不是限制——之後用數值細調。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">距離</strong> 燈到受光點的距離，它的提示寫著經驗法則：越近影子越軟。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong class="shot-label">精確數字</strong> 預設收合：<strong>水平環繞</strong>、<strong>上下角度</strong>、<strong>高度</strong>、<strong>燈位把手</strong>。</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">相機與診斷</strong> 點 <strong>燈放哪裡</strong> 最下方的它展開。</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">檢查光路／碰撞</strong> 回報器材是否和其他物件表面交疊、到受光點的中心光路是否被擋、受光點是否背向燈。只提示，不移動任何東西。</span></li><li><span class="shot-num" aria-hidden="true">7</span><span class="shot-text">這盞燈最新的一則訊息，例如「光路尚未檢查」或檢查結果。</span></li></ol></figure>
+<p><strong>燈放哪裡</strong> 子面板把燈擺在受光點周圍，角度從相機的角度來看：0° 在主體和相機之間（正前方）、+90° 在相機右邊、−90° 在相機左邊、180° 在主體後方。</p>
+<p>前後左右在建立燈的時候依場景相機決定。當時場景如果沒有相機，就改照你目前的視角。之後加了相機，面板會顯示「左右方向是在沒有相機時定的，現在場景有相機了」，並附 <strong>以相機設定前方</strong> 按鈕。</p>
+<h3 id="數值">數值</h3>
+<p><strong>距離</strong>（燈到受光點的距離）就在方向按鈕下方，它的提示寫著經驗法則：越近影子越軟。其他數值收在 <strong>精確數字</strong> 裡，預設收合：</p>
+<div class="table-wrap"><table><thead><tr><th>控制</th><th>作用</th></tr></thead><tbody><tr><td><strong>水平環繞</strong></td><td>繞著主體水平轉：0° 前、+90° 右、−90° 左、180° 後。</td></tr><tr><td><strong>上下角度</strong></td><td>燈比受光點高或低幾度（俯仰角）。</td></tr><tr><td><strong>高度</strong></td><td>只改世界 Z 高度，從上方看的位置不變。</td></tr><tr><td><strong>燈位把手</strong></td><td>顯示或隱藏視窗裡的把手（見下方）。</td></tr></tbody></table></div>
+<p><strong>距離</strong>、<strong>水平環繞</strong>、<strong>上下角度</strong>、<strong>高度</strong> 都即時移燈，可以輸入任意值。</p>
+<p><strong>設定暫時套不到燈上時。</strong>設定暫時套不到燈上時（單位規模不是 1、燈被縮放、受光點在燈裡、有別的約束用了 aim 的名字、和 Blender 複本共用身分、Scrim 正在跟隨燈），面板會留著你輸入的值，並說明原因。原因排除後，燈會自動照面板的值更新，其他燈不會跟著這次改動變。尺寸、顏色、功率等設定也是一樣。「尺寸重設」和方向按鈕會先檢查，不能套用時什麼都不改，並說明原因。</p>
+<ul><li>如果有別的約束叫「Studio Shapers Aim」，或受光點被設成燈的子物件，位置的改動會暫時套不上；把那個約束改名，或把受光點從燈底下移出來之後，燈會自動移到面板的值。受光點在燈裡時，訊息寫「改選其他物件」；實際的修法是把受光點移出燈外。</li><li><strong>燈放哪裡</strong>、各項設定（包括 <strong>跟隨燈光</strong> 與它的距離、偏移）或 <strong>主體</strong> 的改動因為別的約束叫「Studio Shapers Aim」而暫時套不上時，訊息會寫：把那個約束改名後，你輸入的值會自動套用。被擋下時什麼都不改的按鈕（<strong>尺寸重設</strong>、<strong>重建幾何</strong>、方向按鈕、<strong>點選受光點</strong>）仍寫「把它改名後再試一次」：改名後再按一次那個按鈕。「前方還沒設定；按「以相機設定前方」後再試一次」也照字面：按了 <strong>以相機設定前方</strong> 之後，要把數值再打一次。</li><li>按了 <strong>以相機設定前方</strong> 之後，狀態可能寫「燈已移動」，但燈其實沒動。</li><li>燈同時被兩個原因擋住時（例如單位規模已回到 1，但燈被縮放），錯誤框可能還留著舊訊息；以上方的紅字為準。</li><li>鎖定期間 <strong>距離</strong> 和 <strong>高度</strong> 都改的話，只有最後改的那一個會生效；另一欄會被改成燈實際位置的值。</li><li>Scrim 跟隨燈時打的 <strong>高度</strong>，放開跟隨後才會套用（如果期間主燈沒動過）。</li><li>復原（Undo）回到「改動被擋下」的那一步時，<strong>燈放哪裡</strong> 的數字會回到燈實際所在的位置。</li><li>受光點掛在燈底下時打的距離，可能在場景更新時被面板重讀成燈的實際位置，你打的值就不會留下。</li><li>改動被擋下時（例如單位規模不是 1）改了燈的 <strong>燈型</strong>，條件解除後燈會變成新燈型，但名稱不會自動改。</li></ul>
+<h3 id="方向按鈕">方向按鈕</h3>
+<p>3 × 3 的捷徑格：<strong>左後</strong>、<strong>後</strong>、<strong>右後</strong>／<strong>左</strong>、<strong>正上方</strong>、<strong>右</strong>／<strong>左前</strong>、<strong>前（相機）</strong>、<strong>右前</strong>。它們是起點不是限制——之後用數值細調。按過 <strong>正上方</strong> 再按側面方向，燈會回到按 <strong>正上方</strong> 之前的上下角度，不會只改了方位、燈卻還停在正上方。</p>
+<p><strong>正上方</strong>（以及輸入 90°、或在俯視圖拖到正中央）會停在 <strong>89.9°</strong> 而不是 90°。原因見<a href="#13-物理說明與誠實的限制">第 13 節</a>。</p>
+<h3 id="視窗把手">視窗把手</h3>
+<p><strong>燈位把手</strong>（在 <strong>精確數字</strong> 裡）開啟時，選取的燈在視窗裡有三個把手：藍色圓環（<strong>水平環繞</strong>）、橘色圓環（<strong>上下角度</strong>）、綠色箭頭（<strong>距離</strong>）。拖曳即沿該軸移燈；Shift 細調，滾輪調距離，Esc 還原到拖曳前。</p>
+<h3 id="用-g-移動">用 G 移動</h3>
+<p>選取這盞燈（在清單點它的名字），照常按 <strong>G</strong>：G 之後按 X／Y／Z 限定軸、Shift 細調、Esc 取消。燈會保持對準目標，面板上的位置數字也會自動更新。</p>
+<p>用其他擺燈 addon 移動或改 SS 的燈，SS 面板可能把燈拉回原位。</p>
+<h3 id="俯視圖">俯視圖</h3>
+<figure class="shot" id="shot-top_map"><div class="shot-frame" style="max-width:286px"><a href="img/zh/11_top_map.png"><img src="img/zh/11_top_map.png" width="286" height="256" alt="視窗裡的俯視圖：圓環、受光點、橘色的正在調的燈、其他燈、相機三角、高度條" loading="lazy"></a><span class="shot-dot" style="left:35.31%;top:50.00%" aria-hidden="true">1</span><span class="shot-dot" style="left:62.24%;top:58.59%" aria-hidden="true">2</span><span class="shot-dot" style="left:44.76%;top:32.42%" aria-hidden="true">3</span><span class="shot-dot" style="left:31.12%;top:60.55%" aria-hidden="true">3</span><span class="shot-dot" style="left:46.15%;top:82.81%" aria-hidden="true">4</span><span class="shot-dot" style="left:2.80%;top:92.97%" aria-hidden="true">5</span><span class="shot-dot" style="left:82.52%;top:58.59%" aria-hidden="true">6</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">中央白點：受光點。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">橘點：你正在調的這盞燈。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">淡白點：場景裡其他沒隱藏的燈（只供參考，不能拖）。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text">下方藍色小三角：相機那一側。</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text">左下角：燈的世界高度與上下角度。</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong>高度條</strong>：<strong>受光點</strong> 是受光點的高度，底部 <strong>地面</strong> 是地面，橘點是燈目前的高度。</span></li></ol></figure>
+<p>按 <strong>打開俯視圖</strong> 會在視窗裡開一張小小的俯視圖，按鈕變成 <strong>關閉俯視圖</strong>。操作期間俯視圖會持續顯示。</p>
+<p>俯視圖上有什麼：</p>
+<ul><li>中央白點：受光點（名稱標在橘點的另一側）。</li><li>橘點：你正在調的這盞燈。</li><li>淡白點：場景裡其他沒隱藏的燈（只供參考，不能拖）。</li><li>下方藍色小三角：相機那一側。上方是 <strong>後</strong>，兩側標 <strong>左</strong>、<strong>右</strong>。</li><li>左下角：燈的世界高度與上下角度，例如「高 2.54 m · 上下角度 28°」（高度用場景的長度單位）。</li><li>右側細直條：<strong>高度條</strong>。白色短線 <strong>受光點</strong> 是受光點的高度，底部 <strong>地面</strong> 是地面（Z = 0），橘點是燈目前的高度。</li></ul>
+<p>可以怎麼操作：</p>
+<ul><li><strong>在圓內拖曳</strong> → 移動燈從上方看的位置，高度不變。</li><li><strong>在高度條上下拖</strong> → 只改高度，從上方看的位置不變。</li><li>兩者可以任意交替；上下角度由兩者自動算出。</li><li><strong>滑鼠停在俯視圖上轉滾輪</strong> → 每格高度 ±5 cm；按住 <strong>Shift</strong> 每格 ±1 cm。連續轉的多格合成一步復原。滑鼠不在俯視圖上時，滾輪照常縮放視窗。</li><li>每次拖曳是一步復原。拖曳途中按 Esc 或右鍵，取消這一次拖曳。</li><li>在正上方的燈也能從中心拖開。</li></ul>
+<p>關閉方式：在視窗裡點俯視圖外任何地方（那一下照常生效，例如選到你點的物件）、按 <strong>Esc</strong>、或按 <strong>關閉俯視圖</strong>。點在俯視圖上但不在圓內，不會穿透去選到後面的物件。側欄、中鍵轉視角、滾輪都不會關閉俯視圖。</p>
+<p>拖曳途中比例固定。用數值把燈移得很遠時，俯視圖的範圍會擴大以容納燈，但不會自己縮回來——關閉後重開，就會配合目前的距離。</p>
+<h3 id="相機與診斷">相機與診斷</h3>
+<p>點 <strong>燈放哪裡</strong> 最下方的 <strong>相機與診斷</strong> 展開。</p>
+<div class="table-wrap"><table><thead><tr><th>控制</th><th>作用</th></tr></thead><tbody><tr><td>（基準說明列）</td><td>「前方」從哪裡算：「相機：…」、「已鎖定工作視角」、「世界座標：前方是 −Y」或「尚未鎖定」。</td></tr><tr><td><strong>參考相機</strong></td><td>留空＝場景相機。鎖定後不跟隨相機移動。</td></tr><tr><td><strong>以相機設定前方</strong></td><td>立刻以參考相機重新定義前後左右。燈不會移動，方位數字依新基準重算。旋轉視窗永遠不會改變基準——只有這個按鈕會。</td></tr><tr><td><strong>檢查光路／碰撞</strong></td><td>回報器材是否和其他物件表面交疊、到受光點的中心光路是否被擋、受光點是否背向燈。只提示，不移動任何東西。</td></tr><tr><td>（訊息列）</td><td>這盞燈最新的一則訊息，例如「光路尚未檢查」或檢查結果。</td></tr></tbody></table></div>
+<p><strong>檢查光路／碰撞</strong> 只是快速檢查：它只看有沒有表面互相穿插，以及從燈中心到受光點的那一條光線，不會檢查整道光束。它不管實例化的物件（例如 Geometry Nodes 或粒子產生的），也看不出燈有沒有被完全包住。遇到玻璃等透明材質，或加了複雜修改器（Modifier）的物件，請自己看算圖確認。</p>
+<hr>
+<h2 id="7-場景裡的燈清單">7. 場景裡的燈清單</h2>
+<figure class="shot" id="shot-light_list"><div class="shot-frame" style="max-width:250px"><a href="img/zh/08_light_list.png"><img src="img/zh/08_light_list.png" width="250" height="238" alt="有三盞燈、其中一盞隱藏的燈清單：主燈欄位、整組控制、各列與全部顯示" loading="lazy"></a><span class="shot-dot" style="left:16.80%;top:6.30%" aria-hidden="true">1</span><span class="shot-dot" style="left:78.40%;top:6.30%" aria-hidden="true">2</span><span class="shot-dot" style="left:89.60%;top:6.30%" aria-hidden="true">2</span><span class="shot-dot" style="left:2.80%;top:18.91%" aria-hidden="true">3</span><span class="shot-dot" style="left:2.80%;top:31.09%" aria-hidden="true">4</span><span class="shot-dot" style="left:73.60%;top:66.39%" aria-hidden="true">5</span><span class="shot-dot" style="left:82.00%;top:66.39%" aria-hidden="true">5</span><span class="shot-dot" style="left:90.00%;top:66.39%" aria-hidden="true">5</span><span class="shot-dot" style="left:60.80%;top:74.37%" aria-hidden="true">6</span><span class="shot-dot" style="left:2.80%;top:94.96%" aria-hidden="true">7</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">標題列是「共 N 盞燈」（點它可收合），有隱藏的燈時後面接「· 隱藏 N」。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">兩個圖示鈕：相機圖示是從相機看；<strong>看光</strong> 會把視窗的著色切到「算繪」。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">主燈</strong> 在發光的燈超過一盞時出現，讓你指定主燈。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong>整組距離</strong>、<strong>補亮度</strong>、<strong>點選整組受光點</strong> 會把主體上的燈一起移動。</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text">星號（<strong>只亮這盞</strong>）：只留這一盞亮著。眼睛（<strong>隱藏／顯示燈</strong>）：隱藏＝視窗與算圖都不出現。✕（<strong>刪除燈</strong>）：可 <strong>Ctrl+Z</strong> 復原。</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text">主燈用太陽圖示；其他發光的燈顯示比主燈亮或暗幾級，例如 <code>-2.0 級</code>。</span></li><li><span class="shot-num" aria-hidden="true">7</span><span class="shot-text"><strong class="shot-label">全部顯示</strong> 有隱藏、「只亮這盞」，或有燈被一鍵布光關掉時才出現。</span></li></ol></figure>
+<p><strong>新增一盞燈</strong> 下方是場景裡所有 Studio Shapers 燈的清單。標題列是「共 N 盞燈」（點它可收合），有隱藏的燈時後面接「· 隱藏 N」。右邊有兩個圖示鈕：相機圖示是從相機看（場景有相機時才出現）；<strong>看光</strong> 會把視窗的著色切到「算繪」（Rendered；已經是「算繪」就不顯示）。清單還是空的時候會寫「還沒有燈；先點選主體，再按上面的鈕」。</p>
+<p>清單照新增順序排列，最新的在最下面，所以讀起來就是你的打光順序（主燈 → 補光 → 輪廓光）。改名或換燈型都不會改變它的位置。</p>
+<p>每一列：</p>
+<div class="table-wrap"><table><thead><tr><th>部分</th><th>作用</th></tr></thead><tbody><tr><td>名稱</td><td>點一下選取這盞燈，並在下方顯示它的設定；<strong>Shift</strong>＋點可加選。一鍵布光建的燈、依角色加的燈顯示角色（<strong>主燈</strong>、<strong>補光</strong>、<strong>輪廓光</strong>、<strong>髮光</strong>…）；只有兩盞會顯示成一樣時，才在後面加上布光名稱，例如「主燈 · 三點布光」。你自己改過名字的燈，就顯示你取的名字。舊版做的檔案裡，只有 0.9.3 版內建一鍵布光的燈會推回角色；其他燈（例如 0.9.1～0.9.6 存的我的布光、你自己取名的燈）一律照原名顯示。</td></tr><tr><td>太陽圖示／數字</td><td>主燈用太陽圖示；其他發光的燈顯示比主燈亮或暗幾級，例如 <code>-2.0 級</code>（四捨五入後接近 0 的顯示 <code>0.0 級</code>）。見<a href="#10-亮度與主燈">第 10 節</a>。</td></tr><tr><td>星號（<strong>只亮這盞</strong>）</td><td>只留這一盞亮著。見下方。</td></tr><tr><td>眼睛（<strong>隱藏／顯示燈</strong>）</td><td>隱藏＝視窗與算圖都不出現，燈等於關掉。再按一次恢復。隱藏中切換燈型，新器材也維持隱藏。</td></tr><tr><td>✕（<strong>刪除燈</strong>）</td><td>刪除這盞燈（含器材與受光點），可 <strong>Ctrl+Z</strong> 復原。主體，以及你自己掛在燈下的物件，都會保留。</td></tr></tbody></table></div>
+<p>清單裡可能遇到的名稱狀況：</p>
+<ul><li>0.9.1～0.9.6「我的布光」存的舊燈，名字是「&lt;我的布光名&gt; &lt;角色&gt;」。清單很窄時，兩列可能被截成相同的開頭（例如兩列「My Portr…」）；把側欄拉寬，或到大綱編輯器（Outliner）看。</li><li>同一個場景裡有兩組同名的內建一鍵布光，會出現兩列一樣的名稱（例如兩列「主燈 · 三點布光」），新舊檔案都一樣。</li><li>單獨一盞名字以內建布光名開頭的燈（例如你自己取名「Three-Point Spare」），清單只顯示尾段「Spare」。</li></ul>
+<p><strong>大綱編輯器的相機圖示。</strong>在大綱編輯器關掉燈控制物件的相機圖示（提示寫 <strong>算繪時停用</strong>，Disable in Renders），整盞燈連同器材一起關。如果燈所在的集盒（Collection）被關掉算圖，或在檢視層（View Layer）被取消勾選，清單會標相機圖示並算成隱藏；清單上的眼睛打不開它們，要到大綱編輯器把集盒打開。<strong>只亮這盞</strong>、<strong>主燈變亮變暗時一起跟著</strong>、<strong>存成我的布光…</strong> 都會略過這種燈。</p>
+<p>清單上方在發光的燈超過一盞時，會出現 <strong>主燈</strong> 欄位讓你指定主燈（見<a href="#10-亮度與主燈">第 10 節</a>）。幾個場景共用同一批燈時（新增場景 &gt; 連結副本；New Scene &gt; Linked Copy），每個場景各用自己的主燈算清單上的級數與跟隨。</p>
+<p>清單下方：</p>
+<ul><li><strong>全部顯示</strong> — 有隱藏、「只亮這盞」，或有燈被一鍵布光關掉時才出現。它會顯示所有隱藏的燈、結束「只亮這盞」，並把一鍵布光關掉的 Blender 燈打開。</li><li><strong>整理集盒</strong> — 有燈不在自己的集盒裡時才出現（見下方）。用 <strong>X</strong> 刪掉燈的受光點時也會出現，這時按下去會把受光點放回來，效果和 <strong>建立／修復受光點</strong> 一樣（<a href="#5-照哪裡">第 5 節</a>）。共用同一個身分的燈（用 Blender 的 Shift+D／Alt+D 複製出來的，或 <strong>新增場景 &gt; 完整副本</strong>（New Scene &gt; Full Copy）做出的場景）不會讓它出現：請先刪掉多出來的那一盞；刪掉之後如果還有東西不在集盒裡，按鈕會再出現，按一次就好。</li></ul>
+<p><strong>在視窗裡刪除。</strong>如果你在視窗裡選取一盞燈，用 Blender 本身的刪除（<strong>X</strong>）刪掉它，addon 也會一併清掉那盞燈的其他部分——器材、光源、受光點與空的集盒——不會留下還在發光的殘骸。<strong>Ctrl+Z</strong> 可以把整盞燈救回來。場景裡有這盞燈的複本（Shift+D、完整副本的場景）時也一樣，每盞燈只帶走自己的器材；沒有任何燈瞄準的複製受光點會被清掉。</p>
+<h3 id="整組移動">整組移動</h3>
+<figure class="shot" id="shot-group_pick"><div class="shot-frame" style="max-width:780px"><a href="img/zh/09_group_pick.png"><img src="img/zh/09_group_pick.png" width="780" height="800" alt="點選整組受光點時的視窗：標頭那一行，以及主體臉上滑鼠旁的標籤" loading="lazy"></a><span class="shot-dot" style="left:24.36%;top:1.75%" aria-hidden="true">1</span><span class="shot-dot" style="left:37.18%;top:79.13%" aria-hidden="true">2</span><span class="shot-dot" style="left:33.59%;top:82.75%" aria-hidden="true">3</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">視窗標頭會寫「點選整組受光點：點主體確認／Esc 或右鍵取消／每盞燈的角度與距離不變」。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">標籤寫「點一下：整組燈瞄準主體內部的這一點」。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text">再點主體，每盞燈都移過去瞄準新的點，各自的角度與距離不變。</span></li></ol></figure>
+<p>在燈列上方（有 <strong>主燈</strong> 欄位時就在它下面），清單可能會出現幾個控制項，讓同一個主體上的燈一起移動。主體是你選取的 Mesh，或你選取的那盞燈所屬的主體。</p>
+<ul><li><strong>整組距離</strong>：主體上有兩盞以上可以移動的燈時出現，數字是主燈到受光點的距離。改這個值，每盞燈都照同一個倍率靠近或遠離，各自沿原本的方向移動，角度不變。跟隨某盞燈的柔光布和黑旗會跟著它走。</li><li><strong>補亮度</strong>（預設勾選）：距離改變時跟著調整每盞燈的功率，功率 ×（新距離 ÷ 舊距離）²，所以主體一樣亮，燈與燈的比例也不變。關掉就只動距離。</li><li><strong>點選整組受光點</strong>：主體上有一盞這樣的燈就會出現。按下去再點主體，每盞燈都移過去瞄準新的點，各自的角度與距離不變，所以整組移動的量就是受光點移動的量。跟隨的器材會跟著走，功率不動。視窗標頭會寫「點選整組受光點：點主體確認／Esc 或右鍵取消／每盞燈的角度與距離不變」，滴管游標、圓盤和狀態列都和 <strong>點選受光點</strong>（<a href="#5-照哪裡">第 5 節</a>）一樣；標籤寫「點一下：整組燈瞄準主體內部的這一點」。完成後訊息會寫移動了幾盞，例如「整組受光點已設定：3 盞燈跟著移動」。</li></ul>
+<p><strong>整組受光點落在哪裡。</strong>落在主體內部：沿著你的視線，從你點的位置到另一側表面的一半。這樣不管燈從哪一側來，都是瞄向主體裡面，而不是瞄著表皮上的一點。沒有另一面的薄片，受光點就在表面上（「找不到另一面，受光點在表面上」）。下巴底下、脖子這類凹處，另一側表面很近，落點會貼近表面。</p>
+<p><strong>限制。</strong></p>
+<ul><li>不算在整組裡的：背景光、負補光、跟隨某盞燈的柔光布和黑旗（它們跟著那盞燈走）、被隱藏或關掉的燈，以及 <strong>燈放哪裡</strong> 目前無法移動的燈。</li><li><strong>整組距離</strong> 在任何一件器材（包括跟隨的柔光布、黑旗）會離主體的 bounding box 不到 1 cm 時停住；任何一盞燈到了 <strong>距離</strong> 拖曳的上限（20 m）時也停住。滑桿下面那一行會指出是哪一盞擋住，例如「不能再近：「輪廓光」會碰到主體」。</li><li><strong>點選整組受光點</strong> 不會攔住燈。如果有器材因此碰到主體，控制項下面那一行會提醒（「「輪廓光」碰到主體：把整組拉遠，或換一個受光點」）；有燈沒辦法移動時，訊息會列出名稱（「留在原位：…」）。</li><li>兩者都可以用 <strong>Ctrl+Z</strong> 復原。</li><li>我的布光不保存受光點：存下來的布光套到新主體時，會重新對準它 bounding box 的中心（<a href="#我的布光">第 11 節</a>），內建一鍵布光也一樣。</li></ul>
+<h3 id="小提示">小提示</h3>
+<p>場景裡有燈之後，清單下方會出現 <strong>小提示</strong> 框。</p>
+<ul><li>視窗的著色不是「算繪」時，它會寫「著色要切到「算繪」才看得到光」，下面是一顆全寬的 <strong>看光（切到「算繪」著色）</strong> 按鈕。</li><li>在「算繪」著色下，改成四句「看到什麼問題 → 去動哪裡」：「太暗或太亮：按 +1／-1」、「影子在錯邊：點方向按鈕」、「影子太硬：燈放大、靠近一點」、「分不清誰的影子：按星星，只亮這盞」。</li><li>右上角的 ✕（<strong>關掉小提示</strong>）會永久關掉這個框。想再打開，到 addon 的偏好設定（編輯 &gt; 偏好設定 &gt; 附加元件 &gt; Studio Shapers；Edit &gt; Preferences &gt; Add-ons）勾選 <strong>顯示小提示</strong>。</li></ul>
+<h3 id="只亮這盞solo">只亮這盞（Solo）</h3>
+<p><strong>只亮這盞</strong>（星號）會暫時關掉其他所有燈——其他 Studio Shapers 的燈<strong>以及</strong>場景裡一般的 Blender 燈——視窗與算圖都關。清單上方會出現紅色列「只亮這盞：名稱」，旁邊有 <strong>結束</strong> 按鈕。</p>
+<ul><li>再按一次星號、按 <strong>結束</strong>、或按 <strong>全部顯示</strong> 都可以結束。</li><li>結束時只會重新打開被「只亮這盞」關掉的燈。你在這之前自己隱藏的燈，會繼續隱藏；只在視窗裡隱藏、但算圖時仍會出現的 Blender 燈，也會維持那個狀態。</li><li>直接對另一盞按星號，會改成只亮那一盞。</li><li>刪掉正在「只亮這盞」的燈，會自動結束並把其他燈打開；用清單的 ✕、<strong>刪除燈</strong>，或在視窗裡用 Blender 本身的刪除都一樣。</li><li>Mesh 上的自發光材質與 World <strong>不受</strong>「只亮這盞」影響。</li><li>這個狀態會存在檔案裡。</li><li>從其他檔案連結（link）進來的燈不會被關，訊息會說有幾盞。</li><li>燈的 <strong>算繪時停用</strong>（大綱編輯器的相機圖示）有動畫（用 <strong>K</strong> 打了關鍵影格（Keyframe），或有 driver）時，「只亮這盞」（或一鍵布光）把燈關著的期間，這段動畫會暫停，讓燈在算圖裡真的保持關閉；按 <strong>全部顯示</strong> 或結束「只亮這盞」時恢復。（來自 NLA strip 的動畫不會暫停；同一個 action slot 被好幾個物件共用時，會一起暫停。）</li><li>幾個場景共用燈時（連結副本）：在一個場景按「只亮這盞」，共用這些燈的場景也會顯示紅條（「只亮這盞（場景 "A"）：…」這類字樣），任一場景都可以結束；在另一個場景開始新的「只亮這盞」，會先結束前一個。</li></ul>
+<h3 id="集盒分層">集盒分層</h3>
+<p>新增的燈會放進它自己的集盒：<code>Studio Shapers &gt; 燈的名稱</code>；主控制點、器材 Mesh、光源、受光點都在這一層。刪掉燈時，它的空集盒會一起移除；最後一盞刪掉時 <code>Studio Shapers</code> 也會移除。</p>
+<p>有燈不在自己的集盒裡時（舊版建立的燈，或物件被手動搬走），清單下方會出現 <strong>整理集盒</strong>。按下去會把場景裡所有的燈收進上述結構，並把每個集盒名稱同步成燈目前的名字。它只整理目前這個場景的集盒，其他使用同一批物件的場景不受影響。用 Shift+D 複製出來的燈會被略過，訊息會說有幾盞。燈所在的集盒如果也被其他場景使用，燈會留在原位，同時加進本場景自己的集盒，其他場景不受影響；訊息會說有幾盞。連結（link）與藏庫凌駕（Library Override）的燈不會被搬動。整理後不會留下空的集盒；如果你刪掉了 <code>Studio Shapers</code> 這個集盒，整理會沿用燈原本的集盒。</p>
+<p><code>Studio Shapers</code> 集盒在檢視層被取消勾選（或在大綱編輯器關了它的螢幕圖示）時，不能加燈，面板會說明；只關眼睛時燈照樣加入，只是看不到。</p>
+<hr>
+<h2 id="8-跟著燈走的柔光布與黑旗">8. 跟著燈走的柔光布與黑旗</h2>
+<p><strong>柔光布</strong> 或 <strong>黑旗</strong> 可以掛在燈上，像夾在同一支燈架上的器材：燈移動或轉向時，柔光布／黑旗一起跟著走。這是用 Blender 內建的約束（Constraint）做的，所以不管你怎麼移燈——俯視圖、<strong>水平環繞</strong> 滑桿、把手或 <strong>G</strong>——都會跟著。</p>
+<h3 id="怎麼設定">怎麼設定</h3>
+<ul><li><strong>先選一盞會發光的燈，再按 新增一盞燈 &gt; 柔光布（或黑旗）。</strong>新加的器材會立刻跟隨那盞燈。</li><li>沒選燈時，柔光布或黑旗會像一般的燈那樣擺放，不跟隨。</li><li>之後要把現有的柔光布或黑旗掛到某盞燈上，在它的 <strong>跟隨燈光</strong> 欄位（緊接在 <strong>燈放哪裡</strong> 下方的 <strong>跟隨燈光</strong> 子面板）選那盞燈即可。清除欄位就解除跟隨，器材停在原地。</li></ul>
+<p>跟隨中的器材，<strong>燈放哪裡</strong> 子面板只顯示「跟隨「燈名」」與一段說明（柔光布太大、放不下時，還會加上<a href="#柔光布">柔光布</a>一節說的那段提示）；方位數值、俯視圖與把手對它暫停。距離與偏移在 <strong>跟隨燈光</strong> 子面板調整。</p>
+<p>刪掉它跟隨的燈（用清單的 ✕ 或 Blender 本身的刪除）時，柔光布或黑旗會停在原地，並自動解除跟隨，狀態文字也會跟著更新（實測含先移動燈、換 frame、存檔重開；需要 addon 有啟用）。<strong>跟隨燈光</strong> 欄位只列出目前這個場景的燈。</p>
+<p>不要用 Ctrl+P 手動改跟隨中的黑旗、柔光布（或任何 Studio Shapers 零件）的父物件：那個零件會偏離它該在的位置。要改跟誰，請用 <strong>跟隨燈光</strong> 欄位。</p>
+<p>按 <strong>左右對調</strong> 把燈翻到相機另一側時，柔光布或黑旗會跟著燈一起過去。</p>
+<h3 id="柔光布">柔光布</h3>
+<figure class="shot" id="shot-scrim_follow"><div class="shot-frame" style="max-width:250px"><a href="img/zh/13_scrim_follow.png"><img src="img/zh/13_scrim_follow.png" width="250" height="302" alt="跟隨 Three-Point Key 的柔光布：跟隨那一行、跟隨燈光子面板與燈調亮按鈕" loading="lazy"></a><span class="shot-dot" style="left:2.80%;top:40.07%" aria-hidden="true">1</span><span class="shot-dot" style="left:2.80%;top:82.12%" aria-hidden="true">2</span><span class="shot-dot" style="left:2.80%;top:88.74%" aria-hidden="true">3</span><span class="shot-dot" style="left:2.80%;top:95.36%" aria-hidden="true">4</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text">跟隨中的器材，<strong>燈放哪裡</strong> 子面板只顯示「跟隨「燈名」」與一段說明。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">跟隨燈光</strong> 在這裡選燈就掛上；清除欄位就解除跟隨，器材停在原地。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">與燈距離</strong> 在燈前方多遠，沿著燈到受光點的連線量。預設是燈到主體距離的 30%。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong>燈調亮 +… 級（補償柔光布）</strong> 會把它跟隨的那盞燈功率調高，補回布料吸收與反射掉的光。數字是 addon 的估算，你的場景會不一樣。</span></li></ol></figure>
+<ul><li>它待在燈到受光點的連線上，布面朝向燈，讓光束直直穿過它。</li><li><strong>與燈距離</strong>：在燈前方多遠，沿著這條連線量。預設是燈到主體距離的 30%。</li><li>選著燈新增柔光布時，大塊的布放在 30% 可能會低於主體底部、插進地板。這時 addon 會沿連線把它往燈移，直到下緣不低於主體底部，但最近只到 10%。到 10% 還不夠時就停在那裡，柔光布的 <strong>燈放哪裡</strong> 子面板會提示（「…布比較大，下緣低於主體底部，可能插進地板…」）。那條邊沒入鏡就不用管；入鏡的話，縮小布或把燈抬高。這段提示是新增當下寫的，之後移動燈或布不會自動更新。</li><li>距離設得比燈到主體還遠時，面板會提醒：「柔光布已跑到主體後面；把「與燈距離」調小」。</li><li>跟隨時，柔光布會跟著燈的上下角度傾斜。勾選 <strong>保持直立</strong> 則保持垂直、只左右轉。</li><li><strong>燈調亮 +… 級（補償柔光布）</strong> 會把它跟隨的那盞燈功率調高，補回布料吸收與反射掉的光。按鈕上顯示的是 addon 依布目前的距離、大小與燈的大小估出來的級數（取一位小數），例如 <strong>燈調亮 +0.8 級（補償柔光布）</strong>，按下去就加這麼多。它只調亮這一盞燈，勾著「跟著主燈」的其他燈不會變，所以主體上它們跟主燈的比例會回到掛柔光布之前的樣子。</li><li>按過之後按鈕變灰，寫「已補償 +N 級（柔光布）」；移動或改柔光布大小、或改燈的大小之後會再出現，只補差額（柔光布吃得比較少時會顯示「燈調暗 … 級（柔光布損失變小）」）。它記得的是「補過多少」，不是燈現在的功率：補過之後又自己手動把功率調回來，按鈕仍然顯示已補償。</li><li>燈比柔光布大很多時，損失可能不到 0.05 級；按鈕會變灰，寫「不需補償（柔光布損失不到 0.05 級）」。</li><li><strong>束光筒</strong> 估不準：按鈕會變灰，寫著「束光筒無法估算，請目測調整」（束光筒的窄光束會散在柔光布上；請看結果，用眼睛調功率）。柔光布放在燈具內側（燈泡和傘面或碗之間）也無法估算：按鈕變灰，寫「柔光布在燈具內側（燈泡與反射面之間），無法估算，請看算圖調整」。</li><li>場景的 <strong>穿透</strong> 反彈數（算繪屬性 &gt; 光徑 &gt; 最大反彈數 &gt; 穿透；Render Properties &gt; Light Paths &gt; Max Bounces &gt; Transmission）是 0 時，按鈕下方會有一行提醒；這時柔光布吃掉的光比估算多。addon 不會改這個設定。數字怎麼算、準到什麼程度，見<a href="#13-物理說明與誠實的限制">第 13 節</a>。</li></ul>
+<h3 id="黑旗">黑旗</h3>
+<p>跟柔光布不同，跟隨中的黑旗不會擋在光束正中央，而是掛在光束旁邊，擋掉<strong>溢光</strong>——也就是漏到你不想照亮的地方（例如背景或鏡頭）的光。</p>
+<ul><li><strong>與燈距離</strong>：在燈前方多遠，沿著燈自己的光軸量。預設是燈到主體距離的 60%，沒有上限。</li><li><strong>左右偏移</strong>：橫向移過光束，往燈的右邊（+）或左邊（−）。</li><li><strong>上下偏移</strong>：移到光束上方（+）或下方（−）。預設讓黑旗下緣落在「燈的出光面上緣 → 主體中心」這條連線上，擋掉往上的溢光，又不會遮到主體。</li><li>三個值都以燈自己的方向量，所以燈轉向時依然正確。也可以直接用 <strong>G</strong> 拖黑旗，數值會自動更新。請讓黑旗留在燈的前方：拖到燈面的背後（或燈前 5 cm 以內）時，黑旗會停在你放的位置，但 <strong>與燈距離</strong> 顯示 0.05 m；之後再改黑旗的任何設定，它會跳到燈前 5 cm。黑旗放在燈背後本來也擋不到光。</li><li>很大的主體上，燈對準邊角時，跟隨的黑旗或柔光布可能落進主體的 bounding box（那裡的光路本來就穿過主體）。</li><li>跟隨中的黑旗不顯示 <strong>保持直立</strong>：它改成跟著燈一起轉。</li></ul>
+<hr>
+<h2 id="9-色溫與色紙">9. 色溫與色紙</h2>
+<p>兩者都在 <strong>顏色</strong> 子面板（預設收合）。</p>
+<h3 id="色溫">色溫</h3>
+<p>勾選 <strong>色溫</strong>，就能用 <strong>K 值</strong> 設定燈的顏色。數字越低越暖（偏橘）、越高越冷（偏藍）：預設的 5600 K 是日光或閃燈，3200 K 是暖色的鎢絲燈。顏色來自 Blender 的黑體（blackbody）設定，也就是物體加熱到那個溫度時發出的顏色。<strong>色溫</strong> 沒勾時，<strong>K 值</strong> 欄位會變灰，燈是純白光（只有 <strong>光色</strong> 會染色）；這時加色紙，就從這個白光起算（見下方）。上方的 <strong>光色</strong> 是疊加上去的額外染色——保持白色，就是乾淨的黑體顏色。</p>
+<h3 id="色紙">色紙</h3>
+<figure class="shot" id="shot-gels_panel"><div class="shot-frame" style="max-width:250px"><a href="img/zh/14_gels_panel.png"><img src="img/zh/14_gels_panel.png" width="250" height="186" alt="顏色子面板：色溫沒勾、色紙選全 CTO（暖），以及面板顯示的兩行說明" loading="lazy"></a><span class="shot-dot" style="left:2.80%;top:37.10%" aria-hidden="true">1</span><span class="shot-dot" style="left:2.80%;top:62.90%" aria-hidden="true">2</span><span class="shot-dot" style="left:2.80%;top:75.27%" aria-hidden="true">3</span><span class="shot-dot" style="left:2.80%;top:97.85%" aria-hidden="true">4</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong class="shot-label">色溫</strong> 沒勾時，<strong>K 值</strong> 欄位會變灰，燈是純白光。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text"><strong class="shot-label">色紙</strong> 攝影師夾在燈前的一片有色濾光塑膠片。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong>色溫</strong> 沒勾時，面板會顯示「色溫沒開：色紙以 Blender 白光（約 6500K）起算」。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text">結果，這裡是「色紙後：3196 K，透光 55%（-0.9 級）」（側欄太窄時長句會被截掉）。</span></li></ol></figure>
+<p><strong>色紙</strong> 是攝影師夾在燈前的一片有色濾光塑膠片。<strong>CTO</strong>（Color Temperature Orange，橘色校色片）讓光變暖，<strong>CTB</strong>（Color Temperature Blue，藍色校色片）讓光變冷；全、1/2、1/4、1/8 是濃度。<strong>加綠</strong> 與 <strong>減綠（洋紅）</strong>（以及它們的 1/2 版本）用來加上或抵銷綠色偏色，例如配合日光燈或 LED；表中的 CC30、CC15 是這種偏色的強度（攝影用的色彩補償單位）。下表「偏移」欄的單位是 <strong>mired</strong>（＝1,000,000 ÷ K 值）；色紙廠商用這個單位，是因為同一張色紙對任何燈造成的 mired 偏移量都一樣。跟真的色紙一樣，它會改變顏色，<strong>而且</strong>只讓部分光通過。</p>
+<p>選了色紙後面板會顯示結果，例如（<strong>色溫</strong> 沒勾、加全 CTO）：「色紙後：3196 K，透光 55%（-0.9 級）」。</p>
+<div class="table-wrap"><table><thead><tr><th>色紙</th><th>LEE 編號</th><th>偏移</th><th>透光</th><th>≈ 級數</th></tr></thead><tbody><tr><td><strong>全 CTO（暖）</strong></td><td>204</td><td>+159 mired</td><td>55%</td><td>−0.9</td></tr><tr><td><strong>1/2 CTO（暖）</strong></td><td>205</td><td>+109 mired</td><td>70%</td><td>−0.5</td></tr><tr><td><strong>1/4 CTO（暖）</strong></td><td>206</td><td>+64 mired</td><td>81%</td><td>−0.3</td></tr><tr><td><strong>1/8 CTO（暖）</strong></td><td>223</td><td>+26 mired</td><td>85%</td><td>−0.2</td></tr><tr><td><strong>全 CTB（冷）</strong></td><td>201</td><td>−137 mired</td><td>34%</td><td>−1.6</td></tr><tr><td><strong>1/2 CTB（冷）</strong></td><td>202</td><td>−78 mired</td><td>55%</td><td>−0.9</td></tr><tr><td><strong>1/4 CTB（冷）</strong></td><td>203</td><td>−35 mired</td><td>69%</td><td>−0.5</td></tr><tr><td><strong>1/8 CTB（冷）</strong></td><td>218</td><td>−18 mired</td><td>81%</td><td>−0.3</td></tr><tr><td><strong>加綠</strong></td><td>244</td><td>約 CC30 綠</td><td>74%</td><td>−0.4</td></tr><tr><td><strong>1/2 加綠</strong></td><td>245</td><td>約 CC15 綠</td><td>82%</td><td>−0.3</td></tr><tr><td><strong>減綠（洋紅）</strong></td><td>247</td><td>約 CC30 洋紅</td><td>58%</td><td>−0.8</td></tr><tr><td><strong>1/2 減綠</strong></td><td>248</td><td>約 CC15 洋紅</td><td>71%</td><td>−0.5</td></tr></tbody></table></div>
+<p>計算方式：</p>
+<ul><li><strong>CTO／CTB</strong> 依表中的 mired 值偏移燈的色溫（mired＝1,000,000 ÷ K 值）。<strong>色溫</strong> 有勾時，起點是 <strong>K 值</strong> 欄位：5600 K 加 <strong>全 CTO（暖）</strong> 約得 2962 K。沒勾時，起點是 Blender 的白光（約 6500K），面板會顯示「色溫沒開：色紙以 Blender 白光（約 6500K）起算」，這時 <strong>全 CTO（暖）</strong> 約得 3196 K。</li><li><strong>加綠／減綠</strong> 是染色，不改色溫。</li><li>實際打進場景的光是 <strong>功率 (W)</strong> × 透光率。<strong>功率 (W)</strong> 欄位仍顯示加色紙前的數值，所以加色紙會讓燈變暗，但那個數字不變。<a href="#10-亮度與主燈">第 10 節</a>的級數<strong>有</strong>算進色紙。</li></ul>
+<p>mired 偏移與透光率採用上表 LEE 濾片編號的公開數值。顏色本身不是量測的濾片光譜：<strong>色溫</strong> 有勾時是 Blender 的黑體色；沒勾時是 addon 用 Planck 定律算出、對 6500K 的黑體色比值（約 3200～8400 K 之間與 Blender 自己的顏色差不到 1%；超過 12000 K 時 Blender 的顏色不再變化，這裡的計算會繼續，所以 1/2 CTB 和全 CTB 仍看得出差別）；加綠／減綠則是簡單的 RGB 染色。請當作接近的起點，而不是精確配色。</p>
+<hr>
+<h2 id="10-亮度與主燈">10. 亮度與主燈</h2>
+<p>攝影師用「<strong>級</strong>」來比較燈光。1 級就是光量加倍或減半：+1 級是兩倍亮，−1 級是一半，−2 級是四分之一。<strong>亮度</strong> 子面板也用這個單位。</p>
+<ul><li><strong>功率 (W)</strong> 下方的 <strong>-1 / -1/3 / +1/3 / +1</strong> 以該級數調整功率，每盞會發光的燈都有。功率是 0 W 時，<strong>+1/3</strong>、<strong>+1</strong> 從 1 W 起算（+1＝2 W），<strong>-1／-1/3</strong> 變灰。對停在 0 W 的主燈按 <strong>+</strong>，不會把跟隨它的燈調暗或調亮。</li></ul>
+<h3 id="主燈">主燈</h3>
+<ul><li>每個場景有一盞會發光的燈是<strong>主燈</strong>。在清單上方的 <strong>主燈</strong> 欄位指定（發光的燈超過一盞時才出現），或在其他燈的 <strong>亮度</strong> 子面板按 <strong>設成主燈</strong>。留空時，主燈是最早加入的那盞。套用一鍵布光時會自動替你設好主燈。</li><li>主燈的 <strong>亮度</strong> 子面板會顯示「主燈：其他燈都跟這盞比亮暗」，清單裡它用太陽圖示。</li><li>把一盞 0 W 的燈設為主燈，它會重新起算：從 0 W 調亮時不會帶動其他燈。設成主燈前先給它一個大概的功率——從 0 W 往上拖時，第一格就成為它的基準，之後其他燈照這個基準跟著變。</li></ul>
+<h3 id="其他燈的兩種設法">其他燈的兩種設法</h3>
+<figure class="shot" id="shot-brightness_panel"><div class="shot-frame" style="max-width:250px"><a href="img/zh/12_brightness_panel.png"><img src="img/zh/12_brightness_panel.png" width="250" height="192" alt="補光的亮度子面板：功率、級數按鈕、跟主燈比、比主燈 -2.0、主燈變亮變暗時一起跟著、設成主燈、外殼不擋其他燈" loading="lazy"></a><span class="shot-dot" style="left:2.80%;top:33.33%" aria-hidden="true">1</span><span class="shot-dot" style="left:2.80%;top:46.35%" aria-hidden="true">2</span><span class="shot-dot" style="left:2.80%;top:56.77%" aria-hidden="true">3</span><span class="shot-dot" style="left:2.80%;top:67.71%" aria-hidden="true">4</span><span class="shot-dot" style="left:2.80%;top:78.13%" aria-hidden="true">5</span><span class="shot-dot" style="left:2.80%;top:91.67%" aria-hidden="true">6</span></div><ol class="shot-legend"><li><span class="shot-num" aria-hidden="true">1</span><span class="shot-text"><strong>功率 (W)</strong> 下方的 <strong>-1 / -1/3 / +1/3 / +1</strong> 以該級數調整功率。</span></li><li><span class="shot-num" aria-hidden="true">2</span><span class="shot-text">最上面有兩個按鈕：<strong>跟主燈比</strong>（預設）與 <strong>自己調</strong>。</span></li><li><span class="shot-num" aria-hidden="true">3</span><span class="shot-text"><strong class="shot-label">比主燈</strong> 這盞燈比主燈亮（+）或暗（−）幾級；旁邊用白話再說一次：「1/4 亮」。</span></li><li><span class="shot-num" aria-hidden="true">4</span><span class="shot-text"><strong class="shot-label">主燈變亮變暗時一起跟著</strong> 你改主燈的 <strong>功率 (W)</strong> 時，這盞燈的功率也照同樣的倍率改變，兩者的比例保持不變。</span></li><li><span class="shot-num" aria-hidden="true">5</span><span class="shot-text"><strong class="shot-label">設成主燈</strong> 把這盞燈設成主燈。</span></li><li><span class="shot-num" aria-hidden="true">6</span><span class="shot-text"><strong class="shot-label">外殼不擋其他燈</strong> <strong>柔光箱</strong>、<strong>長條箱</strong>、<strong>八角箱</strong> 的最下面一行。勾選後，箱體與背板不再擋住其他燈的光（見下方「外殼不擋其他燈」）。</span></li></ol></figure>
+<p>其他每盞會發光的燈，<strong>亮度</strong> 子面板最上面有兩個按鈕：<strong>跟主燈比</strong> 與 <strong>自己調</strong>。</p>
+<p><strong>跟主燈比</strong>（預設）</p>
+<ul><li><strong>比主燈</strong> 是這盞燈在它的受光點上，比主燈亮（+）或暗（−）幾級。旁邊用白話再說一次：「1/4 亮」「2 倍亮」「一樣亮」。<strong>直接輸入就會調整</strong>：輸入 −2，功率就會改成讓這盞燈是主燈的四分之一亮。</li><li><strong>主燈變亮變暗時一起跟著</strong>（預設勾選）：你改主燈的 <strong>功率 (W)</strong>（直接輸入或用級數按鈕）時，這盞燈的功率也照同樣的倍率改變，兩者的比例保持不變。取消勾選，這盞燈的功率就不動。<ul><li>用眼睛藏起來的燈不跟；「只亮這盞」暫時關掉的燈照跟。</li><li>新加的燈也會跟著主燈按比例變。包括主燈很暗或在 0 W 時新加、手動調過、複製出來、或改回跟隨的燈：主燈拉亮時，它也跟其他燈照同一個倍率一起變。例如用拖的把主燈降到 0 W，跟隨的燈會一路跟著變暗；拉回來時全部一起回來。不想被帶動，就取消那盞燈的 <strong>主燈變亮變暗時一起跟著</strong>。</li><li>主燈在 0 W 時，在 <strong>主燈</strong> 欄位重選同一盞燈，它記住的值會被清掉，之後其他燈不會回到原本的光比。<strong>設成主燈</strong> 按鈕不會這樣。</li><li>用 Blender 原生的 Shift+D、Alt+D 複製，或附加／連結（Append／Link）進來的燈，照它自帶的功率跟隨，addon 不會先調整它們。</li></ul></li><li>如果這盞燈跟主燈打的是不同的主體（受光點相距超過 0.5 m），就沒有東西可以比，子面板會顯示「這個主體上沒有主燈可以比」。<strong>背景光</strong> 是例外：它屬於加燈時的那個主體，所以雖然受光點在背景上，仍會跟那個主體的主燈比較；它的光是在背景上量的（<a href="#依角色加燈">第 3 節</a>）。</li><li>這盞燈是 0 W 時，子面板顯示「這盞燈目前是 0 W；把功率調上來才能和主燈比較」；主燈是 0 W 時顯示「主燈（燈名）目前是 0 W，暫時沒有東西可以比」。兩種情況下 <strong>主燈變亮變暗時一起跟著</strong> 都還在。</li></ul>
+<p><strong>自己調</strong></p>
+<ul><li><strong>級數</strong> 設定這盞燈自己的亮度：0 級＝100 W，每 1 級亮一倍或暗一半（+1 級＝200 W、−1 級＝50 W）。旁邊會顯示瓦數。主燈怎麼變都不影響它。</li></ul>
+<p>選的模式與 <strong>主燈變亮變暗時一起跟著</strong> 會存進<a href="#我的布光">我的布光</a>。不管哪種模式，清單都會顯示每盞發光的燈跟主燈差幾級（例如 <code>-2.0 級</code>）。</p>
+<h3 id="這個數字代表什麼以及不代表什麼">這個數字代表什麼——以及不代表什麼</h3>
+<p>級數是<strong>約略值</strong>：</p>
+<blockquote><p>到達的光 ≈ 色紙後功率 ÷（燈到受光點的距離）²</p></blockquote>
+<p>它<strong>不含</strong>器材內部的光損——反射傘的反射、格柵／束光筒／柔光箱的吸收、前面的柔光布都沒算。所以：</p>
+<ul><li>同類器材互比（柔光箱比柔光箱、長條箱比長條箱）最準。</li><li>不同器材互比（反射傘比柔光箱）只能當起點，不是測光表讀數。請看算圖結果再調。</li><li>打在不同主體上的燈（受光點相距超過 0.5 m）不互相比較，也不會顯示數字（<strong>背景光</strong> 是例外，見上方）。這裡的「同一個主體」是指受光點相距不超過 0.5 m，不是同一個物件。大主體（汽車）上挑一個離主燈受光點 2 m 的點，就沒有「跟主燈比」，也不會跟著主燈變；靠得很近的小物件（兩枚戒指）上的燈則會互相比較。大主體請共用一個受光點，或把這類燈設成<strong>自己調</strong>。</li><li>不發光器材（黑旗、反光板、柔光布）沒有級數。</li></ul>
+<h3 id="間接照明限定提醒傘類">間接照明限定提醒（傘類）</h3>
+<p>Cycles 的 <strong>間接照明</strong> 限定（算繪屬性 &gt; 光徑 &gt; 限定 &gt; 間接照明；Render Properties &gt; Light Paths &gt; Clamping &gt; Indirect Light；Blender 新場景預設是 10）會把太亮的反彈光截掉，用來壓螢火蟲雜點。<strong>反射傘</strong>、<strong>透射傘</strong>、<strong>拋物線深傘</strong> 有很大一部分光是靠反彈來的，數值一低，燈就會比功率該有的暗很多。我們的實測裡，間接照明限定 10 對比 0：<strong>拋物線深傘</strong> 約暗 50%，<strong>反射傘</strong> 約暗 30～37%，<strong>透射傘</strong> 約暗 22%。</p>
+<ul><li>算繪引擎（Render Engine）是 Cycles，而且間接照明限定大於 0、小於 20（<strong>反射傘</strong>、<strong>透射傘</strong>）或小於 100（<strong>拋物線深傘</strong>）時，那盞燈的 <strong>亮度</strong> 子面板會出現一段提示和 <strong>間接照明限定設為 0</strong> 按鈕。</li><li>按鈕只改間接照明（不動上面那格 <strong>直接照明</strong>，Direct Light），而且只在你按下時才改。<strong>Ctrl+Z</strong> 可以改回原值。</li><li>場景裡只有這一盞燈時，改調曝光也可以。</li><li>其他燈型不會出現提示：它們的光是直接打到主體的，限定幾乎碰不到。</li></ul>
+<h3 id="外殼不擋其他燈">外殼不擋其他燈</h3>
+<p>柔光箱是一個真的箱子，別的燈從旁邊照過去時，它會投下影子，就跟在攝影棚裡一樣。箱子站在某盞燈和背景之間時（例如 <strong>三點布光</strong> 或 <strong>交叉輪廓光</strong> 的長條箱），這個影子可能在背景上留下一條較暗的帶子，看起來很像「背景不夠亮」。</p>
+<p><strong>外殼不擋其他燈</strong> 是 <strong>柔光箱</strong>、<strong>長條箱</strong>、<strong>八角箱</strong> 的 <strong>亮度</strong> 子面板最下面一行。勾選後，箱體與背板不再擋住其他燈的光。</p>
+<ul><li>燈自己的光不變：我們的測試算圖裡，勾與不勾逐像素相同。</li><li><strong>蜂巢格柵</strong> 仍然會擋其他燈，八角箱的切角片也是（它們負責把自己的光修成八角形）。</li><li>其他燈型（<strong>束光筒</strong>、<strong>拋物線深傘</strong>、<strong>雷達罩</strong> 等）沒有這個勾選框：它們的器材本身就在塑形自己的光。</li><li>預設不勾，內建一鍵布光也不勾，因為箱子會擋光本來就是真實器材的行為。暗帶讓你在意時再勾。</li><li>EEVEE 也一樣：箱子在 EEVEE 也會擋光，勾選後暗帶一樣消除，燈自己的光不變，格柵仍然會擋。</li><li>它會跟著燈的其他設定一起存進我的布光。</li></ul>
+<hr>
+<h2 id="11-一鍵布光">11. 一鍵布光</h2>
+<p><strong>一鍵布光</strong>（在 <strong>新增一盞燈</strong> 旁邊）一次在主體周圍建好整組燈。選單由上到下是：</p>
+<ul><li><strong>主燈在：左</strong> ▸ —— 滑鼠移過去選 <strong>左</strong> 或 <strong>右</strong>：內建一鍵布光（以及新增的燈）把主燈放在相機哪一側（從相機看）。這一行會顯示目前的選擇，選了 <strong>右</strong> 之後就變成 <strong>主燈在：右</strong>。</li><li><strong>左右對調</strong> —— 把目前主體上已經擺好的燈翻到相機另一側（沒有主體時是全部的燈），上面那一行也會跟著換（<strong>主燈在：左</strong> 變成 <strong>主燈在：右</strong>，反之亦然）。跟隨中的柔光布、黑旗會跟著燈走。可以 <strong>Ctrl+Z</strong> 復原。</li><li><strong>器材避開地板</strong> —— 預設勾選；見<a href="#器材避開地板">下方</a>。</li><li>一行說明要布在哪裡——「套用到：Head 周圍」——判斷規則和 <strong>新增一盞燈</strong> 一樣（<a href="#3-快速上手">第 3 節</a>）；沒有主體時顯示「套用到：3D 游標 周圍」。</li><li>內建的各組，再來是 <strong>我的布光</strong>。滑鼠停在每一組上，會顯示一句說明。</li></ul>
+<h3 id="14-組內建一鍵布光">14 組內建一鍵布光</h3>
+<p>每一組拍出來的樣子：</p>
+<ul><li><strong>林布蘭光</strong> — 暗面臉頰上出現一小塊三角形亮光。</li><li><strong>環形光</strong> — 鼻影往下彎向嘴角，不跟臉頰的陰影連在一起。</li><li><strong>蝴蝶光</strong> — 鼻子正下方一小塊蝴蝶形的陰影。</li><li><strong>蚌殼光</strong> — 上方主燈加上下方反光板，柔和均勻的美妝光。</li><li><strong>分割光</strong> — 臉一半亮、一半暗。</li><li><strong>三點布光</strong> — 前方主燈與補光，再加上後方輪廓光，把主體和背景分開。</li><li><strong>低調光</strong> — 一盞加格柵的主燈、不補光：陰影很深，也很少光漏到背景上。背景和世界都要暗。</li><li><strong>高調光</strong> — 明亮輕快：大柔光箱主燈、對側補光，再加兩盞打在後方牆面的背景光。牆要是淺色的（燈能把牆打亮，但沒辦法把深色的牆變白），最適合頭部到半身的取景。</li><li><strong>頂光（產品）</strong> — 上方柔光，前方的白色反光板補亮產品正面。</li><li><strong>雙長條箱輪廓光（產品）</strong> — 產品兩側勾出亮邊，從暗背景中分離出來。</li><li><strong>平鋪俯拍（產品）</strong> — 物品平放在桌上、從正上方拍時用的均勻光。</li><li><strong>白底（產品）</strong> — 產品放在乾淨明亮的背景前：主燈、對側略偏後的補光，再加兩盞打在背景上的燈。產品後面要有淺色牆或背景紙。</li><li><strong>玻璃亮底（產品）</strong> — 玻璃用：正後方一塊發光板直接入鏡，玻璃在亮背景上呈現暗邊線。取景框要在發光板內，世界背景要暗。</li><li><strong>玻璃暗底（產品）</strong> — 玻璃用：後方一盞大燈，中間隔一塊入鏡的黑旗，玻璃在黑背景上呈現亮邊線。牆和世界背景要暗。</li></ul>
+<p><strong>寬光與窄光（Broad／Short lighting）</strong> 沒有獨立的一組：套用 <strong>環形光</strong>，再轉頭（或轉主體）。臉轉離主燈時，靠近相機的那半邊臉被打亮，就是寬光；臉轉向主燈時，靠近相機的那半邊臉落在陰影裡，就是窄光。</p>
+<p>確切位置見下表。角度沿用 <strong>燈放哪裡</strong> 的慣例（水平環繞 − ＝相機左、+ ＝相機右；仰角 + ＝往上、− ＝往下），並以主燈在 <strong>左</strong>（預設）為準；改成 <strong>右</strong> 時，所有水平角度正負對調。距離是主體最大尺寸的倍數。人像以 0.6 m 的頭肩為基準，產品以 0.3 m 的桌上產品為基準。</p>
+<p><strong>高調光</strong> 和 <strong>白底（產品）</strong> 的背景光跟 <strong>背景光</strong> 角色的做法一樣（<a href="#依角色加燈">第 3 節</a>）：它們對準主體後方背景上的一點，角度是繞著那一點量的，距離是「主體到背景的間距」的一個比例（至少 0.3 m、最多 3 m）。它們不會因為選 <strong>右</strong> 而對調；反正這兩盞本來就左右對稱。</p>
+<p><strong>人像</strong></p>
+<div class="table-wrap"><table><thead><tr><th>名稱</th><th>燈</th></tr></thead><tbody><tr><td><strong>林布蘭光</strong></td><td>主燈柔光箱 −50°、仰角 45°、2.5 倍；白色反光板補光 +45°、0°、1.8 倍</td></tr><tr><td><strong>環形光</strong></td><td>主燈柔光箱 −30°、仰角 30°、2.5 倍；反光板補光 +45°、0°、1.8 倍</td></tr><tr><td><strong>蝴蝶光</strong></td><td>雷達罩在正前方、仰角 40°、1.8 倍</td></tr><tr><td><strong>蚌殼光</strong></td><td>大柔光箱（0.9 × 0.9 m）在正前方、仰角 40°、1.5 倍；反光板在正前方、往下 30°、1.0 倍</td></tr><tr><td><strong>分割光</strong></td><td>一盞柔光箱在 −90°、仰角 15°、1.8 倍；不補光</td></tr><tr><td><strong>三點布光</strong></td><td>主燈柔光箱 −45°、仰角 35°、2.0 倍；補光柔光箱 +45°、0°、2.0 倍、−2 級（四分之一亮）；長條箱輪廓光在正後方（180°、仰角 50°）、1.5 倍，跟主燈一樣亮（0 級）</td></tr><tr><td><strong>低調光</strong></td><td>主燈柔光箱加蜂巢格柵 −45°、仰角 35°、2.0 倍；不補光</td></tr><tr><td><strong>高調光</strong></td><td>大主燈柔光箱（0.9 × 1.2 m）−45°、仰角 35°、2.0 倍；補光柔光箱 +45°、0°、2.0 倍、−1 級（一半亮）；兩盞背景光柔光箱，繞著背景上的那一點在 −40° 與 +40°、比它低 10°、距離是主體到背景間距的 0.5 倍，各 +0.5 級</td></tr></tbody></table></div>
+<p><strong>產品</strong></p>
+<div class="table-wrap"><table><thead><tr><th>名稱</th><th>燈</th></tr></thead><tbody><tr><td><strong>頂光（產品）</strong></td><td>柔光箱（0.9 × 0.6 m）在前方、幾乎正上方的仰角 75°、2.0 倍；白色反光板在前方、往下 15°、1.5 倍</td></tr><tr><td><strong>雙長條箱輪廓光（產品）</strong></td><td>兩支長條箱在後方 +135° 與 −135°、仰角 10°、1.3 倍，一樣亮</td></tr><tr><td><strong>平鋪俯拍（產品）</strong></td><td>兩盞柔光箱在 +45° 與 −45°、仰角 60°、1.8 倍，一樣亮</td></tr><tr><td><strong>白底（產品）</strong></td><td>主燈柔光箱 −45°、仰角 30°、2.5 倍；補光柔光箱 +100°（過了正側面、略偏後）、仰角 15°、2.5 倍、−1 級；兩盞背景光柔光箱，同 <strong>高調光</strong></td></tr><tr><td><strong>玻璃亮底（產品）</strong></td><td>柔光箱（0.45 × 0.56 m）在正後方（180°、0°）、2.0 倍，<strong>器材入鏡</strong> 開；基準尺寸下 3.125 W</td></tr><tr><td><strong>玻璃暗底（產品）</strong></td><td>大柔光箱（1.2 × 1.2 m）在正後方（180°、0°）、3.0 倍；黑旗（0.3 × 0.45 m）在正後方 1.0 倍，位在燈和玻璃之間，<strong>器材入鏡</strong> 開</td></tr></tbody></table></div>
+<p>角度與光比取自常見的攝影教學資料。各來源的數字並不完全一致——例如林布蘭光的主燈，有的說側面 45°、有的說 60°——所以每組都取中間值。請把每一組當成<strong>起點</strong>：移動燈，直到臉或產品在你眼中看起來對了為止。</p>
+<h3 id="套用後會發生什麼">套用後會發生什麼</h3>
+<ul><li><strong>整組會跟著主體大小縮放。</strong>主體大小以它的最大尺寸計算（目標是 3D 游標時當作 1 m）。主體大 4 倍，距離和器材尺寸也會變 4 倍，功率則變 16 倍——因為光會隨距離的平方變弱（平方反比定律），這樣打到主體上的光才會一樣亮。</li><li>器材尺寸只在基準尺寸的 ¼ 到 5 倍之間縮放，超出時停在上下限（也限制在各欄位的正常範圍內）。距離和功率一律跟著主體，所以打在主體上的光還是一樣；只是器材不再變大變小，在很小的主體上相對變大（光比較軟），在很大的主體上相對變小（光比較硬）。</li><li>主體很小時，太淺而建不出來的雷達罩或傘會設成能建出來的最小尺寸，套用後的訊息會列出調整了哪些欄位。真的建不出來時什麼都不加，訊息會寫出是哪個欄位、目前的值和需要的值。</li><li>套用到一半失敗時什麼都不會留下：已建好的燈會被移除，原本的燈、一般的 Blender 燈、主燈和選取都維持原樣。</li><li>主燈在基準尺寸下是 100 W（依上述規則縮放），並被設成場景的主燈；其他燈依設定跟主燈差幾級（<strong>跟主燈比</strong>，並勾選 <strong>主燈變亮變暗時一起跟著</strong>）。反光板不發光，它的效果取決於擺放位置。<strong>玻璃亮底（產品）</strong> 是例外：它的發光板就是相機拍到的背景，所以基準尺寸下從 3.125 W 起跳（低 5 級），免得發光板整片過曝成白色。</li><li>器材一開始不入鏡（<a href="#12-別讓器材入鏡">第 12 節</a>），只有 <strong>玻璃亮底（產品）</strong> 的發光板和 <strong>玻璃暗底（產品）</strong> 的黑旗例外：這兩樣本來就是要拍進畫面的。</li><li>會低於地板的燈會被抬高（<a href="#器材避開地板">見下方</a>）。</li><li>燈的名稱是「英文名稱 角色」，例如 <code>Rembrandt Key</code>、<code>Three-Point Fill</code>。這些物件名稱永遠是英文。</li><li>每盞燈都是一般的 Studio Shapers 燈，都能照常調整。</li><li>套用後會選取主燈。</li><li>場景沒有相機時，左右會照你目前的視角，訊息也會寫「場景沒有相機，左右先照目前的視角」。</li></ul>
+<p>套用後立刻出現的 Blender <strong>調整最後的操作</strong>（Adjust Last Operation）面板（在視窗左下角，或按 <strong>F9</strong>）有這些選項：</p>
+<ul><li><strong>鏡射</strong> — 左右對調，主燈改從 <strong>左</strong>／<strong>右</strong> 所選的另一側打。之後想再換邊，選單裡的 <strong>左右對調</strong> 也能對已經建好的燈做同樣的事。</li><li><strong>隱藏目前的燈</strong>（預設開）— 這個主體原本的燈<strong>只會隱藏、不會刪除</strong>。用清單的眼睛或 <strong>全部顯示</strong> 可以叫回來。沒有主體（整組打在 3D 游標周圍）時，就沒有「目前的燈」可以隱藏：再套一次會在同一個位置多疊一組，亮度會加上去。請先選一個 Mesh，或先用眼睛把前一組藏起來再套。</li><li><strong>關掉其他燈</strong>（預設開）— 一併關掉場景裡一般的 Blender 燈（例如預設的 <em>Light</em> 物件），免得混進這組布光。原本就關著的燈不會被動到；訊息會說關掉了幾盞。按 <strong>全部顯示</strong> 就能打開。從其他檔案連結進來的燈不會被關（訊息會說有幾盞）。<strong>算繪時停用</strong>（Disable in Renders）有動畫的燈，關著的期間動畫會暫停，按 <strong>全部顯示</strong> 時恢復。</li></ul>
+<p><strong>Ctrl+Z</strong> 可一步復原整組套用。</p>
+<h3 id="器材避開地板">器材避開地板</h3>
+<p>這些布光是照「主體下方有空間」寫的。主體直接站在地板上時，放得低或放得遠的燈，可能有一部分跑到地板底下。<strong>器材避開地板</strong>（預設勾選）就是處理這件事的。同一個勾選框出現在三個地方：<strong>一鍵布光</strong> 選單的 <strong>左右對調</strong> 下面、<strong>新增一盞燈</strong> 選單的 <strong>主燈在：左</strong> ▸ 下面，以及 <strong>看圖選燈</strong> 的 <strong>依角色加燈</strong> 分頁。</p>
+<p>套用內建一鍵布光或我的布光、或加入角色燈時，會低於地板的燈會往上轉：</p>
+<ul><li>只改仰角，以它自己的受光點為軸轉。水平角度和距離不變，所以它離照的東西一樣遠。</li><li>轉到離地板 1 cm 為止，但最多只比布光原本給的仰角高 20°。背景光最多可以到 50°（繞著它在背景上的那一點）。</li><li>地板是器材正下方任何看得見、會算圖的 Mesh，但主體（和它的子物件）、燈，以及 addon 自己的輔助物件不算。背景紙的彎曲處、底座的頂面都算。</li><li>訊息會列出抬高了哪些，例如「抬高了 2 盞燈以避開地板：補光、輪廓光」。</li><li>到了上限還是低於地板的燈，就停在上限，訊息會說明：「1 盞仍有一部分低於地板：背光。建議把主體放在桌子或底座上」。主體直接放在地板上時，<strong>雙長條箱輪廓光（產品）</strong> 的長條箱和 <strong>玻璃暗底（產品）</strong> 的背光可能會這樣。</li><li>從下方往上打的不發光器材（<strong>蚌殼光</strong> 的反光板、<strong>頂光（產品）</strong> 的反光板）不會轉，因為轉了就失去它的用途；它低於地板時，會列在同一句「仍有一部分低於地板」裡。</li><li>轉上去後會跑進主體外框的燈，或不再位於主體與背景之間的背景光，會放回布光原本擺的位置，一樣列在那一句裡。</li></ul>
+<p>就像訊息說的，把主體放在桌子或底座上，燈就有空間，完全不需要這些。</p>
+<p>不檢查的：從燈型那幾組加的單盞燈、負補光，以及之後的任何移動（<strong>左右對調</strong>、<strong>整組距離</strong>、你自己移動燈）。關掉這個勾選框時，每盞燈都完全照布光的設定擺。</p>
+<h3 id="我的布光">我的布光</h3>
+<p><strong>存成我的布光…</strong> 會把目前主體上<strong>看得到</strong>的燈存成檔案：燈型、尺寸（含格柵與遮光片設定）、顏色、色溫與色紙、入鏡設定、<strong>外殼不擋其他燈</strong>、位置、功率、亮度模式與 <strong>主燈變亮變暗時一起跟著</strong>、哪盞是主燈、哪片柔光布／黑旗跟隨哪盞燈，以及每盞角色燈的角色。對話框會請你輸入 <strong>名稱</strong>。</p>
+<ul><li>存檔需要有主體 Mesh（不能以 3D 游標為中心存）。沒有主體時按鈕是灰的，滑鼠停上去會顯示「還沒選主體；選一個 Mesh 主體或它的燈」。</li><li>用已存在的名稱存檔不會覆蓋舊檔：新的會存成「名稱 (2)」（再來是「(3)」，依此類推）。</li><li>存好後，訊息會顯示新檔案的完整路徑。</li><li>有錯誤訊息的燈不會被存進去，訊息會說明；所有燈都有錯誤時就不存。集盒（Collection）被關掉算圖的燈也不會存。</li><li>角色燈套用後仍是同一個角色：存進去的 <strong>輪廓光</strong> 回來還是輪廓光，<strong>負補光</strong> 還是負補光。<strong>背景光</strong> 會在新主體後方重新找背景，並保持它在「主體到背景間距」裡的相對位置（一樣是 0.3–3 m）。主燈一起存時，背景光跟主燈比的級數會照存；否則存它的功率。</li><li>受光點不會存：在新主體上，燈會對準它 bounding box 的中心（背景光對準背景）。之後可以用 <strong>點選整組受光點</strong>（<a href="#整組移動">第 7 節</a>）移過去。</li></ul>
+<p>存過的布光會出現在同一個選單的 <strong>我的布光</strong> 底下，套用方式和內建的一樣：依新主體縮放，套用後也有同樣的選項。燈的名稱是「布光名稱 原本的燈名」。</p>
+<p>角度是相對「相機」存的，所以換一個場景、換一台相機套用時，主燈仍在相機的同一側。<strong>左</strong>／<strong>右</strong> 的選擇不會翻轉「我的布光」：存的時候在哪一側，套用時就在哪一側；<strong>鏡射</strong> 或 <strong>左右對調</strong> 仍然可以對調。</p>
+<p><strong>刪除「我的布光」…</strong>（存過至少一組才出現）只刪檔案，不會動到場景裡已經建好的燈。</p>
+<p><strong>打開「我的布光」資料夾</strong> 會用系統的檔案總管打開存檔的資料夾。每組布光一個 <code>.json</code> 檔，放在 Blender 使用者 scripts 資料夾裡的 <code>presets/studio_shapers/setups/</code>。複製這些檔案就能備份，或拿到另一台電腦使用。清單只會列出由本 addon 存的檔案。</p>
+<hr>
+<h2 id="12-別讓器材入鏡">12. 別讓器材入鏡</h2>
+<p>真實器材常常得擺在畫面邊緣外。在這裡，器材可以擺在畫面<strong>裡面</strong>，卻不會被拍到。</p>
+<p><strong>器材入鏡</strong>（在 <strong>進階設定</strong> 子面板）預設<strong>關閉</strong>。它只切換器材 Mesh 與裡面光源的「相機」射線可見性（物體屬性 &gt; 可見性 &gt; 光線可見性裡的 <strong>相機</strong>；Object Properties &gt; Visibility &gt; Ray Visibility &gt; Camera），所以器材與發光面會一起入鏡、一起消失；<strong>陰影</strong>、<strong>漫射</strong>、<strong>光澤</strong>（Shadow、Diffuse、Glossy）都保持開啟。所以關閉時，器材：</p>
+<ul><li><strong>不會</strong>直接出現在 Cycles 相機畫面裡；</li><li><strong>仍然</strong>會擋光、塑形、反光；</li><li><strong>仍可能出現在鏡面般的反射裡</strong>（鍍鉻產品、光亮地板）。這是刻意保留的，因為那些反射本來就是器材對畫面的影響之一。</li></ul>
+<p>只有想拍器材本身時才打開 <strong>器材入鏡</strong>。打開後器材會連同發亮的發光面一起出現，像真實器材的照片：柔光箱正面看起來就是一片發亮的面。</p>
+<p>有兩組內建一鍵布光會幫你打開它，因為在那裡器材本身就是畫面：<strong>玻璃亮底（產品）</strong> 的發光板，和 <strong>玻璃暗底（產品）</strong> 的黑旗（<a href="#11-一鍵布光">第 11 節</a>）。</p>
+<p><strong>負補光</strong> 的黑旗打開 <strong>器材入鏡</strong> 後，如果它在相機畫框裡，<strong>進階設定</strong> 子面板會提醒：「這面黑旗在相機畫面內，會被算進畫面。把它移出畫框，或關掉「器材入鏡」。」addon 不會幫你搬。</p>
+<p><strong>0.9.9 以前存的檔案：</strong>原本就開著 <strong>器材入鏡</strong> 的燈，發光面不會自己出現。把 <strong>器材入鏡</strong> 關掉再打開一次（或按 <strong>重建幾何</strong>），發光面就會出現。</p>
+<p><strong>Viewport 線框</strong>（預設開）讓器材在視窗裡以線框顯示，工作時不會擋住主體。它只影響顯示，Cycles 永遠用完整實體計算。取消勾選即可看到實體外形。</p>
+<p><strong>不要用其他可見性開關來讓器材不入鏡：</strong></p>
+<ul><li>用大綱編輯器（Outliner）的眼睛在視窗裡隱藏器材 Mesh，可能讓 Cycles 視窗預覽不再計算它們，預覽畫面就會失去器材的作用。</li><li>關掉它們的算圖可見性，會把器材整個從算圖移除——連同它對光的影響。</li></ul>
+<p>（燈清單的眼睛不一樣：它是刻意把<strong>整盞燈</strong>隱藏，等於把那盞燈關掉。）</p>
+<p>大多數燈型裡的光源是 Cycles 的區光（Area）或點光（Point），不是會發光的布料 Mesh；<strong>器材入鏡</strong> 會讓它跟器材一起入鏡。<strong>拋物線深傘</strong> 的光源是一顆很小的點光，藏在黑色頂蓋後面，所以從正面看，亮起來的主要是反射面，不是燈泡本身。<strong>雷達罩</strong> 沒有燈物件：碗的內面本身會發光，<strong>器材入鏡</strong> 顯示的就是這個發光的碗，前面擋著擋片。</p>
+<hr>
+<h2 id="13-物理說明與誠實的限制">13. 物理說明與誠實的限制</h2>
+<p>這一節讓你在依賴某個數字之前，先知道該期待什麼。</p>
+<h3 id="光源">光源</h3>
+<ul><li>功率是 <strong>Cycles 瓦（W）</strong>，不是攝影閃燈的 <strong>Ws</strong>（瓦秒）。兩者之間沒有換算；請以算圖結果判斷曝光。</li><li>光源使用 Cycles 的標準功率設定，區光（Area）維持完整的 180° 擴散角。格柵、束光筒、四葉遮光片<strong>只靠幾何擋光</strong>來控光——addon 不會偷偷縮窄光源擴散角，或在裡面藏一盞聚光燈來假裝效果。</li><li>被器材擋掉或吸收的光<strong>不會</strong>自動補回。格柵深、束光筒長，燈就會變暗，跟在棚裡一樣。</li></ul>
+<h3 id="柔光布-1">柔光布</h3>
+<ul><li>測試算圖中（0.8.6 版），小光源照一根細柱，在牆上投出清楚的陰影；加上柔光布後，陰影幾乎消失，牆面亮度約降 <strong>2.3 級</strong>。改在主體上量，柔光布約吃 <strong>0.8～2 級</strong>，看布掛在哪裡、多大；燈比布大時少得多。所以柔光布 <strong>跟隨燈光</strong> 子面板裡的 <strong>燈調亮 +… 級（補償柔光布）</strong> 按鈕，會依布目前的距離、大小與燈的大小算出級數。</li><li>這個數字是依 Blender 預設的光線反彈（光徑 &gt; 最大反彈數 &gt; 穿透 1 以上；Light Paths &gt; Max Bounces &gt; Transmission）算的，與 32 張實渲比對在 ±0.15 級內；大柔光箱、偏離光軸的柔光布、反射傘在 ±0.21 級內。它會算燈的大小：燈比柔光布大時，有一部分光從布旁邊直接照到主體，按鈕給的比較少（2×3 m 柔光箱配 1×1 m 布：約 +0.5）。場景的穿透反彈數是 0 時，布吃掉的光較多（平均多約 0.15 級，反射傘、反光板的光幾乎全被擋掉），面板會提醒。柔光布放在燈具內側（燈泡和傘面之間）時無法估算，請看算圖。</li><li>柔光布<strong>只柔化穿過它的光。</strong>沒打到布的直射光仍然是硬光——你會在布的邊緣外看到較亮的硬光帶。要全部打柔，就把柔光布加大，或移近燈。</li></ul>
+<h3 id="拋物線深傘與過濾光澤">拋物線深傘與過濾光澤</h3>
+<p>拋物線深傘的聚焦走的是 Cycles 所謂的散焦（Caustics）路徑：點光源 → 光滑銀色反射面 → 主體。Cycles 預設的 <strong>過濾光澤 = 1.0</strong>（算繪屬性 &gt; 光徑 &gt; 散焦 &gt; 過濾光澤；Render Properties &gt; Light Paths &gt; Caustics &gt; Filter Glossy）正好會模糊這條路徑。</p>
+<ul><li>在預設 1.0 下，這個聚焦效果大半會被抹掉。</li><li><strong>過濾光澤 = 0</strong> 時，把 <strong>焦點偏移</strong> 從 0 移開，我們的測試中光束集中度差約 <strong>20%</strong>——但畫面明顯雜訊變多，需要更高的取樣數。</li></ul>
+<p>addon 永遠不會改你的過濾光澤或取樣數。如果聚焦效果對你的畫面很重要，請自己調低過濾光澤並提高取樣數。</p>
+<h3 id="級數是約略值">級數是約略值</h3>
+<p><strong>比主燈</strong> 的數字是「色紙後功率 ÷ 距離²」。它<strong>不含</strong>器材內部的光損（反射傘的反射、格柵、束光筒、柔光箱）或柔光布。同類器材互比最準；不同器材之間請當作起點。見<a href="#10-亮度與主燈">第 10 節</a>。</p>
+<h3 id="燈停在離正上方-01-處">燈停在離正上方 0.1° 處</h3>
+<p>燈正好在受光點正上方時，「燈的上方是哪邊」無法定義，燈可能轉 180°。大多數外形看不出差別，但四葉遮光片的上下兩片會對調。所以每盞燈的仰角都停在 <strong>89.9°</strong>——距離 2 m 時約偏離中心 3 mm。輸入 90°、按 <strong>正上方</strong>、或在俯視圖拖到正中央，都會停在 89.9°。</p>
+<h3 id="透射傘與反射傘">透射傘與反射傘</h3>
+<p>透射傘會把相當多的光往後方與側面送。在對照算圖中，燈後方的牆面，用 <strong>透射傘</strong> 時收到的光是用 <strong>反射傘</strong> 時的好幾倍。這是透射傘的真實特性，不是 bug；如果燈後方的溢光是問題，請改用反射傘或加黑旗。</p>
+<h3 id="器材是工程近似">器材是工程近似</h3>
+<ul><li>器材是依常見外形建模的，<strong>不是任何品牌產品的量測複製</strong>；沒有品牌特有的布料皺褶、菲涅耳透鏡、IES 配光檔或量測配光。</li><li>柔光箱正面是均勻的區光，不是模擬「閃光管加多層布」。</li><li>黑色零件（格柵、束光筒、遮光片、黑旗、柔光箱外罩）用的是很暗、很粗糙的材質，表現得像黑色器材，但還是會反射一點點光，就跟真的黑布一樣。</li><li>黑旗的板子比其他黑色零件更黑：約反射 0.4% 的光，以前約 2.4%，所以就算主燈的光溢到黑旗上，它仍然吸得掉光。舊檔裡的黑旗板維持舊的黑色，直到那面黑旗重建（<strong>重建幾何</strong>）。</li><li>白色與銀色反射面是光學近似，不是校準過的材質。</li></ul>
+<h3 id="雜訊">雜訊</h3>
+<p>反射型器材（反射傘、拋物線深傘）讓光多彈一次，所以比單純的區光更容易有雜訊，也可能留下降噪殘影。請給它們更高的取樣數（算繪屬性 &gt; 取樣；Render Properties &gt; Sampling）。沒有任何取樣數能保證完全沒有雜訊。</p>
+<p><strong>雷達罩</strong> 是例外：它的碗直接發光，1024 取樣時，測試算圖裡的斑塊雜訊跟 <strong>八角箱</strong> 差不多（1.16 倍）。不過它算得比較久——同一次測試裡，同樣取樣數大約是八角箱的兩倍時間——因為發光不均勻，Cycles 的 adaptive sampling 會多花工夫。</p>
+<h3 id="生成的-mesh">生成的 Mesh</h3>
+<p>設定一改，器材 Mesh 就會重建。你手動修改的內容會被取代。想自己改造的話，請另外保留一份你修改過的版本。重建失敗時會保留上一個有效造型；新造型要完整建好才會換上。</p>
+<p>器材的材質也屬於這盞燈。重建時會換上新的材質、刪掉舊的，就算你改過名字或顏色也一樣。想改器材的外觀，請指定你自己新建的材質；addon 不會刪它沒建立的材質。</p>
+<hr>
+<h2 id="14-疑難排解與常見問題">14. 疑難排解與常見問題</h2>
+<h3 id="可能看到的訊息">可能看到的訊息</h3>
+<div class="table-wrap"><table><thead><tr><th>訊息</th><th>怎麼處理</th></tr></thead><tbody><tr><td>「這個 addon 是為 Cycles 打光（算繪屬性 &gt; 算繪引擎，繁中介面顯示為「循環」）」</td><td>按正下方的 <strong>切換到 Cycles</strong>，或自己把算繪屬性 &gt; 算繪引擎（Render Properties &gt; Render Engine）切到 Cycles。</td></tr><tr><td>「把場景屬性 &gt; 單位 &gt; 單位規模設成 1 就能用」／「場景沒有變動；把場景屬性 &gt; 單位 &gt; 單位規模設成 1 後再試一次」</td><td>把場景屬性 &gt; 單位 &gt; 單位規模（Scene Properties &gt; Units &gt; Unit Scale）設為 1。單位規模不是 1 時，「尺寸重設」等按鈕什麼都不改。</td></tr><tr><td>「把場景屬性 &gt; 單位 &gt; 單位規模設成 1；設好後，你輸入的新值會自動套用」</td><td>單位規模不是 1 時你改了設定，就會看到這句。設成 1 之後，你輸入的值會自動套用（<a href="#6-燈放哪裡">第 6 節</a>）。</td></tr><tr><td>「這盞燈或它的父物件有縮放；用 Alt+S 把「縮放」歸 1，再用尺寸欄位調大小」</td><td>把燈（以及它的父物件）的「縮放」重設為 1，改用 <strong>尺寸（影子軟硬）</strong> 的欄位調大小。</td></tr><tr><td>「這盞燈和另一盞燈共用同一個身分，常見原因是用 Blender 複製（Shift+D），或同一盞燈附加了兩次…」／「這盞燈和場景「…」裡的一盞燈共用同一個身分，常見原因是用「新增場景 &gt; 完整副本」複製了場景…」</td><td>Blender 的 Shift+D／Alt+D、<strong>新增場景 &gt; 完整副本</strong>（New Scene &gt; Full Copy），或同一盞燈附加（Append）兩次，會做出共用同一個身分的燈，兩盞都在時都不能調整。請刪掉多出來的那一盞，改按燈名旁邊的 <strong>複製這盞燈</strong>（<a href="#4-12-種燈型">第 4 節</a>）；做場景的變化版請用 <strong>新增場景 &gt; 連結副本</strong>（New Scene &gt; Linked Copy）。見下方常見問題。</td></tr><tr><td>「這盞燈來自另一個檔案（連結進來的），在這裡改的設定不會存檔…」</td><td>把燈附加進來，或做藏庫凌駕（Library Override）。<strong>複製這盞燈</strong> 可以做出自己的複本。</td></tr><tr><td>「藏庫凌駕的燈不能改尺寸和種類…」</td><td>尺寸和種類請到原檔改。</td></tr><tr><td>「未更新：保留最後有效造型」</td><td>某個尺寸數值超出範圍，原因會顯示在下方。修正數值後造型就會更新。</td></tr><tr><td>「這盞燈有器材零件被刪掉了；按「重建幾何」可以補回來」</td><td>按同一個框裡的 <strong>重建幾何</strong>。</td></tr><tr><td>「格柵過密，請加大格子尺度（上限 100,000 面）」</td><td>加大 <strong>格子尺度</strong> 或把燈縮小。</td></tr><tr><td>「光源太靠近傘底…」／「光源離傘口太遠…」／「前擋片會碰到傘面…」</td><td>拋物線深傘：依訊息指示的方向調整 <strong>焦點偏移</strong>。</td></tr><tr><td>「還沒有主體；在「主體」欄位選一個 Mesh，再點表面」</td><td><strong>點選受光點</strong> 需要 <strong>主體</strong> 是 Mesh。</td></tr><tr><td>「沒有點到主體，受光點沒有變更；請點在主體表面」</td><td>請點在主體本身上；原本的受光點會保留。</td></tr><tr><td>「還沒有受光點；按「建立／修復受光點」即可建立」</td><td>在 <strong>照哪裡</strong> 子面板按 <strong>建立／修復受光點</strong>。燈不會移動。</td></tr><tr><td>「燈離受光點太近；用 G 把燈移遠一點再試」</td><td>把燈移遠一點再試。</td></tr><tr><td>「這個器材正在跟隨燈光；到下方「跟隨燈光」清除「跟隨燈光」欄位，就能自己移動」</td><td>這片柔光布或黑旗正在跟隨一盞燈。在 <strong>跟隨燈光</strong> 子面板清除 <strong>跟隨燈光</strong> 欄位，就能自己擺（<a href="#8-跟著燈走的柔光布與黑旗">第 8 節</a>）。</td></tr><tr><td>「黑旗、反光板和柔光布不會發光，所以沒有功率」</td><td>級數按鈕與 <strong>設成主燈</strong> 只對會發光的燈有用。</td></tr><tr><td>「俯視圖畫不出來；關掉再重開一次」</td><td>按 <strong>關閉俯視圖</strong>，再按 <strong>打開俯視圖</strong>。</td></tr><tr><td>「這個主體上沒有看得到的燈；先新增或顯示燈再存」</td><td><strong>存成我的布光…</strong> 只存對準目前主體、而且沒隱藏的燈。</td></tr><tr><td>「目前間接照明的限定是 10，這盞燈會暗很多；…」</td><td>按下方的 <strong>間接照明限定設為 0</strong>；場景只有這一盞燈時，也可以改調曝光（<a href="#10-亮度與主燈">第 10 節</a>）。</td></tr><tr><td>「…布比較大，下緣低於主體底部，可能插進地板…」</td><td>柔光布下緣沒入鏡就不用管；入鏡的話，縮小布或把燈抬高（<a href="#8-跟著燈走的柔光布與黑旗">第 8 節</a>）。</td></tr><tr><td>「…主燈在別的主體上，無法比較，先用預設功率」／「…主燈是 0 W，尚無可比較的亮度，先用預設功率」</td><td>角色燈用預設功率加進來，沒有跟主燈設光比。請看算圖結果，用眼睛調功率；主燈是 0 W 時，也可以先把主燈調上來，再在 <strong>比主燈</strong> 輸入級數（<a href="#依角色加燈">第 3 節</a>）。</td></tr><tr><td>「這盞背景光所屬的主體不見了（被刪除或不在這個場景），無法和主燈比較」</td><td>它的主體被刪掉或移出了場景。對你現在用的主體重新加一盞 <strong>背景光</strong>，或把這盞設成 <strong>自己調</strong>（<a href="#依角色加燈">第 3 節</a>）。</td></tr><tr><td>「… 盞仍有一部分低於地板：…。建議把主體放在桌子或底座上」</td><td>列出的燈已經抬到允許的上限，或維持原位。把主體放到桌子或底座上，或自己移動那幾盞燈（<a href="#器材避開地板">第 11 節</a>）。</td></tr><tr><td>「…如果這個物件只是瞄準用的輔助物件，請改選真正的主體，再用「點選整組受光點」對到想要的位置。」</td><td>這組布光套在一個很小的物件周圍。如果那個物件只是拿來瞄準的，請改套到真正的主體上，再用 <strong>點選整組受光點</strong>（<a href="#整組移動">第 7 節</a>）。</td></tr><tr><td>「不能再近：「…」會碰到主體」／「不能再近：「…」已到最近距離」／「不能再遠：「…」已到最遠距離」</td><td><strong>整組距離</strong> 停在那盞燈的極限。先單獨移動那盞燈，或就停在這裡（<a href="#整組移動">第 7 節</a>）。</td></tr><tr><td>「「…」碰到主體：把整組拉遠，或換一個受光點」</td><td>用 <strong>點選整組受光點</strong> 之後，那盞燈的器材碰到主體。把 <strong>整組距離</strong> 調大，或換一個點。</td></tr><tr><td>「找不到另一面，受光點在表面上」</td><td>整組受光點落在你點的表面上，例如薄片。除非你想要它更深入，否則不用處理。</td></tr><tr><td>「先選一個 Mesh 當主體，或選它的一盞燈」／「這個主體上沒有可以一起瞄準的燈」</td><td><strong>點選整組受光點</strong> 需要一個主體，而且上面至少有一盞會發光的燈。</td></tr><tr><td>「留在原位：…」／「無法放回原位：…」</td><td>列出的燈沒能跟著新的受光點移動。檢查一下那幾盞，或按 <strong>Ctrl+Z</strong> 復原。</td></tr><tr><td>「沒有主燈，無法判斷暗側：黑旗先放在預設位置」</td><td>先把一盞燈設成主燈，再重新加一次 <strong>負補光</strong>，或自己移動黑旗（<a href="#依角色加燈">第 3 節</a>）。</td></tr><tr><td>「這面黑旗在相機畫面內，會被算進畫面。把它移出畫框，或關掉「器材入鏡」。」</td><td>兩個做法選一個（<a href="#12-別讓器材入鏡">第 12 節</a>）。</td></tr></tbody></table></div>
+<h3 id="常見問題">常見問題</h3>
+<p><strong>更新之後好像沒變？</strong> 重新啟動 Blender，再到 編輯 &gt; 偏好設定（Edit &gt; Preferences）看這個 addon 的版號。只重新安裝不一定能換掉已經載入的模組。</p>
+<p><strong>視窗裡看不到光。</strong> 視窗的著色要切到「算繪」（Rendered）才看得到打光效果。按 <strong>看光</strong>（清單標題列的圖示，或 <strong>小提示</strong> 框裡的按鈕）就好。</p>
+<p><strong>有按鈕是灰的。</strong> 滑鼠停在按鈕上，提示會說缺了什麼，例如還沒選主體，或還沒選 Studio Shapers 的燈。</p>
+<p><strong>算圖裡少了一盞燈。</strong> 看燈清單：它的眼睛是不是關著？是不是有紅色「只亮這盞」列顯示正在只亮另一盞？一般的 Blender 燈可能被一鍵布光關掉了，按 <strong>全部顯示</strong> 就能打開。清單上有相機圖示，表示那盞燈所在的集盒（Collection）被關掉算圖、或在檢視層（View Layer）取消勾選，要到大綱編輯器（Outliner）把它打開（<a href="#7-場景裡的燈清單">第 7 節</a>）。很深的格柵、很長的束光筒或很強的色紙，也會讓燈比你預期的暗很多。</p>
+<p><strong>為什麼算圖裡看不到柔光箱？</strong> <strong>器材入鏡</strong> 預設就是刻意關閉的。打開後器材會連同發光面一起出現；0.9.9 以前存的檔案要關掉再打開一次（<a href="#12-別讓器材入鏡">第 12 節</a>）。</p>
+<p><strong>某盞燈沒有「比主燈」欄位。</strong> 它就是主燈、它是不發光器材、它設成了 <strong>自己調</strong>，或它打的主體和主燈不同（<a href="#10-亮度與主燈">第 10 節</a>）。<strong>背景光</strong> 則是透過它所屬的主體跟主燈比（<a href="#依角色加燈">第 3 節</a>）。</p>
+<p><strong>新燈一直打到錯的物件。</strong> 按下前先看 <strong>新增一盞燈</strong> 下方的提示。選取一次你要的 Mesh，之後的燈就會記住它。</p>
+<p><strong>新燈和一鍵布光的主燈放錯邊。</strong> 把滑鼠移到 <strong>新增一盞燈</strong> 或 <strong>一鍵布光</strong> 選單最上面那一行 <strong>主燈在：左</strong> ▸，選 <strong>左</strong> 或 <strong>右</strong>。它影響新加的燈與內建一鍵布光；已經存在的燈不會動。想連它們一起翻過去，按 <strong>一鍵布光</strong> 選單裡的 <strong>左右對調</strong>。</p>
+<p><strong>柔光布移不動。</strong> 它正在跟隨一盞燈。請移動那盞燈、改 <strong>與燈距離</strong>，或清除 <strong>跟隨燈光</strong> 再自由擺放。</p>
+<p><strong>背景上有一條較暗的帶子。</strong> 常見原因是某個柔光箱、長條箱或八角箱站在別的燈和背景之間，擋出了影子。在那盞燈上勾選 <strong>外殼不擋其他燈</strong>（<a href="#外殼不擋其他燈">第 10 節</a>）。</p>
+<p><strong>一鍵布光把某些燈擺得比表上寫的高。</strong> <strong>器材避開地板</strong> 把它們抬高了，免得低於地板；訊息會列出是哪幾盞。把主體放在桌子或底座上，或取消勾選，讓燈完全照布光的設定擺（<a href="#器材避開地板">第 11 節</a>）。</p>
+<p><strong>可以用 EEVEE 嗎？</strong> 器材的效果不行。整個概念——真的幾何在擋光與反光——需要路徑追蹤，本 addon 是為 Cycles 做的。在 EEVEE 裡，柔光箱、長條箱、八角箱、束光筒、四葉遮光片燈照得亮主體，色紙和黑旗也有效；addon 會打開燈的影子抖動，所以箱型燈、四葉遮光片與格柵的影子接近 Cycles（EEVEE 視窗在很低的 samples，約 4 時，顆粒會多一點；16 以上我們看不出差別）。傘類與 <strong>雷達罩</strong> 完全照不亮主體，<strong>柔光布</strong> 會讓那盞燈整個變黑，<strong>反光板</strong> 沒有補光效果。舊版做的檔案，開檔時會替燈打開一次影子抖動；你自己關掉的會維持關閉。Cycles 的算圖逐像素不變。</p>
+<p><strong>addon 會改我的場景或算圖設定嗎？</strong> 它不會改單位設定、取樣數或過濾光澤（Filter Glossy）。只有你按 <strong>切換到 Cycles</strong> 時，才會改算繪引擎；只有你按 <strong>間接照明限定設為 0</strong> 時，才會改間接照明限定（光徑 &gt; 限定 &gt; 間接照明，Light Paths &gt; Clamping &gt; Indirect Light；見<a href="#10-亮度與主燈">第 10 節</a>）。除此之外，它只建立與編輯它自己的燈、Mesh、受光點與集盒。「只亮這盞」與 <strong>關掉其他燈</strong> 會關掉一般的 Blender 燈；結束「只亮這盞」或按 <strong>全部顯示</strong> 就會打開。</p>
+<p><strong>舊檔案裡的燈沒有受光點／沒有放進集盒。</strong> 在 <strong>照哪裡</strong> 子面板按 <strong>建立／修復受光點</strong>——不會移動燈。在清單下方按 <strong>整理集盒</strong> 把它們收進集盒。</p>
+<p><strong>燈說它和另一盞燈共用同一個身分。</strong> 新增場景 &gt; 完整副本、同一盞燈附加兩次，或 Blender 原生的 Shift+D／Alt+D，會做出共用同一個身分的燈，兩盞都在時都不能調整（面板會說明）。這時設定會變灰、設定按鈕只會說明原因；<strong>複製這盞燈</strong> 和清單的隱藏／<strong>只亮這盞</strong> 仍可用。做場景的變化版請用 <strong>新增場景 &gt; 連結副本</strong>；要一盞可以各自調整的燈，請刪掉多出來的副本，再用 <strong>複製這盞燈</strong>。這段期間如果被 script 等方式改了設定，燈不會變，但面板會留著新值；刪掉多出來的副本後，燈就照面板上的值更新（功率、尺寸、顏色、位置），其他燈不會跟著這次改動變。期間如果改了燈的種類，燈會重建成新種類，但名稱不會自動改。</p>
+<p><strong>可以用連結（link）進來的燈，或藏庫凌駕嗎？</strong> 從其他檔案連結進來的燈不能在這裡改：設定會變灰，按鈕會說明原因（改了也不會存檔）。請附加，或做藏庫凌駕；<strong>複製這盞燈</strong> 可以做出自己的複本。檔案裡同時有你自己的 Studio Shapers 燈時，連結進來的燈 <strong>照哪裡</strong> 子面板也會正常顯示受光點（1.0.0 以前可能誤報「還沒有受光點」）。藏庫凌駕的燈，功率、顏色等設定存檔重開後會回到原檔的值（位置和隱藏會保留），尺寸與種類不能在這裡改；要永久改請到原檔改。藏庫凌駕的燈適合暫時試光。<strong>復原</strong>（Undo）對它不完全有效：改了藏庫凌駕的燈的功率或顏色之後按 Ctrl+Z，面板會回去、燈不會——想復原請自己改回去，或重開檔案。一般的（不是 Studio Shapers 的）藏庫凌駕的燈被一鍵布光或「只亮這盞」關掉後，重開檔案會維持關閉，<strong>全部顯示</strong> 也認不得它，要到大綱編輯器打開。被「只亮這盞」關掉的 Studio Shapers 藏庫凌駕的燈，重開檔案後結束「只亮這盞」不會打開它，<strong>全部顯示</strong> 會。</p>
+<p><strong>反射傘的算圖很多雜訊。</strong> 反射光本來就這樣。請提高取樣數；見<a href="#13-物理說明與誠實的限制">第 13 節</a>。<strong>雷達罩</strong> 現在不靠反射出光，算起來跟 <strong>八角箱</strong> 差不多乾淨；舊檔裡的雷達罩如果有斑塊，重建一次就好（見下一題）。</p>
+<p><strong>打開 0.9.9 以前做的檔案。</strong> 都打得開、也都能算圖。有三件事要知道：</p>
+<ul><li><strong>格柵</strong> 保留原本的尺寸。沒改過的格柵尺寸維持舊預設（格子 15 cm、深 12 cm、格壁 2 mm），當時沒開格柵的燈也一樣。新燈用新預設（4 cm、5 cm、1 mm）；舊燈要換成新預設，按 <strong>尺寸重設</strong>。舊燈重建後，格柵會多出新的周邊牆，所以面數會稍微不同，格子尺寸不變。如果是在檔案開著的時候升級 addon，請先存檔、重新開啟這個檔案，再去改那些燈；不然它們會讀到新預設。舊燈 <strong>附加</strong> 進新檔案時，格柵也保留原本的尺寸。</li><li><strong>雷達罩</strong> 在重建之前，碗裡的舊燈都會保留：改任一個尺寸，或按 <strong>重建幾何</strong>，就會變成新的發光碗。預設尺寸時亮度跟以前一樣；碗或擋片加大時，舊版會變暗（我們的測試約暗 30%），所以重建後可能比舊檔亮。</li><li>色溫沒開的燈加色紙，現在從 Blender 的白光（約 6500K）起算，不再從 5600K 起算。這類燈在你改到任何設定之前維持舊顏色，改了之後色紙的顏色會變（1/2 CTO 會淡一點）。舊場景裡有色紙的燈請再看一次。</li></ul>
+<p><strong>怎麼把我的布光帶到另一台電腦？</strong> 按 <strong>一鍵布光</strong> 選單裡的 <strong>打開「我的布光」資料夾</strong>，複製裡面的 <code>.json</code> 檔，放到另一台電腦的同一個資料夾（在那台電腦用同一個按鈕打開）（<a href="#11-一鍵布光">第 11 節</a>）。</p>
+<p><strong>算圖農場或沒裝 addon 的同事，能渲我的檔案嗎？</strong> 可以。addon 做出來的東西全是 Blender 原生資料——Mesh、燈、材質和標準 constraint——所以沒裝 Studio Shapers 的 Blender 會渲出一樣的畫面；在那邊搬燈，跟隨中的柔光布、黑旗也會照樣跟著走。我們測的是背景（命令列）算圖，也就是算圖農場的情況；沒裝 addon 時在 Blender 介面裡開檔的操作沒有測。限制：</p>
+<ul><li>沒裝 addon 只能「渲」和「搬」，改不了 Studio Shapers 的設定（功率、色紙、色溫、器材外形）。</li><li>對方如果直接改了原生燈的強度或顏色，檔案回到你手上後，只要在面板上動到那盞燈的任何設定，就會以面板數值為準。</li><li>不同 Blender 版本渲出的雜訊顆粒會略有差異，這對所有 .blend 都一樣；要逐像素一致，農場請用跟你同一版的 Blender。</li></ul>
+<hr>
+<h2 id="15-詞彙對照">15. 詞彙對照</h2>
+<p>本手冊提到的 Blender 畫面字，以 Blender 5.1 繁體中文介面為準（5.2 相同）。Blender 是中文時對著「繁中介面」欄找；Blender 是英文、而 addon 選了「中文」時，對著「英文介面」欄找。這裡只列 Blender 自己的字；addon 的按鈕與面板名稱（例如 <strong>看光</strong>、<strong>整理集盒</strong>）不在表內。Cycles、EEVEE、快捷鍵，以及物件與集盒的名稱（例如 <code>Studio Softbox</code>）一律是英文。</p>
+<p><strong>偏好設定與安裝</strong></p>
+<div class="table-wrap"><table><thead><tr><th>繁中介面</th><th>英文介面</th><th>在哪裡</th></tr></thead><tbody><tr><td>編輯 &gt; 偏好設定...</td><td>Edit &gt; Preferences...</td><td>最上方的選單列；選單項後面有「...」</td></tr><tr><td>偏好設定</td><td>Preferences</td><td>上一列打開的視窗</td></tr><tr><td>取得擴充套件</td><td>Get Extensions</td><td>偏好設定視窗左側的分頁</td></tr><tr><td>附加元件</td><td>Add-ons</td><td>偏好設定視窗左側的分頁</td></tr><tr><td>從磁碟安裝...</td><td>Install from Disk...</td><td>取得擴充套件／附加元件分頁右上角的下拉選單</td></tr></tbody></table></div>
+<p><strong>3D 檢視</strong></p>
+<div class="table-wrap"><table><thead><tr><th>繁中介面</th><th>英文介面</th><th>在哪裡</th></tr></thead><tbody><tr><td>3D 檢視</td><td>3D Viewport</td><td>編輯器類型；側欄（<strong>N</strong>）裡有 <strong>Studio Shapers</strong> 分頁</td></tr><tr><td>算繪（著色）</td><td>Rendered</td><td>3D 檢視右上角的著色按鈕</td></tr><tr><td>調整最後的操作</td><td>Adjust Last Operation</td><td>3D 檢視左下角，做完一個動作後出現的面板（<strong>F9</strong>）</td></tr></tbody></table></div>
+<p><strong>大綱編輯器</strong></p>
+<div class="table-wrap"><table><thead><tr><th>繁中介面</th><th>英文介面</th><th>在哪裡</th></tr></thead><tbody><tr><td>大綱編輯器</td><td>Outliner</td><td>編輯器類型，預設在畫面右上方</td></tr><tr><td>集盒</td><td>Collection</td><td>大綱編輯器裡的分組；燈放在 <code>Studio Shapers</code> 這個集盒底下</td></tr><tr><td>檢視層</td><td>View Layer</td><td>集盒前面的勾選框（取消勾選＝從檢視層中排除）</td></tr><tr><td>算繪時停用</td><td>Disable in Renders</td><td>大綱編輯器的相機圖示（滑鼠提示）</td></tr><tr><td>螢幕圖示</td><td>Disable in Viewports</td><td>大綱編輯器的螢幕圖示（手冊用圖示來稱呼它）</td></tr></tbody></table></div>
+<p><strong>場景與檔案</strong></p>
+<div class="table-wrap"><table><thead><tr><th>繁中介面</th><th>英文介面</th><th>在哪裡</th></tr></thead><tbody><tr><td>新增場景</td><td>New Scene</td><td>最上方場景選擇器旁的按鈕</td></tr><tr><td>連結副本</td><td>Linked Copy</td><td>新增場景的選單</td></tr><tr><td>完整副本</td><td>Full Copy</td><td>新增場景的選單</td></tr><tr><td>附加（檔案 &gt; 附加...）</td><td>Append (File &gt; Append...)</td><td>檔案選單</td></tr><tr><td>連結（檔案 &gt; 連結...）</td><td>Link (File &gt; Link...)</td><td>檔案選單</td></tr><tr><td>藏庫凌駕</td><td>Library Override</td><td>物體選單</td></tr><tr><td>復原</td><td>Undo</td><td>編輯選單（<strong>Ctrl+Z</strong>）</td></tr><tr><td>關鍵影格</td><td>Keyframe</td><td>按 <strong>K</strong> 插入</td></tr><tr><td>容體</td><td>Volume</td><td>物體類型（新增選單）</td></tr></tbody></table></div>
+<p><strong>屬性編輯器：場景屬性</strong></p>
+<div class="table-wrap"><table><thead><tr><th>繁中介面</th><th>英文介面</th><th>在哪裡</th></tr></thead><tbody><tr><td>場景屬性</td><td>Scene Properties</td><td>屬性編輯器的分頁</td></tr><tr><td>單位</td><td>Units</td><td>場景屬性裡的面板</td></tr><tr><td>單位規模</td><td>Unit Scale</td><td>場景屬性 &gt; 單位</td></tr></tbody></table></div>
+<p><strong>屬性編輯器：算繪屬性（Cycles）</strong></p>
+<div class="table-wrap"><table><thead><tr><th>繁中介面</th><th>英文介面</th><th>在哪裡</th></tr></thead><tbody><tr><td>算繪屬性</td><td>Render Properties</td><td>屬性編輯器的分頁</td></tr><tr><td>算繪引擎</td><td>Render Engine</td><td>算繪屬性最上面；Cycles 在繁中介面顯示為「循環」</td></tr><tr><td>取樣</td><td>Sampling</td><td>算繪屬性裡的面板</td></tr><tr><td>算繪</td><td>Render</td><td>算繪屬性 &gt; 取樣 裡的子面板</td></tr><tr><td>最大樣本數</td><td>Max Samples</td><td>算繪屬性 &gt; 取樣 &gt; 算繪（<strong>噪訊閾值</strong> 沒勾時這格叫「採樣」，Samples）</td></tr><tr><td>光徑</td><td>Light Paths</td><td>算繪屬性裡的面板</td></tr><tr><td>最大反彈數</td><td>Max Bounces</td><td>算繪屬性 &gt; 光徑</td></tr><tr><td>穿透</td><td>Transmission</td><td>算繪屬性 &gt; 光徑 &gt; 最大反彈數</td></tr><tr><td>限定</td><td>Clamping</td><td>算繪屬性 &gt; 光徑</td></tr><tr><td>直接照明</td><td>Direct Light</td><td>算繪屬性 &gt; 光徑 &gt; 限定</td></tr><tr><td>間接照明</td><td>Indirect Light</td><td>算繪屬性 &gt; 光徑 &gt; 限定</td></tr><tr><td>散焦</td><td>Caustics</td><td>算繪屬性 &gt; 光徑</td></tr><tr><td>過濾光澤</td><td>Filter Glossy</td><td>算繪屬性 &gt; 光徑 &gt; 散焦</td></tr></tbody></table></div>
+<p><strong>屬性編輯器：物體屬性</strong></p>
+<div class="table-wrap"><table><thead><tr><th>繁中介面</th><th>英文介面</th><th>在哪裡</th></tr></thead><tbody><tr><td>物體屬性</td><td>Object Properties</td><td>屬性編輯器的分頁</td></tr><tr><td>可見性</td><td>Visibility</td><td>物體屬性裡的面板</td></tr><tr><td>光線可見性</td><td>Ray Visibility</td><td>物體屬性 &gt; 可見性</td></tr><tr><td>相機</td><td>Camera</td><td>物體屬性 &gt; 可見性 &gt; 光線可見性（<strong>器材入鏡</strong> 切換的就是這格）</td></tr><tr><td>漫射</td><td>Diffuse</td><td>物體屬性 &gt; 可見性 &gt; 光線可見性</td></tr><tr><td>光澤</td><td>Glossy</td><td>物體屬性 &gt; 可見性 &gt; 光線可見性</td></tr><tr><td>陰影</td><td>Shadow</td><td>物體屬性 &gt; 可見性 &gt; 光線可見性</td></tr></tbody></table></div>
+<p><strong>燈光類型</strong></p>
+<div class="table-wrap"><table><thead><tr><th>繁中介面</th><th>英文介面</th><th>在哪裡</th></tr></thead><tbody><tr><td>區光</td><td>Area</td><td>選了燈光時，物體資料屬性裡的 <strong>類型</strong>；也在 新增 &gt; 燈光 選單</td></tr><tr><td>點光</td><td>Point</td><td>選了燈光時，物體資料屬性裡的 <strong>類型</strong>；也在 新增 &gt; 燈光 選單</td></tr></tbody></table></div>
+  </main>
+</div>
+
+<footer class="page-footer">
+  Studio Shapers &middot; 由 MANUAL_ZH.md 產生
+</footer>
+<script>
+(function () {
+  var btn = document.getElementById('jtpThemeToggle');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var root = document.documentElement;
+    var current = root.getAttribute('data-theme');
+    if (current !== 'dark' && current !== 'light') {
+      current = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    var next = current === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('jtpTheme', next); } catch (e) {}
+  });
+})();
+</script>
+</body>
+</html>
