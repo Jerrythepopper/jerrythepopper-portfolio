@@ -641,26 +641,33 @@ html:not(.is-embed) .chapters { scroll-margin-top: 56px; }
   font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--color-text-muted);
 }
 .chapters-list {
-  display: flex; flex-wrap: wrap; gap: 0 22px; margin: 0; padding: 6px 0 0; list-style: none;
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 16px 0 0; list-style: none;
   border-top: 1px solid var(--color-line-faint);
 }
 .chapters-list a {
-  display: inline-flex; align-items: baseline; gap: 8px; min-height: 36px; padding: 9px 0 6px;
+  display: inline-flex; align-items: baseline; gap: 8px; min-height: 36px; padding: 9px 12px 6px;
+  border: 1px solid var(--c-ph-line); border-radius: 0;
   font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.5;
   color: var(--color-text-muted); white-space: nowrap;
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
 }
-.chapters-list a .n { font-family: var(--font-numeric); font-size: 12px; letter-spacing: 0.06em; color: var(--color-text); text-transform: none; }
-.chapters-list a:hover { opacity: 1; color: var(--color-text); }
+.chapters-list a .n { font-family: var(--font-numeric); font-size: 12px; letter-spacing: 0.06em; color: var(--color-text); text-transform: none; transition: color var(--dur-fast) var(--ease-out); }
+.chapters-list a:hover, .chapters-list a:focus-visible { opacity: 1; color: var(--c-accent); border-color: var(--c-accent); }
+.chapters-list a:hover .n, .chapters-list a:focus-visible .n { color: var(--c-accent); }
 @media (max-width: 520px) {
-  .chapters-list { gap: 0 14px; }
-  .chapters-list a { gap: 6px; letter-spacing: 0.1em; }
+  .chapters-list a { gap: 6px; padding: 9px 10px 6px; letter-spacing: 0.1em; }
 }
 .to-chapters {
   margin: 28px 0 0;
   font-family: var(--font-sans); font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; line-height: 1.5;
 }
-.to-chapters a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--color-text-muted); }
-.to-chapters a:hover { opacity: 1; color: var(--color-text); }
+.to-chapters a {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px;
+  border: 1px solid var(--c-ph-line); border-radius: 0;
+  color: var(--color-text-muted);
+  transition: color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.to-chapters a:hover, .to-chapters a:focus-visible { opacity: 1; color: var(--c-accent); border-color: var(--c-accent); }
 .takeaway {
   margin: 0;
   max-width: var(--measure);
