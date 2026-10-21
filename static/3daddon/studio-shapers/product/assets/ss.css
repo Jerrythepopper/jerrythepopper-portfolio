@@ -352,6 +352,8 @@ html:not(.js) .gear-seg { display: none; }
 .specs .row { display: grid; grid-template-columns: 180px 1fr; gap: 16px; padding: 14px 0 13px; border-bottom: 1px solid var(--color-line-faint); }
 .specs dt { font-family: var(--font-sans); font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--color-text-muted); padding-top: 4px; }
 .specs dd { margin: 0; font-size: 14px; line-height: 1.8; letter-spacing: 0.035em; overflow-wrap: anywhere; }
+.specs .row dd a { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: var(--c-accent); overflow-wrap: anywhere; }
+.specs .row dd a:hover, .specs .row dd a:focus-visible { opacity: 1; color: var(--c-accent); }
 .more-gap { margin-top: clamp(56px, 8vw, 96px); }
 .support { margin-top: clamp(56px, 8vw, 96px); padding-bottom: clamp(96px, 12vw, 160px); }
 .support p { margin: 0 0 20px; max-width: var(--measure); font-size: 15px; line-height: 1.95; letter-spacing: 0.035em; }
