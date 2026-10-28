@@ -16,9 +16,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- 原型用完整 family；正式版照 build-site.js:446-519（S45）子集化 -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500&display=swap">
-<link rel="stylesheet" href="fqp.css">
+<link rel="stylesheet" href="fqp.css?v=1.4.0d">
 <noscript><style>.fade-up{opacity:1;transform:none}.flow-line::after{transform:scaleX(1)}.tabs-rail::after{transform:scaleY(1)}.panel[hidden]{display:none}</style></noscript>
-<script src="fqp.js" defer></script>
+<script src="fqp.js?v=1.4.0d" defer></script>
 </head>
 <body>
 
@@ -33,6 +33,25 @@
 </div>
 
 <main>
+
+<!-- ============================== 1.4 上線＋折扣碼小橫幅（WEB14e 2026-10-28） ============================== -->
+<!-- 放在 hero 之前（不動 hero）：一般模式在頂列下方、跟著頁面捲走（不 sticky）；嵌入模式頂列隱藏，它就是頁面第一塊。
+     文字照作者 10-28 00:33：「1.4 is out — free update for existing owners · Launch code FQPLAUNCH: $7.99 until Nov 23」，
+     拆兩行（第一行的「—」用 flow-line 畫，旁邊留 .sr 的「 — 」；兩行之間的「·」只留給螢幕閱讀器）。
+     到期：2026-11-23 23:59 CST＝2026-11-24T05:59:00Z，fqp.js 過了就移除（沒有 JS 時照常顯示）。 -->
+<section class="launch" aria-label="Version 1.4 launch offer" data-launch data-launch-end="2026-11-24T05:59:00Z">
+  <span class="launch-rule" aria-hidden="true"></span>
+  <div class="wrap launch-in">
+    <p class="launch-lead"><span class="launch-tag"><span class="n">1.4</span> <span class="launch-out">is out</span></span><span class="flow-line" aria-hidden="true"></span><span class="sr"> — </span><span class="launch-free">free update for existing owners</span><span class="sr"> · </span></p>
+    <div class="launch-offer">
+      <p class="launch-deal">Launch code <code class="launch-code" data-launch-code>FQPLAUNCH</code>: <span class="num">$7.99</span> until <span class="num">Nov 23</span></p>
+      <p class="launch-act">
+        <button class="launch-copy" type="button" data-launch-copy aria-label="Copy launch code FQPLAUNCH" hidden><span class="lc-idle" aria-hidden="true">Copy</span><span class="lc-done" aria-hidden="true">Copied</span></button>
+        <span class="launch-status sr" role="status" aria-live="polite" data-launch-status></span>
+      </p>
+    </div>
+  </div>
+</section>
 
 <!-- ============================== 00 HERO（W3a：v4 Title＋Opening） ============================== -->
 <header class="hero">
@@ -49,7 +68,7 @@
     <ul class="specline fade-up" aria-label="Specs">
       <li>Blender <span class="num">5.1 / 5.2</span></li>
       <li>Cycles only</li>
-      <li>Version <span class="num">1.3.0</span></li>
+      <li>Version <span class="num">1.4.0</span></li>
     </ul>
     <div class="prose opening fade-up">
       <p>Nobody needs another render setup. I made one anyway, because every bounce count and noise threshold I had ever copied was measured on someone else’s scene. Possibly a donut.</p>
@@ -57,6 +76,43 @@
     </div>
   </div>
 </header>
+
+<!-- ============================== NEW IN 1.4（WEB14b 2026-10-27） ============================== -->
+<!-- 影片拖拉對比。素材＝一支 1080×1080 MP4（assets/new14/），上半＝Cycles 內建降噪（OIDN，逐幀）、
+     下半＝FQP＋1.4 時間降噪視窗；兩半是同一次算圖（kitchen_C2，64 spp 固定、adaptive 關，PR1_report_stop1:20）、
+     各裁成 1080×540（2:1，標籤列裁掉）。fqp.js 把同一幀的上半畫在分界線左邊、下半畫在右邊（canvas），
+     所以兩邊一定是同一幀。拖曳／鍵盤沿用 ② 拖拉對比（fqp.js initCompare）。
+     說明出處 MAN 195–200、1072–1075；限制（MAN 1778–1783）寫在 04 Animation，這裡用連結帶過去。 -->
+<section class="block" id="new14" aria-labelledby="h-new14">
+  <div class="wrap">
+    <div class="head fade-up">
+      <p class="eyebrow"><span class="n">1.4</span><span class="flow-line" aria-hidden="true"></span><span class="sr"> — </span><span>New</span></p>
+      <h2 id="h-new14">Temporal Denoise window</h2>
+    </div>
+
+    <div class="fade-up" data-compare data-vcompare>
+      <figure class="frame cmp vcmp" style="--split:50%" data-cmp>
+        <video muted loop playsinline preload="none" width="1080" height="1080" aria-hidden="true" tabindex="-1" poster="assets/new14/kitchen_c2_stack_f060_1080x1080.webp" data-src="assets/new14/kitchen_c2_stack_1080x1080.mp4" data-vcmp-video></video>
+        <canvas width="1080" height="540" role="img" aria-label="Kitchen animation at 64 samples, one render. Left of the divider: Cycles built-in denoiser. Right: FQP with the Temporal Denoise window." data-vcmp-canvas></canvas>
+        <span class="side side-a" data-cmp-la>Cycles built-in</span>
+        <span class="side side-b" data-cmp-lb>FQP + Temporal Denoise window</span>
+        <span class="divider" aria-hidden="true"></span>
+        <div class="grip" role="slider" tabindex="0" aria-label="Comparison divider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50%" data-grip>
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M5 3.5 1.5 7 5 10.5M9 3.5 12.5 7 9 10.5"/></svg>
+        </div>
+      </figure>
+      <div class="vcmp-bar">
+        <p class="caption"><span>Kitchen · moving camera · 64 samples, one render for both sides · <span class="plain">One shot, rendered once. It stands for that shot only.</span></span></p>
+        <button type="button" class="tabs-pause vcmp-play" data-vcmp-play>Play</button>
+      </div>
+    </div>
+
+    <div class="prose after-figures fade-up">
+      <p>Every frame gets denoised on its own, and each one is a slightly different guess, so playback shimmers. The Temporal Denoise window checks each frame against up to three neighbours per side, using the noise measured in your own frames, and works on the frames already on disk: no re-render to tune it. Drag the line.</p>
+      <p><a class="inline" href="#temporal">How it works, and where it holds back → Animation</a></p>
+    </div>
+  </div>
+</section>
 
 <!-- ============================== 01 ANALYZER ============================== -->
 <section class="block" id="analyzer" aria-labelledby="h-analyzer">
@@ -233,14 +289,18 @@ JOINT VERIFICATION   the Strict values applied AT ONCE and really rendered, to c
 
     <div class="prose sub fade-up">
       <h3>Sampling Analyzer: how tight is tight enough</h3>
+      <!-- WEB14（2026-10-27）：1.4 的說法。Quick Check 段＝MAN 826–836、845；動畫那一條＝MAN 858–876（按鈕字逐字取 translations.py:360）；
+           三個選項＝MAN 955–984；所需時間＝MAN 820–822（取代原本作者寫的「10–50 seconds」，待作者確認）。 -->
+      <p>Not sure it’s worth the minutes? <b>Quick Check</b> renders one small image with your own settings and tells you how many pixels already hit Max Samples. If more than half do, a looser threshold won’t save time, and the full analysis shows which Max is enough.</p>
       <p>Press <b>Analyze Sampling</b>. It renders your scene at a ladder of noise thresholds, denoises each one, and suggests the cheapest whose finished picture stays within <span class="num">10%</span> of the tightest. When there is nothing to save, it says so: this scene needs the tightest one.</p>
       <p>A few cases it handles itself:</p>
       <ul>
         <li>If the camera has depth of field, it picks one step tighter.</li>
         <li>If Max Samples is what’s actually limiting quality, the report warns you.</li>
-        <li>For animation, set <b>Analyze Frames</b> to <b>First, Middle, Last</b>: it checks three frames and takes the strictest answer, in about three times the time. Its job is to avoid a wrong pick, not to save time.</li>
+        <li>For animation, answer <b>Yes: look at the first, middle and last frame</b> when it asks: it checks three frames and takes the strictest answer, in about three times the time. Its job is to avoid a wrong pick, not to save time.</li>
       </ul>
-      <p>Analysing the current frame takes about <span class="num">10–50</span> seconds.</p>
+      <p>The report ends with three options, <b>Fast</b>, <b>Balanced</b> and <b>Safe</b>, each with its time against Safe’s and its own Apply button. It asks before it writes.</p>
+      <p>An analysis takes from some tens of seconds to a few minutes, depending on the scene, on how many frames it looks at and on <b>Detail comparison</b>.</p>
     </div>
   </div>
 </section>
@@ -268,7 +328,10 @@ JOINT VERIFICATION   the Strict values applied AT ONCE and really rendered, to c
          W3c-1（規格 §3.10 第 4 點）：面板圖改用 1.3.0 截圖的原始解析度（871px 寬的整排，只裁高度、不縮放；
          顯示時 max-width:100%，不會放大超過 1.0 倍）。六張同一個框（871:304＝六步裡最高的那一步），圖在框內置中、
          底色＝面板底色。02、03 兩步各放兩段（Light Path 與 Sampling 兩張截圖各一段）。裁切表在 README「W3c-1 變更」。
-         點圖放大開的是整張原截圖（data-lb-src）。 -->
+         點圖放大開的是整張原截圖（data-lb-src）。
+         WEB14（2026-10-27）：01、02、03、05、06 換成 1.4 介面截圖（assets/ui/ui14_*，裁切座標記在 WEB14 的回報）；
+         04 沿用 main_start（1.4 這一塊相同）。
+         06 改成時間降噪視窗，放大圖＝視窗截圖。框的比例沒動，每一步疊起來都 ≤ 304 高。 -->
     <p class="eyebrow flow-eyebrow mt fade-up">Workflow</p>
     <div class="tabs fade-up" data-tabs>
       <div class="tabs-side">
@@ -279,34 +342,34 @@ JOINT VERIFICATION   the Strict values applied AT ONCE and really rendered, to c
           <button type="button" role="tab" id="tab-3" aria-controls="panel-3" aria-selected="false" tabindex="-1"><span class="idx">03</span><span class="ttl">Apply</span><span class="prog" aria-hidden="true"></span></button>
           <button type="button" role="tab" id="tab-4" aria-controls="panel-4" aria-selected="false" tabindex="-1"><span class="idx">04</span><span class="ttl">Build Pipeline</span><span class="prog" aria-hidden="true"></span></button>
           <button type="button" role="tab" id="tab-5" aria-controls="panel-5" aria-selected="false" tabindex="-1"><span class="idx">05</span><span class="ttl">F12 / CLI Render</span><span class="prog" aria-hidden="true"></span></button>
-          <button type="button" role="tab" id="tab-6" aria-controls="panel-6" aria-selected="false" tabindex="-1"><span class="idx">06</span><span class="ttl">Build &amp; Run Temporal <span class="tag">Animation only</span></span><span class="prog" aria-hidden="true"></span></button>
+          <button type="button" role="tab" id="tab-6" aria-controls="panel-6" aria-selected="false" tabindex="-1"><span class="idx">06</span><span class="ttl">Temporal Denoise Window <span class="tag">Animation only</span></span><span class="prog" aria-hidden="true"></span></button>
         </div>
         <button type="button" class="tabs-pause" aria-pressed="false" data-tabs-pause><span data-tabs-pause-label>Pause</span></button>
       </div>
       <div class="panels">
         <div class="panel" role="tabpanel" id="panel-1" aria-labelledby="tab-1" tabindex="0">
-          <figure class="frame ui"><img src="assets/ui/flowc_01_apply_final_sampling_871x92.webp" width="871" height="92" loading="lazy" decoding="async" alt="Apply Final Sampling" data-lb data-lb-src="assets/ui/main_built.webp"></figure>
+          <figure class="frame ui"><img src="assets/ui/ui14_01_apply_final_sampling_871x92.webp" width="871" height="92" loading="lazy" decoding="async" alt="Set 32-bit EXR Output, Final Max Samples, Apply Final Sampling" data-lb data-lb-src="assets/ui/ui14_lb_main_panel_885x898.webp"></figure>
           <p>Sets the sampling the analyzers measure against. Press it first.</p>
         </div>
         <div class="panel" role="tabpanel" id="panel-2" aria-labelledby="tab-2" tabindex="0" hidden>
-          <figure class="frame ui"><img src="assets/ui/flowc_02a_analyze_light_paths_871x140.webp" width="871" height="140" loading="lazy" decoding="async" alt="Analyze Light Paths" data-lb data-lb-src="assets/ui/analysis_lightpath.webp"><img src="assets/ui/flowc_02b_analyze_sampling_871x143.webp" width="871" height="143" loading="lazy" decoding="async" alt="Analyze Sampling" data-lb data-lb-src="assets/ui/analysis_sampling.webp"></figure>
-          <p>Analyze Light Paths and Analyze Sampling render your saved .blend in a separate Blender.</p>
+          <figure class="frame ui"><img src="assets/ui/ui14_02a_light_path_analyzer_871x176.webp" width="871" height="176" loading="lazy" decoding="async" alt="Light Path Analyzer, Analyze Light Paths" data-lb data-lb-src="assets/ui/ui14_lb_analysis_885x817.webp"><img src="assets/ui/ui14_02b_quick_check_871x112.webp" width="871" height="112" loading="lazy" decoding="async" alt="Quick Check: 99% hit Max (512)" data-lb data-lb-src="assets/ui/ui14_lb_analysis_885x817.webp"></figure>
+          <p>Analyze Light Paths and Analyze Sampling render your saved .blend in a separate Blender. Quick Check, one small image, tells you first whether your setting already runs into Max.</p>
         </div>
         <div class="panel" role="tabpanel" id="panel-3" aria-labelledby="tab-3" tabindex="0" hidden>
-          <figure class="frame ui"><img src="assets/ui/flowc_03a_apply_strict_visual_871x90.webp" width="871" height="90" loading="lazy" decoding="async" alt="Apply Strict, Apply Visual" data-lb data-lb-src="assets/ui/analysis_lightpath.webp"><img src="assets/ui/flowc_03b_apply_suggested_threshold_871x61.webp" width="871" height="61" loading="lazy" decoding="async" alt="Apply Suggested Threshold" data-lb data-lb-src="assets/ui/analysis_sampling.webp"></figure>
-          <p>Apply Strict or Apply Visual for bounces; Apply Suggested Threshold for noise. Each asks first.</p>
+          <figure class="frame ui"><img src="assets/ui/ui14_03a_apply_strict_visual_871x60.webp" width="871" height="60" loading="lazy" decoding="async" alt="Apply Strict, Apply Visual, Show Light Path Report" data-lb data-lb-src="assets/ui/ui14_lb_analysis_885x817.webp"><img src="assets/ui/ui14_03b_sampling_options_871x188.webp" width="871" height="188" loading="lazy" decoding="async" alt="Sampling report options: Apply Fast, Apply Balanced, Apply Safe" data-lb data-lb-src="assets/ui/ui14_lb_sampling_report_710x1115.webp"></figure>
+          <p>Apply Strict or Apply Visual for bounces; for noise, Apply Suggested Threshold or one of the report’s three options. Each asks first.</p>
         </div>
         <div class="panel" role="tabpanel" id="panel-4" aria-labelledby="tab-4" tabindex="0" hidden>
           <figure class="frame ui"><img src="assets/ui/main_start.webp" width="871" height="130" loading="lazy" decoding="async" alt="Build Pipeline" data-lb data-lb-src="assets/ui/main_start.webp"></figure>
           <p>The whole denoise tree, in front of your own compositor chain.</p>
         </div>
         <div class="panel" role="tabpanel" id="panel-5" aria-labelledby="tab-5" tabindex="0" hidden>
-          <figure class="frame ui"><img src="assets/ui/cli_render.webp" width="871" height="148" loading="lazy" decoding="async" alt="CLI Render Still, CLI Render Animation" data-lb data-lb-src="assets/ui/cli_render.webp"></figure>
+          <figure class="frame ui"><img src="assets/ui/ui14_05_cli_render_871x210.webp" width="871" height="210" loading="lazy" decoding="async" alt="CLI Render Still, CLI Render Animation" data-lb data-lb-src="assets/ui/ui14_05_cli_render_871x210.webp"></figure>
           <p>Render as usual, or hand it to a second Blender and keep working.</p>
         </div>
         <div class="panel" role="tabpanel" id="panel-6" aria-labelledby="tab-6" tabindex="0" hidden>
-          <figure class="frame ui"><img src="assets/ui/temporal.webp" width="871" height="304" loading="lazy" decoding="async" alt="Build &amp; Run Temporal" data-lb data-lb-src="assets/ui/temporal.webp"></figure>
-          <p>For locked-off or slow shots: steadies what the denoiser guesses differently on each frame.</p>
+          <figure class="frame ui"><img src="assets/ui/ui14_06a_prepare_animation_output_871x61.webp" width="871" height="61" loading="lazy" decoding="async" alt="Prepare Animation Output, Remove Animation Output" data-lb data-lb-src="assets/ui/ui14_lb_main_panel_885x898.webp"><img src="assets/ui/ui14_06b_temporal_denoise_window_871x126.webp" width="871" height="126" loading="lazy" decoding="async" alt="Temporal Denoise Window, Open Temporal Denoise Window" data-lb data-lb-src="assets/ui/ui14_lb_tdn_window_1904x1007.webp"></figure>
+          <p>Measure the noise, preview one frame, then Process the Whole Sequence. It works on the frames already on disk.</p>
         </div>
       </div>
     </div>
@@ -448,34 +511,44 @@ JOINT VERIFICATION   the Strict values applied AT ONCE and really rendered, to c
     <div class="head fade-up">
       <p class="eyebrow"><span class="n">04</span><span class="flow-line" aria-hidden="true"></span><span class="sr"> — </span><span>Animation</span></p>
       <h2 id="h-temporal">Animation</h2>
-      <p class="lede">A denoiser guesses slightly differently on every frame, and playback shimmers. On a locked-off or slow-moving camera, <b>Run Temporal</b> steadies it: it warps neighbouring frames onto the current one along motion vectors, drops the pixels whose depth doesn’t match, and averages the rest. On a fast dolly or pan, the outline of an object moving across the background can come out slightly worse than without it, so it’s a per-shot choice.</p>
+      <!-- WEB14（2026-10-27）：改成 1.4 的時間降噪視窗。出處 MAN 195–201、1072–1075、1778–1783。 -->
+      <p class="lede">A denoiser guesses slightly differently on every frame, and playback shimmers. The Temporal Denoise window works on the frames already on disk: measure the noise, preview one frame, move the sliders, then <b>Process the Whole Sequence</b>. It compares each frame with up to three neighbours on each side, uses the noise it measured in your own frames, and can show you how much the neighbours were used. Where the light itself moves, or an object moves quickly, it stays close to the per-frame result: no smearing, just less improvement there.</p>
     </div>
 
-    <!-- 單一大影片＋上方分頁。三支 640×320 片段（從 KT 三欄 MP4 裁出，見 README）疊放、
-         同時循環；切分頁時把目標片段對齊到目前時間點，seeked 後才換 opacity（不閃）。 -->
+    <!-- WEB14c（2026-10-27）：換成 1.4 宣傳片的素材（RES\pr1\out\final）。兩個場景 × 三種做法＝六支 1080×540，
+         同一場景三支來自同一次算圖（64 samples、adaptive 關），逐幀對齊。順序＝場景×3＋做法（kitchen 0–2、bathroom 3–5）。
+         延後載入：網址放 data-src；接近視窗才載入目前場景的三支，另一個場景切到它時才載入。
+         切換時把目標片段對齊到目前時間點，seeked 後才換 opacity（不閃、不從頭播）。舊的 assets/kitchen/flicker_* 留著沒刪。
+         WEB14d：同一場景三支掛同一張 poster（builtin 成品第 0 幀），載入前不出空框；捲出畫面或分頁隱藏時暫停。 -->
     <div class="flicker fade-up" data-flicker>
+      <div class="seg" role="radiogroup" aria-label="Scene" data-flicker-scene>
+        <button type="button" role="radio" aria-checked="true" tabindex="0" data-s="0">Kitchen</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-s="1">Bathroom</button>
+      </div>
       <div class="seg" role="radiogroup" aria-label="Denoiser" data-flicker-group>
         <button type="button" role="radio" aria-checked="true" tabindex="0" data-v="0">Cycles built-in</button>
-        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-v="1">FQP</button>
-        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-v="2">FQP + Run Temporal</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-v="1">FQP (per frame)</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-v="2">FQP + Temporal Denoise window</button>
       </div>
       <figure class="frame flicker-frame">
-        <video class="on" autoplay muted loop playsinline preload="auto" width="640" height="320" aria-label="Kitchen animation, Cycles built-in denoiser" data-flicker-v>
-          <source src="assets/kitchen/flicker_builtin_640x320.mp4" type="video/mp4">
-        </video>
-        <video autoplay muted loop playsinline preload="auto" width="640" height="320" aria-label="Kitchen animation, FQP" aria-hidden="true" data-flicker-v>
-          <source src="assets/kitchen/flicker_fqp_640x320.mp4" type="video/mp4">
-        </video>
-        <video autoplay muted loop playsinline preload="auto" width="640" height="320" aria-label="Kitchen animation, FQP with Run Temporal" aria-hidden="true" data-flicker-v>
-          <source src="assets/kitchen/flicker_fqp-temporal_640x320.mp4" type="video/mp4">
-        </video>
+        <video class="on" autoplay muted loop playsinline preload="none" width="1080" height="540" poster="assets/anim14/kitchen_a3_f000_1080x540.webp" aria-label="Kitchen animation, Cycles built-in denoiser" data-src="assets/anim14/kitchen_a3_builtin_1080x540.mp4" data-flicker-v></video>
+        <video autoplay muted loop playsinline preload="none" width="1080" height="540" poster="assets/anim14/kitchen_a3_f000_1080x540.webp" aria-label="Kitchen animation, FQP per frame" aria-hidden="true" data-src="assets/anim14/kitchen_a3_fqp_1080x540.mp4" data-flicker-v></video>
+        <video autoplay muted loop playsinline preload="none" width="1080" height="540" poster="assets/anim14/kitchen_a3_f000_1080x540.webp" aria-label="Kitchen animation, FQP with the Temporal Denoise window" aria-hidden="true" data-src="assets/anim14/kitchen_a3_fqp-temporal_1080x540.mp4" data-flicker-v></video>
+        <video autoplay muted loop playsinline preload="none" width="1080" height="540" poster="assets/anim14/bathroom_c0_f000_1080x540.webp" aria-label="Bathroom animation, Cycles built-in denoiser" aria-hidden="true" data-src="assets/anim14/bathroom_c0_builtin_1080x540.mp4" data-flicker-v></video>
+        <video autoplay muted loop playsinline preload="none" width="1080" height="540" poster="assets/anim14/bathroom_c0_f000_1080x540.webp" aria-label="Bathroom animation, FQP per frame" aria-hidden="true" data-src="assets/anim14/bathroom_c0_fqp_1080x540.mp4" data-flicker-v></video>
+        <video autoplay muted loop playsinline preload="none" width="1080" height="540" poster="assets/anim14/bathroom_c0_f000_1080x540.webp" aria-label="Bathroom animation, FQP with the Temporal Denoise window" aria-hidden="true" data-src="assets/anim14/bathroom_c0_fqp-temporal_1080x540.mp4" data-flicker-v></video>
       </figure>
-      <p class="caption"><span>Kitchen · locked-off camera · 46 frames · <span class="plain">One scene, measured once. It stands for that scene only.</span></span></p>
+      <p class="caption cap-stack">
+        <span data-cap="kitchen">Kitchen · moving camera · 64 samples · all three from the same render · <span class="plain">Two scenes, each rendered once. They stand for those two scenes only.</span></span>
+        <span data-cap="bathroom" aria-hidden="true">Bathroom · moving camera · 64 samples · all three from the same render · <span class="plain">Two scenes, each rendered once. They stand for those two scenes only.</span></span>
+      </p>
     </div>
 
     <div class="prose after-figures fade-up">
-      <p>Motion blur sits out the render and comes back at the end as Vector Blur.</p>
-      <p><b>Prepare Animation Output, render as usual, Build Temporal, Run Temporal.</b> The expensive render stays on disk. Only the cheap part repeats.</p>
+      <!-- WEB14：動態模糊＝MAN 11–13、203–208、1228–1230、1660–1662；步驟＝MAN 61–66、79–81、1081–1084。
+           WEB14c：上面的影片改成 1.4 的時間降噪視窗做的，所以拿掉原本最後那句（說影片是 Run Temporal 做的）；Legacy 那句照留。 -->
+      <p>Motion blur sits out the render. The window doesn’t paint it back on; the 1.3 way, <b>Run Temporal</b>, still does, and it is still there under <b>Legacy: Temporal (Build / Run)</b>.</p>
+      <p><b>Prepare Animation Output</b>, then <b>Prepare Again for Temporal Denoise</b> in the window, render as usual, <b>Process the Whole Sequence</b>, <b>Play Result</b>. The expensive render stays on disk. Only the cheap part repeats.</p>
     </div>
   </div>
 </section>
@@ -493,14 +566,15 @@ JOINT VERIFICATION   the Strict values applied AT ONCE and really rendered, to c
         <li><b>Not a quality jump.</b> It’s Cycles’ own denoiser underneath. See the first FAQ.</li>
         <li><b>Not mainly a way to render faster.</b> With every surface bounce at its highest, my kitchen scene rendered at most about <span class="num">9–11%</span> slower than at Blender’s factory values, and a foliage scene about <span class="num">6%</span> (one RTX 4090, not a promise). Volume bounces are the exception: they cost a lot. What the analysis buys is knowing, and that includes knowing you were already fine.</li>
         <!-- W3b（規格 §3.8 第 6 點）：巷子圖放在這一條旁邊（一般模式寬螢幕在右側；嵌入與窄寬度在這一條下方），2:1 -->
-        <li class="has-fig"><span class="li-text"><b>Not instant on heavy scenes.</b> <span class="num">1.3</span> limits textures to 1K during the analysis only, and on the one scene I measured that doesn’t fit in graphics memory, <span class="num">21</span> min <span class="num">13</span> s became <span class="num">3</span> min <span class="num">59</span> s. Scenes that already fit don’t get faster.</span>
+        <li class="has-fig"><span class="li-text"><b>Not instant on heavy scenes.</b> Since <span class="num">1.3</span> it limits textures to 1K during the analysis only, and on the one scene I measured that doesn’t fit in graphics memory, <span class="num">21</span> min <span class="num">13</span> s became <span class="num">3</span> min <span class="num">59</span> s. Scenes that already fit don’t get faster.</span>
           <figure class="alley">
             <div class="frame"><img src="assets/alley/alley_saved_1600x800.webp" width="1600" height="800" loading="lazy" decoding="async" alt="The scene in question" data-lb></div>
             <figcaption class="caption"><span>The scene in question · 2.5 GB · 836 textures</span></figcaption>
           </figure>
         </li>
         <li><b>Analyzer limits.</b> Motion blur isn’t rendered during analysis, and custom lens cameras (OSL lens add-ons) can’t be read for depth of field. Judge those shots yourself.</li>
-        <li><b>Run Temporal limits.</b> Consecutive frames only. On a turntable-style shot (object turns, lights stay still) it can come out worse than per-frame denoising. The manual has the measurement.</li>
+        <!-- WEB14：MAN 1614–1615（連續幀）、1778–1783（視窗）、1623–1641（轉檯：FQP 1.2.9＋Run Temporal 量的） -->
+        <li><b>Temporal limits.</b> Consecutive frames only. In the Temporal Denoise window, where the light itself moves (a moving light or shadow edge) or an object moves quickly, the result stays close to the per-frame one. On a turntable-style shot (object turns, lights stay still), Run Temporal, measured in FQP <span class="num">1.2.9</span>, came out worse than per-frame denoising in one test. The manual has the measurement.</li>
         <li><b>Cycles only.</b></li>
       </ul>
       <p>Also in the box: <b>Health Check</b> (read-only diagnostics: it points, it doesn’t touch), 32-bit EXR output, and an English / Traditional Chinese UI.</p>
@@ -536,6 +610,8 @@ JOINT VERIFICATION   the Strict values applied AT ONCE and really rendered, to c
       <section class="prose embed-hide" aria-labelledby="h-changed">
         <h3 id="h-changed">What has changed so far</h3>
         <ul>
+          <!-- WEB14：1.4 這一行從 CHANGELOG v1.4.0 的 Added／Changed（CL 55–100、106–108）濃縮 -->
+          <li><b><span class="num">1.4</span></b>: a Temporal Denoise window: preview one frame, measure the noise, process the whole sequence and play the result. Quick Check, and a sampling report with three options (Fast, Balanced, Safe). Build Temporal and Run Temporal moved under Legacy and still work.</li>
           <li><b><span class="num">1.3</span></b>: the Light Path Analyzer finds two values for every light path, Strict and Visual, with an Apply button for each. A setting it isn’t sure about is never lowered. Scenes that don’t fit in graphics memory are analysed faster. The report was rewritten.</li>
           <li><b><span class="num">1.2</span></b>: a new denoise layout (each light pass is multiplied by its surface colour first, then denoised), and grain kept only in the highlights. The Sampling Analyzer got its “within <span class="num">10%</span> of the tightest” rule, the depth-of-field step and <b>First, Middle, Last</b>. The Light Path Analyzer learned to measure further up on glass-heavy scenes and to say what to raise by hand. Run Temporal leaves far fewer dots along moving outlines.</li>
           <li><b><span class="num">1.1</span></b>: <b>Filter Fireflies Before Remix</b>, and a reliability release for Build, Remove, Health Check and Temporal.</li>
@@ -549,10 +625,10 @@ JOINT VERIFICATION   the Strict values applied AT ONCE and really rendered, to c
     <div class="specs embed-hide fade-up">
       <h3>Specs</h3>
       <dl>
-        <div class="row"><dt>Version</dt><dd class="num">1.3.0</dd></div>
+        <div class="row"><dt>Version</dt><dd class="num">1.4.0</dd></div>
         <div class="row"><dt>Blender</dt><dd><span class="num">5.1 / 5.2</span> · Cycles only</dd></div>
         <div class="row"><dt>Install</dt><dd>Edit &gt; Preferences &gt; Get Extensions &gt; <b>Install from Disk</b></dd></div>
-        <div class="row"><dt>Platforms</dt><dd>Windows (tested on hardware; this is where it is used day to day); macOS (tested on hardware: MacBook Pro M1); Linux (covered by the test suite, not yet tested on real hardware)</dd></div>
+        <div class="row"><dt>Platforms</dt><dd>Windows (tested on hardware; this is where it is used day to day); macOS (tested on hardware: MacBook Pro M2, the Temporal Denoise flow included); Linux (covered by the test suite, not yet tested on real hardware)</dd></div>
         <div class="row"><dt>License</dt><dd>GPL-3.0-or-later</dd></div>
         <div class="row"><dt>Documentation</dt><dd>full manual, English + Traditional Chinese, in the .zip and online</dd></div>
         <div class="row"><dt>Dependencies</dt><dd>No dependencies, no internet access, nothing phones home</dd></div>

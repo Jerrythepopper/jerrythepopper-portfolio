@@ -64,6 +64,11 @@
      --c-muted-on-alt：bg-alt 底上的次要字（Console 標頭、頁尾）。亮場＝muted 本身（4.63:1 已過）；
      暗場 --dk-text-muted #83858d 對 #28292d 只有 3.95:1 → 同色相提亮到 #8f9199（4.62:1）。 */
   --c-muted-on-alt: var(--color-text-muted);
+
+  /* WEB14e 1.4 上線橫幅：底色比頁面亮一階。亮場頁面 #f7f7f7 → 白；
+     暗場頁面 #15161d → --dk-bg-alt #28292d（兩個暗場區塊各設一次）。
+     bg-alt 在亮場反而比頁面暗，所以另開一個槽。 */
+  --c-launch-bg: var(--color-white);
 }
 
 /* ---- 啟用深色：系統偏好（未手動指定時）＋ 手動指定（patch.css:865-914 同構） ---- */
@@ -83,6 +88,7 @@
     --c-flow-rule: var(--dk-flow-rule);
     --c-flow-track: var(--dk-flow-track);
     --c-muted-on-alt: #8f9199;
+    --c-launch-bg: var(--dk-bg-alt);
     --tt-sun: 1;
     --tt-moon: 0;
   }
@@ -102,6 +108,7 @@
   --c-flow-rule: var(--dk-flow-rule);
   --c-flow-track: var(--dk-flow-track);
   --c-muted-on-alt: #8f9199;
+  --c-launch-bg: var(--dk-bg-alt);
   --tt-sun: 1;
   --tt-moon: 0;
 }
@@ -506,6 +513,112 @@ b { font-weight: 500; }
 .specline .num { font-size: 12px; color: var(--color-text); letter-spacing: 0.04em; text-transform: none; }
 
 /* =============================================================================
+   WEB14e 1.4 上線＋折扣碼小橫幅（hero 之前；不 sticky、不蓋內容）
+   醒目但同風格：底色亮一階（--c-launch-bg）、上緣一條實線（--color-line，比全頁的 faint 線重一階）、
+   「1.4 —— IS OUT」沿用 eyebrow 的序號＋生長細線語彙；零圓角、1px 線。
+   動態只有兩個：flow-line 生長（fqp.js 加 .in）、上緣線一道微光掃過 3 次後停；reduced-motion 時都沒有。
+   寬螢幕一行（兩組左右排），放不下時自動拆成兩行；375px 內文字自行換行，不出橫捲。
+   ============================================================================= */
+.launch {
+  position: relative;
+  background: var(--c-launch-bg);
+  border-bottom: 1px solid var(--color-line-faint);
+}
+.launch-rule {
+  position: absolute; left: 0; right: 0; top: 0;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.launch-rule::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0;
+  height: 1px;
+  background: var(--color-line);
+}
+.launch-in {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px 32px;
+  padding-top: 14px; padding-bottom: 13px;
+}
+.launch p { margin: 0; }
+.launch-lead {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 4px 16px;
+  font-family: var(--font-sans);
+  font-size: 14px; line-height: 1.7; letter-spacing: 0.04em;
+  color: var(--color-text);
+}
+.launch-tag { display: inline-flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+.launch-tag .n { font-family: var(--font-numeric); font-size: 19px; line-height: 1; letter-spacing: 0.04em; }
+.launch-out { font-size: 12px; font-weight: 500; letter-spacing: 0.3em; text-transform: uppercase; }
+.launch .flow-line { width: 32px; }
+.launch-offer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
+.launch-deal {
+  font-family: var(--font-sans);
+  font-size: 14px; line-height: 1.9; letter-spacing: 0.04em;
+  color: var(--c-muted-on-alt);   /* 暗場 bg-alt 底上的次要字要用提亮槽（:64-65） */
+}
+.launch-deal .num { font-size: 15px; letter-spacing: 0.02em; color: var(--color-text); }
+.launch-code {
+  display: inline-block;
+  margin: 0 1px 0 6px;
+  padding: 2px 6px 1px 8px;
+  border: 1px solid var(--color-line);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.5; letter-spacing: 0.14em;
+  white-space: nowrap;
+  -webkit-user-select: all; user-select: all;   /* 點一下就整段選取 */
+  cursor: text;
+}
+.launch-act { display: inline-flex; align-items: center; gap: 12px; }
+.launch-copy {
+  display: inline-grid; place-items: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 11px; line-height: 1; letter-spacing: 0.28em;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.launch-copy[hidden] { display: none; }   /* 沒有 JS 時不顯示（按了也沒用）；fqp.js 拿掉 hidden */
+/* Copy／Copied 疊在同一格：按鈕寬度＝較寬的那個，換字不跳版 */
+.launch-copy > span { grid-area: 1 / 1; padding-left: 0.28em; }
+.launch-copy .lc-done { visibility: hidden; }
+.launch-copy.is-done .lc-idle { visibility: hidden; }
+.launch-copy.is-done .lc-done { visibility: visible; }
+@media (hover: hover) {   /* 觸控螢幕不留 hover 反白 */
+  .launch-copy:hover { background: var(--color-text); color: var(--c-cta-hover-fg); }
+}
+.launch-status {
+  font-family: var(--font-sans);
+  font-size: 12px; letter-spacing: 0.06em;
+  color: var(--color-text);
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* 微光：一段 2px 的漸層沿上緣線掃過，9 秒一輪、只跑 3 輪（約 30 秒）就停 */
+  .launch-rule::after {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 22%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-text) 50%, transparent);
+    opacity: 0.9;
+    transform: translateX(-100%);
+    animation: launch-glint 9s var(--ease-inout) 1.4s 3 both;
+  }
+}
+@keyframes launch-glint {
+  0% { transform: translateX(-100%); }
+  30%, 100% { transform: translateX(460%); }
+}
+
+/* =============================================================================
    01 ANALYZER —— 反彈次數步進器
    ============================================================================= */
 .stepper { margin-top: 0; }
@@ -779,6 +892,22 @@ b { font-weight: 500; }
 .cmp .grip svg {
   position: absolute; width: 14px; height: 14px;
   fill: none; stroke: rgba(255, 255, 255, 0.92); stroke-width: 1.25;
+}
+
+/* WEB14b：1.4 影片拖拉對比（hero 下面那一塊）。沿用上面 .cmp 的分界線、兩側標籤、把手；
+   畫面不是兩張圖層，而是一個 canvas：fqp.js 從同一個 <video>（1080×1080，上下兩半）每一幀
+   取上半畫在分界線左邊、下半畫在右邊。video 留在框裡、蓋在 canvas 底下（不設 display:none，
+   有些瀏覽器看不見的影片不送 requestVideoFrameCallback）。圖框沿用 .frame 的 2:1。 */
+.vcmp video, .vcmp canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.vcmp video { object-fit: cover; z-index: 0; pointer-events: none; }
+.vcmp canvas { z-index: 1; display: block; }
+.vcmp-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.vcmp-bar .caption { flex: 1 1 auto; }
+/* 按鈕外觀借 .tabs-pause（後面才定義、同權重），所以這裡用兩個 class 蓋它的 margin-top */
+.vcmp-bar .vcmp-play { margin-top: 8px; flex: none; }
+@media (max-width: 520px) {
+  .vcmp-bar { flex-direction: column; gap: 0; }
+  .vcmp-bar .vcmp-play { margin-top: 14px; }
 }
 
 /* ① 同步放大鏡（W3c-2 改制）：主圖上可拖方框，放大窗裡是原圖的 <img> 圖層（.lay），
@@ -1376,4 +1505,5 @@ a.inline:hover { opacity: 1; text-decoration-color: var(--color-line); }
   .flow-line::after { transform: scaleX(1); }
   .tabs-rail::after { transform: scaleY(1); }
   .console .caret { display: none; }
+  .launch-rule::after { content: none; }   /* WEB14e：微光本來就只寫在 no-preference 裡，這裡再保險一次 */
 }

@@ -70,6 +70,79 @@
     els.forEach(function (el) { obs.observe(el); });
   })();
 
+  /* ---------- WEB14e：1.4 上線＋折扣碼小橫幅（到期移除、複製鈕） ---------- */
+  (function () {
+    var bar = $('[data-launch]');
+    if (!bar) return;
+    // 到期：2026-11-23 23:59 CST（UTC-6）＝ 2026-11-24T05:59:00Z（寫在 index.html 的 data-launch-end）
+    var end = Date.parse(bar.getAttribute('data-launch-end') || '');
+    function expire() { if (bar.parentNode) bar.parentNode.removeChild(bar); }
+    if (!isNaN(end)) {
+      var left = end - Date.now();
+      if (left <= 0) { expire(); return; }
+      // setTimeout 上限 2^31−1 ms（約 24.8 天），超過會立刻觸發 → 剩不到這麼久才排定時器
+      if (left <= 2147483647) setTimeout(expire, left);
+    }
+    // 「1.4 —— IS OUT」的細線生長（同 eyebrow）；reduced-motion／noscript 由 CSS 直接畫滿
+    requestAnimationFrame(function () { requestAnimationFrame(function () { bar.classList.add('in'); }); });
+
+    var code = $('[data-launch-code]', bar);
+    var btn = $('[data-launch-copy]', bar);
+    var status = $('[data-launch-status]', bar);
+    if (!code || !btn || !status) return;
+    btn.hidden = false;
+    var text = (code.textContent || '').trim();
+    var timer = null;
+
+    function reset() {
+      btn.classList.remove('is-done');
+      status.textContent = '';
+      status.classList.add('sr');
+    }
+    function done() {            // 複製成功：鈕上顯示 Copied 2 秒；螢幕閱讀器由 aria-live 念 Copied
+      clearTimeout(timer);
+      status.classList.add('sr');
+      status.textContent = 'Copied';
+      btn.classList.add('is-done');
+      timer = setTimeout(reset, 2000);
+    }
+    function hint() {            // 兩條路都被擋：文字已反白，旁邊顯示 Select and copy（6 秒）
+      clearTimeout(timer);
+      btn.classList.remove('is-done');
+      status.textContent = 'Select and copy';
+      status.classList.remove('sr');
+      timer = setTimeout(reset, 6000);
+    }
+    function selectCode() {
+      try {
+        var sel = window.getSelection();
+        var r = document.createRange();
+        r.selectNodeContents(code);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        return true;
+      } catch (e) { return false; }
+    }
+    function legacyCopy() {      // Superhive iframe 沒給 clipboard-write 時 writeText 會被拒 → 退回 execCommand
+      var ok = false;
+      if (selectCode()) {
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      }
+      if (ok) done(); else hint();
+    }
+    btn.addEventListener('click', function () {
+      selectCode();              // 先在使用者手勢內選起來：就算複製被擋，文字也已經反白
+      var p = null;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext !== false) {
+          p = navigator.clipboard.writeText(text);
+        }
+      } catch (e) { p = null; }
+      if (p && typeof p.then === 'function') p.then(done, legacyCopy);
+      else legacyCopy();
+    });
+  })();
+
   /* ---------- 共用：radiogroup（點選＋←→ Home End，roving tabindex） ---------- */
   function radioGroup(group, onChange) {
     var btns = $$('[role="radio"]', group);
@@ -607,19 +680,22 @@
      左＝64 samples, no denoise；右＝FQP。分界位置存在 --split（百分比），CSS 用 clip-path 切右圖、
      兩側標籤與分界線跟著走。圖框固定 2:1，拖曳不改頁高。
      拖曳：滑鼠＋觸控（Pointer Events；圖框 touch-action:pan-y，直向捲動照常；把手自己是 none）。
-     鍵盤（焦點在把手上）：←→ 2%、Shift＋←→ 10%、PageUp／PageDown 10%、Home／End 到兩端。 */
-  (function () {
-    var box = $('[data-compare]');
-    if (!box) return;
+     鍵盤（焦點在把手上）：←→ 2%、Shift＋←→ 10%、PageUp／PageDown 10%、Home／End 到兩端。
+     WEB14b：頁面上有兩塊 [data-compare]（hero 下面的 1.4 影片那塊在 DOM 裡排第一），原本 $() 只抓第一個，
+     所以改成 initCompare(box, onPos)，每一塊各初始化一次。onPos 只有影片那塊用（分界線一動就重畫 canvas）；
+     圖片那塊不帶 onPos，行為與改之前相同。 */
+  function initCompare(box, onPos) {
     var cmp = $('[data-cmp]', box);
     var la = $('[data-cmp-la]', box), lb = $('[data-cmp-lb]', box);
     var grip = $('[data-grip]', box);
+    if (!cmp || !la || !lb || !grip) return null;
     var pos = 50;
     function setPos(p) {
       pos = Math.max(0, Math.min(100, p));
       cmp.style.setProperty('--split', pos + '%');
       grip.setAttribute('aria-valuenow', String(Math.round(pos)));
       grip.setAttribute('aria-valuetext', Math.round(pos) + '% ' + la.textContent + ', ' + (100 - Math.round(pos)) + '% ' + lb.textContent);
+      if (onPos) onPos(pos);
     }
     var dragging = false;
     function fromEvent(e) {
@@ -654,6 +730,117 @@
       setPos(n);
     });
     setPos(50);
+    return { pos: function () { return pos; } };
+  }
+  $$('[data-compare]').forEach(function (box) {
+    if (!box.hasAttribute('data-vcompare')) initCompare(box);   // 影片那塊由下面的模組帶 onPos 初始化
+  });
+
+  /* ---------- WEB14b：1.4 影片拖拉對比（hero 下面） ----------
+     素材：一支 MP4（1080×1080），上半＝Cycles 內建降噪、下半＝FQP＋時間降噪視窗，同一次算圖、逐幀對齊。
+     同步：只有一個 <video>、一次解碼。每來一幀（requestVideoFrameCallback；不支援就在播放期間用
+       requestAnimationFrame）把「這一幀」的上半畫在 canvas 分界線左邊、下半畫在右邊。兩邊取自同一張解碼影像，
+       所以一定是同一幀，不用校正 currentTime。分界線移動、seek 完、暫停時也各重畫一次。
+     延後載入：<video preload="none">，網址放 data-src；模組接近視窗（IntersectionObserver，rootMargin 300px）才設 src。
+       之前 canvas 先畫 poster（同一支影片的第 60 幀）；影片載入後也先停在第 60 幀，開始播放時不會跳一下。
+     播放：一般情況下進入畫面（≥ 20%）就播（muted、loop、playsinline），捲出畫面或分頁隱藏就暫停，回來再播；
+       使用者按了 Pause 就不再自動播，直到按 Play。
+       prefers-reduced-motion: reduce＝不自動播放，停在第 60 幀，按 Play 才播。兩種情況都有 Play／Pause 鈕。 */
+  (function () {
+    var box = $('[data-vcompare]');
+    if (!box) return;
+    var video = $('[data-vcmp-video]', box);
+    var canvas = $('[data-vcmp-canvas]', box);
+    var btn = $('[data-vcmp-play]', box);
+    var ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
+    if (!video || !canvas || !btn || !ctx) return;
+    var FRAME_T = 60.5 / 24;            // 第 60 幀的中間（24 fps）
+    var split = 50;
+    var poster = null, loaded = false, inView = false;
+    var userPaused = reduce;            // 減少動態：一開始就當成使用者按了暫停
+    var hasRVFC = typeof video.requestVideoFrameCallback === 'function';
+    var raf = 0;
+
+    function source() {
+      if (loaded && video.readyState >= 2 && video.videoWidth) return { el: video, w: video.videoWidth, h: video.videoHeight };
+      if (poster && poster.complete && poster.naturalWidth) return { el: poster, w: poster.naturalWidth, h: poster.naturalHeight };
+      return null;
+    }
+    function draw() {
+      var s = source();
+      if (!s) return;
+      var cw = canvas.width, ch = canvas.height;
+      var hh = s.h / 2;                                   // 上半＝內建、下半＝1.4
+      var x = Math.round(cw * split / 100);
+      var sx = Math.round(s.w * split / 100);
+      try {
+        if (x > 0 && sx > 0) ctx.drawImage(s.el, 0, 0, sx, hh, 0, 0, x, ch);
+        if (x < cw && sx < s.w) ctx.drawImage(s.el, sx, hh, s.w - sx, hh, x, 0, cw - x, ch);
+      } catch (err) {}
+    }
+    function onFrame() { draw(); video.requestVideoFrameCallback(onFrame); }
+    function rafLoop() { draw(); raf = (!video.paused && !video.ended) ? requestAnimationFrame(rafLoop) : 0; }
+    function setLabel() { btn.textContent = video.paused ? 'Play' : 'Pause'; }
+    function play() {
+      if (!loaded) return;
+      var p = video.play();
+      if (p && p.catch) p.catch(function () { setLabel(); });
+    }
+    function update() {                 // 看得到、分頁在前景、使用者沒按暫停 → 播；否則停
+      if (!loaded) return;
+      var want = inView && !document.hidden && !userPaused;
+      if (want && video.paused) play();
+      else if (!want && !video.paused) video.pause();
+    }
+    function load() {
+      if (loaded) return;
+      loaded = true;
+      video.addEventListener('loadeddata', function () {
+        if (video.paused) { try { video.currentTime = FRAME_T; } catch (err) {} }
+        draw();
+        update();
+      }, { once: true });
+      if (hasRVFC) video.requestVideoFrameCallback(onFrame);
+      video.preload = 'auto';
+      video.src = video.getAttribute('data-src');
+      try { video.load(); } catch (err) {}
+    }
+
+    var pSrc = video.getAttribute('poster');
+    if (pSrc) {
+      poster = new Image();
+      poster.decoding = 'async';
+      poster.onload = function () { if (!(loaded && video.readyState >= 2)) draw(); };
+      poster.src = pSrc;
+    }
+    video.addEventListener('play', function () {
+      setLabel();
+      if (!hasRVFC && !raf) raf = requestAnimationFrame(rafLoop);
+    });
+    video.addEventListener('pause', function () { setLabel(); draw(); });
+    video.addEventListener('seeked', draw);
+    btn.addEventListener('click', function () {
+      if (video.paused) { userPaused = false; load(); play(); }
+      else { userPaused = true; video.pause(); }
+    });
+    document.addEventListener('visibilitychange', update);
+
+    if ('IntersectionObserver' in window) {
+      var near = new IntersectionObserver(function (es) {
+        if (es.some(function (e) { return e.isIntersecting; })) { load(); near.disconnect(); }
+      }, { rootMargin: '300px 0px' });
+      near.observe(box);
+      new IntersectionObserver(function (es) {
+        es.forEach(function (e) { inView = e.isIntersecting; });
+        update();
+      }, { threshold: 0.2 }).observe(canvas);
+    } else {
+      inView = true;
+      load();
+    }
+
+    initCompare(box, function (p) { split = p; draw(); });
+    setLabel();
   })();
 
   /* ---------- ① 同步放大鏡（W3c-2 改制：倍率依原圖像素、按住翻切、鍵盤、窄螢幕分頁） ----------
@@ -991,19 +1178,69 @@
     set('on');
   })();
 
-  /* ---------- 04 Animation 影片（W2a）：單一大影片＋分頁，三段同步時間軸 ----------
-     三支片段疊放、同時循環播放（muted）。切分頁：目標片段 currentTime ← 目前片段 currentTime，
-     等 seeked（或已在該時間）才把 .on 換過去 → 不出黑幀、同一時間點接續。
-     減少動態：不自動播放，只有可見那支給 controls；切分頁時沿用目前時間與暫停狀態。 */
+  /* ---------- 04 Animation 影片（W2a → WEB14c）：兩個場景 × 三種做法，時間軸接續 ----------
+     六支片段疊放，順序＝場景×3＋做法（kitchen 0–2、bathroom 3–5）。同一場景的三支同時循環播放（muted）；
+       另一個場景的三支暫停（不解碼）。
+     切換（換做法或換場景）：目標片段 currentTime ← 目前片段 currentTime，等 seeked（或已在該時間）才把 .on 換過去
+       → 不出黑幀、同一時間點接續，不從頭播。目標場景還沒載入時，舊的那支繼續顯示，等目標有畫面（loadeddata）才對時再換。
+       連點時用 gen 計數：只有最後一次切換會生效。
+     延後載入（同 WEB14b）：<video preload="none">，網址放 data-src；模組接近視窗（IntersectionObserver，rootMargin 300px）
+       才載入目前場景的三支；另一個場景切到它時才載入。
+     減少動態：不自動播放，只有可見那支給 controls；切換時沿用目前時間與暫停狀態。
+     WEB14d：poster＝各場景 builtin 第 0 幀（HTML 的 poster 屬性），載入前不出空框。
+       播放改由 JS 決定（拿掉 autoplay 屬性）：影片框進入畫面（≥ 20%）且分頁在前景才播，否則暫停目前場景的三支；
+       回到畫面時，另外兩支對齊到顯示那支的 currentTime 再一起播（同 WEB14b 影片模組的 inView／visibilitychange）。
+       減少動態：不會自己開始播；使用者自己按了播放、捲出畫面被這裡暫停的，回來時才接著播（保留使用者的狀態）。 */
   (function () {
     var box = $('[data-flicker]');
     if (!box) return;
     var vids = $$('[data-flicker-v]', box);
     var group = $('[data-flicker-group]', box);
-    var cur = 0, pending = null;
+    var sceneGroup = $('[data-flicker-scene]', box);
+    var frame = $('.flicker-frame', box) || box;
+    var caps = $$('[data-cap]', box);
+    var CAPS = ['kitchen', 'bathroom'];
+    var cur = 0, scene = 0, method = 0, gen = 0;
+    var loadedScene = [];
+    var inView = !('IntersectionObserver' in window);   // 沒有 IntersectionObserver 就當成一直看得到
+    var autoPaused = false;             // 減少動態：使用者在播、被「捲出畫面／分頁隱藏」暫停的
+    function sceneOf(i) { return Math.floor(i / 3); }
+    function sceneVids(s) { return vids.slice(s * 3, s * 3 + 3); }
+    function playV(v) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+    function pauseV(v) { try { v.pause(); } catch (err) {} }
+    function canPlay() { return inView && !document.hidden; }
+    vids.forEach(function (v) { v.removeAttribute('autoplay'); v.autoplay = false; });
     if (reduce) {
-      vids.forEach(function (v) { v.removeAttribute('autoplay'); try { v.pause(); } catch (err) {} });
+      vids.forEach(pauseV);
       vids[0].controls = true;
+    }
+    function update() {                 // 看得到才播；看不到就停。重複呼叫不會重複對時
+      if (!loadedScene[sceneOf(cur)]) return;
+      var sv = sceneVids(sceneOf(cur)), shown = vids[cur];
+      if (!canPlay()) {
+        if (reduce && !shown.paused) autoPaused = true;
+        sv.forEach(pauseV);
+        return;
+      }
+      if (reduce && !autoPaused) return;   // 減少動態：使用者沒在播就不動
+      autoPaused = false;
+      var t = shown.currentTime;
+      sv.forEach(function (v) {
+        if (v === shown) return;
+        if (v.readyState >= 1 && Math.abs(v.currentTime - t) > 0.05) { try { v.currentTime = t; } catch (err) {} }
+        if (!reduce && v.paused) playV(v);  // 減少動態只接著播顯示那支，另外兩支切換時再對時
+      });
+      if (shown.paused) playV(shown);
+    }
+    function loadScene(s) {
+      if (loadedScene[s]) return;
+      loadedScene[s] = true;
+      sceneVids(s).forEach(function (v) {
+        v.addEventListener('loadeddata', function () { if (sceneOf(cur) === s) update(); }, { once: true });
+        v.preload = 'auto';
+        v.src = v.getAttribute('data-src');
+        try { v.load(); } catch (err) {}
+      });
     }
     function reveal(i) {
       vids.forEach(function (v, j) {
@@ -1011,27 +1248,73 @@
         if (j === i) v.removeAttribute('aria-hidden'); else v.setAttribute('aria-hidden', 'true');
         if (reduce) v.controls = j === i;
       });
+      caps.forEach(function (c) {
+        if (c.getAttribute('data-cap') === CAPS[sceneOf(i)]) c.removeAttribute('aria-hidden');
+        else c.setAttribute('aria-hidden', 'true');
+      });
       cur = i;
     }
     function go(i) {
-      if (i === cur) return;
-      var from = vids[cur], to = vids[i];
-      var t = from.currentTime, paused = from.paused;
-      pending = i;
-      var done = false;
-      function finish() {
-        if (done || pending !== i) return;
-        done = true;
-        reveal(i);
-        if (!paused) { var p = to.play(); if (p && p.catch) p.catch(function () {}); }
-        else { try { to.pause(); } catch (err) {} }
+      var my = ++gen;                   // 之前還沒完成的切換一律作廢
+      if (i === cur) {                  // 切回目前這支（例如換場景還沒載完就按回來）：另一個場景的片段停住，不在看不見的地方播
+        vids.forEach(function (v, j) { if (sceneOf(j) !== sceneOf(cur)) pauseV(v); });
+        return;
       }
-      if (to.readyState >= 2 && Math.abs(to.currentTime - t) < 0.02) { finish(); return; }
-      to.addEventListener('seeked', finish, { once: true });
-      try { to.currentTime = t; } catch (err) { finish(); }
-      setTimeout(finish, 400);          // 保險：seeked 沒來也不卡住
+      var from = vids[cur], to = vids[i];
+      var sceneChange = sceneOf(i) !== sceneOf(cur);
+      loadScene(sceneOf(i));            // 已載入就什麼都不做
+      var done = false, t = 0, paused = true;
+      function finish() {
+        if (done || my !== gen) return;
+        done = true;
+        var old = cur;
+        var run = !paused && canPlay();  // 切換完成時影片框在畫面外（或分頁隱藏）就不播
+        if (reduce && !paused && !canPlay()) autoPaused = true;   // 減少動態：記住使用者原本在播，回到畫面再接著播
+        reveal(i);
+        if (sceneChange) {
+          sceneVids(sceneOf(old)).forEach(pauseV);
+          sceneVids(sceneOf(i)).forEach(function (v) {
+            if (v === to) return;
+            try { v.currentTime = to.currentTime; } catch (err) {}
+            if (run) playV(v); else pauseV(v);
+          });
+        }
+        if (run) playV(to); else pauseV(to);
+      }
+      function seek() {
+        if (done || my !== gen) return;
+        t = from.currentTime;            // 等載入的期間舊的那支還在播，取「現在」的時間
+        paused = reduce ? from.paused : false;   // 一般情況沒有暫停鈕，一律接著播；減少動態沿用使用者的狀態
+        if (Math.abs(to.currentTime - t) < 0.02) { finish(); return; }
+        to.addEventListener('seeked', finish, { once: true });
+        try { to.currentTime = t; } catch (err) { finish(); }
+        setTimeout(finish, 400);        // 保險：seeked 沒來也不卡住（這時目標已經有畫面）
+      }
+      if (to.readyState >= 2) { seek(); return; }
+      to.addEventListener('loadeddata', seek, { once: true });
+      to.addEventListener('error', seek, { once: true });   // 載入失敗也不要卡在半路
     }
-    radioGroup(group, function (btn) { go(parseInt(btn.getAttribute('data-v'), 10)); });
+    radioGroup(sceneGroup, function (btn) {
+      scene = parseInt(btn.getAttribute('data-s'), 10);
+      go(scene * 3 + method);
+    });
+    radioGroup(group, function (btn) {
+      method = parseInt(btn.getAttribute('data-v'), 10);
+      go(scene * 3 + method);
+    });
+    if ('IntersectionObserver' in window) {
+      var near = new IntersectionObserver(function (es) {
+        if (es.some(function (e) { return e.isIntersecting; })) { loadScene(sceneOf(cur)); near.disconnect(); }
+      }, { rootMargin: '300px 0px' });
+      near.observe(box);
+      new IntersectionObserver(function (es) {           // WEB14d：影片框進出畫面 → 播／停
+        es.forEach(function (e) { inView = e.isIntersecting; });
+        update();
+      }, { threshold: 0.2 }).observe(frame);
+    } else {
+      loadScene(0);
+    }
+    document.addEventListener('visibilitychange', update);
   })();
 
   /* ---------- 03 CLI 逐字打出（幽靈全文佔位；減少動態直接顯示全文）。W3a：內容是四行，換行照打 ---------- */
