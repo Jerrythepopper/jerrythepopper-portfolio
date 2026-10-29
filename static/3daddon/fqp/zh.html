@@ -22,7 +22,7 @@
 })();
 </script>
 <title>Final Quality Pipeline 使用手冊</title>
-<meta name="description" content="一條給 Cycles 用的出片級降噪管線。">
+<meta name="description" content="FQP 是一條給 Cycles 用的出片級降噪管線。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=Lustria&family=Noto+Serif+JP:wght@400;500;600&display=swap" rel="stylesheet">
@@ -409,7 +409,7 @@ body.lang-zh footer.page-footer {
     </div>
   </div>
   <h1 class="page-title">Final Quality Pipeline 使用手冊</h1>
-  <p class="page-subtitle">一條給 Cycles 用的出片級降噪管線。</p>
+  <p class="page-subtitle">FQP 是一條給 Cycles 用的出片級降噪管線。</p>
 </header>
 
 <!-- HERO_IMAGES -->
@@ -431,7 +431,7 @@ body.lang-zh footer.page-footer {
   <main>
 <h1 id="final-quality-pipeline-使用手冊">Final Quality Pipeline 使用手冊</h1>
 <blockquote><p>版本 1.4.0 ｜ 適用 Blender 5.1 / 5.2 ｜ <strong>只支援 Cycles</strong> ｜ 網頁版（有截圖）：<a href="https://www.jerrythepopper.com/3daddon/fqp/zh.html">jerrythepopper.com/3daddon/fqp/zh.html</a></p></blockquote>
-<p>一條給 Cycles 用的出片級降噪管線。它把畫面拆成各路光線成分，每一路光先乘上材質顏色再分開、全程 HDR 不壓縮地降噪，並以 albedo／normal 引導，最後給你每一路一支滑桿——微細節要留多少，由<strong>你</strong>決定。動畫另外多一層跨幀處理，消掉降噪造成的閃爍；1.3 的舊做法（執行跨幀穩定）還會在最後把動態模糊補回來。1.4 起還多了一個時間降噪視窗，可以在裡面預覽、量測、處理整段；時間降噪不補動態模糊（見<a href="#處理整段">處理整段</a>）。</p>
+<p>FQP 是一條給 Cycles 用的出片級降噪管線。它把畫面拆成各路光線成分，每一路先乘上材質顏色，再分開用全程 HDR 降噪，並以 albedo／normal 引導。最後每一路給你一支滑桿，微細節要留多少自己決定。動畫另外多一層跨幀處理，消掉降噪造成的閃爍；1.3 的舊做法（執行跨幀穩定）還會在最後把動態模糊補回來。1.4 起還多了一個時間降噪視窗，可以在裡面預覽、量測、處理整段；時間降噪不補動態模糊（見<a href="#處理整段">處理整段</a>）。</p>
 <p>另外附兩把量尺：一把算出這個場景實際需要幾次光線反彈，一把算出雜訊門檻要收到多緊——後者跟「每一幀要花幾秒」根本是同一個問題。</p>
 <hr>
 <h2 id="14-新功能">1.4 新功能</h2>
@@ -449,7 +449,7 @@ body.lang-zh footer.page-footer {
 <p>這個 .zip 會裝成 extension。入口有兩個，結果一樣。</p>
 <ul><li>把 .zip 直接拖進 Blender 視窗；或到 Edit &gt; Preferences &gt; Get Extensions，右上角的下拉選單選 <strong>Install from Disk</strong>。</li><li>或到 Edit &gt; Preferences &gt; Add-ons，右上角的下拉選單選 <strong>Install from Disk</strong>，選那個 .zip。</li></ul>
 <p>只留一份就好——多出來的一份（例如以前留在 <code>scripts/addons</code> 資料夾的舊版）會搶同一個面板。它在外掛清單裡叫 <strong>Who Needs Another Render Setup? (Final Quality Pipeline)</strong>，搜哪個名字都找得到。面板本身的標題還是 Final Quality Pipeline，出現在 Properties &gt; Render 的最上方，就在算圖引擎選單正下方。</p>
-<p>需求：Blender 5.1 或 5.2，算圖引擎必須是 <strong>Cycles</strong>。這不是偏好問題——整條管線吃的是只有 Cycles 生得出來的 per-pass 與 denoising 資料，EEVEE 給不出來。</p>
+<p>需求：Blender 5.1 或 5.2，算圖引擎必須是 <strong>Cycles</strong>：整條管線用的 per-pass 與 denoising 資料只有 Cycles 生得出來，EEVEE 給不出來。</p>
 <hr>
 <h2 id="2-語言">2. 語言</h2>
 <p>這個外掛講英文和繁體中文，而且<strong>切換鈕是它自己的</strong>：面板最上方那一排（或 Edit &gt; Preferences &gt; Add-ons 裡這個外掛自己的偏好設定）有三個選項。</p>
@@ -463,7 +463,7 @@ body.lang-zh footer.page-footer {
 <hr>
 <h2 id="4-它到底在做什麼">4. 它到底在做什麼</h2>
 <p>Cycles 可以把光線分成好幾份輸出：漫射、高光、穿透、自發光、體積——前三份還再拆成「照到多少光」和「表面本身什麼顏色」。一般的降噪是在完成的畫面上一次做完，那時候各種光早就混在一起了，粗糙金屬、玻璃、霧面材質只能共用同一套處理。</p>
-<p>這條管線改成一份一份來：每一路光先乘上材質顏色再降噪，每一份分開處理，全程 HDR、白的地方不切掉；材質紋理與降噪器一起處理，並以 albedo／normal 引導。自發光和體積（Volume Direct/Indirect）沒有自己的顏色 pass，所以直接降噪、直接加回去，不做那一次相乘。</p>
+<p>這條管線改成一份一份來：每一路光先乘上材質顏色再降噪，每一份分開處理，全程 HDR、白的地方不切掉；材質紋理會跟光一起進降噪器，並以 albedo／normal 引導。自發光和體積（Volume Direct/Indirect）沒有自己的顏色 pass，所以直接降噪、直接加回去，不做那一次相乘。</p>
 <p>接著每一路各給一支滑桿，在「原圖」和「完全降噪」之間調。降噪器傷得最重的是反射——它會把粗糙金屬的高光燙成塑膠——所以「高光」那一格預設就低於 1。預設只在畫面很亮的地方把原圖混回來（<strong>只在高光混回</strong>）：高光保留顆粒和層次，其他地方維持乾淨。所以畫面裡沒有很亮的地方時，拉滑桿可能完全看不出差別，這是正常的，不是壞了。想讓滑桿作用在整個畫面（例如要全畫面的顆粒感），就把<strong>只在高光混回</strong>關掉，再按「重建管線」。體積那支滑桿不受這個開關影響，一律作用在整個畫面。</p>
 <p>動畫還有第二段。每一幀各自降噪會讓畫面浮動，因為降噪器每一幀猜的都不太一樣。1.4 起主要的做法是<a href="#9-時間降噪視窗">時間降噪視窗</a>：每一幀拿前後最多各三幀來比對，用它在你自己的幀裡量到的雜訊來決定下手多重，還有一張信心遮罩讓你看相鄰的幀用了多少。它不會把動態模糊補回去。</p>
 <p>1.3 的做法（現在收在舊做法的摺疊面板裡）是這樣：跨幀那一段會抓每一幀的鄰居，用 Cycles 算出來的運動向量把它們搬到正確位置，把深度對不上的像素（以及緊鄰它們的像素）丟掉，剩下的混起來。這要求 Cycles 自己的動態模糊必須關掉，因為糊掉的畫面生不出能用的運動向量——模糊改在最後一步補回去。鎖定機位或慢速鏡頭效果最好；快速推軌或橫移時，在背景前移動的物體輪廓可能比不開跨幀穩定稍差（見「已知限制」）。</p>
