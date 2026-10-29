@@ -2240,3 +2240,112 @@ html, body {
    寫在 patch.css 覆寫而非改 styles.css:12（源檔零觸及慣例）；暗場兩個啟用區塊的選擇器
    （:root:not([data-theme=light]) / :root[data-theme=dark]）特異度更高，不受此處影響。 */
 :root { --color-text-muted: #6a6c74; }
+
+/* ---- Add-ons 入口頁（2026-10-29，build-site.js addonsPage）------------------------------
+   兩張卡片上下排：桌機圖左字右（圖 7：字 5），≤880px 改成圖上字下。語彙沿用全站——
+   名稱用 serif、小標與規格用 sans 大寫字距、連結平時同色 hover 才浮底線（同 .work-cta-line）。
+   顏色只用既有可切換槽（--color-text／-muted／--color-line-faint／--color-bg-alt），明暗兩態自動成立。 */
+.addon-list {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--container-pad) clamp(96px, 14vw, 160px);
+  display: flex; flex-direction: column;
+  gap: clamp(56px, 8vw, 104px);
+}
+.addon-card {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: clamp(28px, 4vw, 56px);
+  align-items: center;
+  padding-top: clamp(28px, 4vw, 40px);
+  border-top: 1px solid var(--color-line-faint);
+}
+.addon-media {
+  display: block;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  background: var(--color-bg-alt);
+}
+.addon-media img {
+  display: block; width: 100%; height: 100%; object-fit: cover;
+  transition: transform 1.6s var(--ease-inout);
+}
+.addon-card:hover .addon-media img { transform: scale(1.03); }
+.addon-body { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.addon-kicker, .addon-specs {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.addon-name {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(28px, 3.4vw, 44px);
+  letter-spacing: 0.03em;
+  line-height: 1.15;
+}
+.addon-name a { color: var(--color-text); }
+.addon-question {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 15px;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+}
+.addon-blurb {
+  margin: 4px 0 0;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.9;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+  max-width: 34em;
+}
+.addon-links {
+  list-style: none; margin: 8px 0 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 10px 28px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+}
+.addon-links a {
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-line-faint);
+  padding-bottom: 2px;
+  transition: border-bottom-color var(--dur-fast) var(--ease-out);
+}
+.addon-links a:hover { border-bottom-color: currentColor; }
+@media (max-width: 880px) {
+  .addon-card { grid-template-columns: 1fr; align-items: start; }
+  .addon-links a { display: inline-flex; align-items: center; min-height: 44px; padding-bottom: 0; }
+}
+/* 3D 頁尾巴的外掛導流：與下方「下一個系列」同語彙，收掉自己的下方留白讓兩塊成一組 */
+.next-series.addon-xlink { padding-bottom: 0; }
+
+/* ---- 中寬螢幕導覽列單行（2026-10-29）------------------------------------------------
+   導覽列 10 項（加了 Add-ons）在 nowrap 下要 ~770px，連同 brand／右側鈕群與 padding 整條約
+   1190px 才排得下。881–1240px 原本會讓項目自己折行（1024px 實測：果菜市場直排、整條 103px 高，
+   加 Add-ons 前就有）。這段比照 P0-2 手機那套：單行、可水平滑、兩側漸層提示（site.js 依捲動
+   位置掛 can-l／can-r，不分斷點）；brand 全名與按鈕尺寸照桌機不動。 */
+@media (min-width: 881px) and (max-width: 1240px) {
+  .frosted nav {
+    gap: 20px;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .frosted nav::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .frosted nav a { flex: 0 0 auto; white-space: nowrap; }
+  .frosted nav a.is-active::after { bottom: 0; }
+  .frosted nav.can-l  { -webkit-mask-image: var(--nav-fade-l);  mask-image: var(--nav-fade-l); }
+  .frosted nav.can-r  { -webkit-mask-image: var(--nav-fade-r);  mask-image: var(--nav-fade-r); }
+  .frosted nav.can-l.can-r { -webkit-mask-image: var(--nav-fade-lr); mask-image: var(--nav-fade-lr); }
+}

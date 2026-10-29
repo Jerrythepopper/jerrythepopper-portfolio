@@ -9,9 +9,46 @@
 <!-- 防閃（仿 build-site.js:552）。嵌入模式 ?embed=1：強制深色、不讀不寫 localStorage。
      一般模式（W3d-1a，與網站同一邏輯）：一律掛 data-theme——jtpTheme 有值照它，沒值＝light（不跟系統）。 -->
 <script>(function(){var d=document.documentElement;d.className+=' js';if(/[?&]embed=1(&|$)/.test(location.search)){d.className+=' is-embed';d.setAttribute('data-theme','dark');return}var t='light';try{var s=localStorage.getItem('jtpTheme');if(s==='dark'||s==='light')t=s}catch(e){}d.setAttribute('data-theme',t);var m=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<m.length;i++){m[i].removeAttribute('media');m[i].setAttribute('content',t==='dark'?'#15161d':'#f7f7f7')}})();</script>
-<title>Final Quality Pipeline — Jerrythepopper</title>
+<title>Final Quality Pipeline — Render Quality &amp; Denoise Add-on for Blender Cycles</title>
 <meta name="description" content="It finds how many samples and bounces your scene needs, then builds the denoise for the final render.">
 <link rel="canonical" href="https://www.jerrythepopper.com/3daddon/fqp/product/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Jerrythepopper">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Final Quality Pipeline — Render Quality &amp; Denoise Add-on for Blender Cycles">
+<meta property="og:description" content="It finds how many samples and bounces your scene needs, then builds the denoise for the final render.">
+<meta property="og:url" content="https://www.jerrythepopper.com/3daddon/fqp/product/">
+<meta property="og:image" content="https://www.jerrythepopper.com/photos/og/og-addon-fqp.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Final Quality Pipeline — Render Quality &amp; Denoise Add-on for Blender Cycles">
+<meta name="twitter:description" content="It finds how many samples and bounces your scene needs, then builds the denoise for the final render.">
+<meta name="twitter:image" content="https://www.jerrythepopper.com/photos/og/og-addon-fqp.jpg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Final Quality Pipeline",
+  "applicationCategory": "DesignApplication",
+  "operatingSystem": "Windows, macOS, Linux",
+  "softwareRequirements": "Blender 5.1 / 5.2, Cycles",
+  "description": "Finds how many samples and bounces your scene needs, then builds the denoise for the final render. Temporal Denoise steadies animation frames already on disk.",
+  "url": "https://www.jerrythepopper.com/3daddon/fqp/product/",
+  "image": "https://www.jerrythepopper.com/3daddon/fqp/product/assets/kitchen/hero_cam001_2560x1280.webp",
+  "author": {
+    "@type": "Person",
+    "name": "Jerrythepopper",
+    "url": "https://www.jerrythepopper.com/"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "9.99",
+    "priceCurrency": "USD",
+    "url": "https://superhivemarket.com/products/final-quality-pipeline"
+  }
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- 原型用完整 family；正式版照 build-site.js:446-519（S45）子集化 -->

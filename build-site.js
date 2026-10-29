@@ -423,6 +423,7 @@ const NAV = [
   { key: 'film', label: 'Film' },
   { key: 'market', label: '果菜市場', labelEn: 'Market' },   // 唯一需要換字的項目（其餘本來就是英文）
   { key: 'work', label: 'Work' },
+  { key: '3daddon', label: 'Add-ons' },   // 2026-10-29：Blender 外掛入口頁（addonsPage）
   { key: 'about', label: 'About' },
 ];
 
@@ -646,6 +647,7 @@ ${series}
       <h4>Office</h4>
       <ul>
         <li><a href="${rel}work/">${isEn() ? 'Work' : 'Work 工作'}</a></li>
+        <li><a href="${rel}3daddon/">${isEn() ? 'Blender Add-ons' : 'Add-ons 外掛'}</a></li>
         <li><a href="${rel}about/">${isEn() ? 'About' : 'About 關於我'}</a></li>
       </ul>
     </div>
@@ -760,6 +762,8 @@ function heroBlock(lhref) {
     </a>
     <div class="hero-topnav">
       <a href="work/">Work</a>
+      <span class="sep">|</span>
+      <a href="3daddon/">Add-ons</a>
       <span class="sep">|</span>
       <a href="about/">Contact</a>
     </div>
@@ -915,6 +919,21 @@ function nextSeriesBlock(s) {
 </section>`;
 }
 
+/* 3D 頁尾巴、「下一個系列」上方：導去外掛頁（2026-10-29）。沿用 next-series 的細線＋次級標題，
+   addon-xlink 只收掉下方留白，讓兩塊看起來是同一組。 */
+function addonXlink() {
+  return `<section class="fade-up next-series addon-xlink" style="transition-delay:0ms">
+  <a href="../3daddon/" class="next-link">
+    <span class="next-eyebrow">
+      <span class="flow-line in" style="width:40px"></span>
+      <span>${isEn() ? 'Blender Add-ons' : 'Blender Add-ons 外掛'}</span>
+    </span>
+    <span class="next-title">Studio Shapers · Final Quality Pipeline<span class="arr" aria-hidden="true">→</span></span>
+  </a>
+</section>
+`;
+}
+
 function categoryPage(s, screenLabel) {
   const photos = photosFor(s.id);
   const rel = assetRel('../');              // 中文 '../'、英文 '../../'
@@ -970,7 +989,7 @@ ${frames}
 </section>
 
 ${flowRuleHTML()}
-${nextSeriesBlock(s)}
+${s.id === '3d' ? addonXlink() : ''}${nextSeriesBlock(s)}
 </main>`;
 
   // nature 頁改用專屬 SEO description（英文開場句 + 定稿中文前 60 字），非套用預設 subtitle/lede 生成規則
@@ -1132,6 +1151,217 @@ ${workCtaBlock()}
   });
 }
 
+// ---------- Add-ons（2026-10-29） ----------
+/* 兩個 Blender 外掛。手冊與商品頁住 static\3daddon\（各自的產生器／匯出腳本產出，原樣複製），
+   這裡做三件事：
+     ① addonsPage()：/3daddon/ 與 /en/3daddon/ 的入口頁（兩張卡片），進導覽列、頁尾、3D 頁、About；
+     ② ADDON_STATIC_SEO：複製 static\ 時替那六頁換 <title>／description、補 canonical／hreflang／
+        og／JSON-LD、拿掉 noindex。寫在這裡而不寫進四條產生器（SS 手冊 build_manual_html.py、
+        FQP 手冊 export_manual.py、兩支商品頁匯出），重新產生頁面時 SEO 才不會掉；
+     ③ 六頁＋入口頁進 sitemap.xml／llms.txt。
+   price 寫原價（特價期間 Superhive 顯示得比這裡低）；改價時改這裡。 */
+const ADDONS = [
+  {
+    key: 'studio-shapers',
+    name: 'Studio Shapers',
+    question: 'Who Needs Another Lighting Setup?',
+    kicker: { en: 'Lighting', zh: '打光' },
+    blurb: {
+      en: 'Softboxes, grids, snoots, flags and scrims built as real meshes, brightness in stops against your main light, a top map for placing lights, and 14 setups that scale to your subject.',
+      zh: '柔光箱、網格、束光筒、黑旗、柔光布都是真的模型；亮度用級數、以主燈為基準；俯視燈位圖拖著擺燈；14 組一鍵布光依主體大小縮放。',
+    },
+    specs: 'Blender 5.1+ · Cycles',
+    hero: '3daddon/studio-shapers/product/assets/img/hero/hero.webp',
+    superhive: 'https://superhivemarket.com/products/studio-shapers',
+    price: '19.99',
+    productTitle: 'Studio Shapers — Studio Lighting Add-on for Blender Cycles',
+    manual: {
+      en: { title: 'Studio Shapers — Blender Lighting Add-on Manual', desc: 'User manual for Studio Shapers, a Blender add-on that adds studio lighting gear to Cycles as real geometry: softboxes, grids, flags, brightness in stops and 14 setups.' },
+      zh: { title: 'Studio Shapers 使用手冊｜Blender 棚拍打光外掛', desc: 'Studio Shapers 使用手冊。這個 Blender 外掛把柔光箱、網格、黑旗等棚拍器材用真的幾何體放進 Cycles，亮度用級數，內建 14 組布光。' },
+    },
+  },
+  {
+    key: 'fqp',
+    name: 'Final Quality Pipeline',
+    question: 'Who Needs Another Render Setup?',
+    kicker: { en: 'Final render', zh: '出片' },
+    blurb: {
+      en: 'Finds how many samples and bounces your scene needs, then builds the denoise for the final render. Temporal Denoise steadies animation frames already on disk.',
+      zh: '找出場景需要多少取樣與彈跳次數，再建好出片用的降噪。Temporal Denoise 處理已經算好的動畫幀，減少播放時的閃爍。',
+    },
+    specs: 'Blender 5.1 / 5.2 · Cycles',
+    hero: '3daddon/fqp/product/assets/kitchen/hero_cam001_2560x1280.webp',
+    superhive: 'https://superhivemarket.com/products/final-quality-pipeline',
+    price: '9.99',
+    productTitle: 'Final Quality Pipeline — Render Quality & Denoise Add-on for Blender Cycles',
+    manual: {
+      en: { title: 'Final Quality Pipeline — Blender Cycles Denoise Add-on Manual', desc: 'User manual for Final Quality Pipeline, a Blender add-on that finds the samples and bounces your Cycles scene needs and builds the denoise for the final render.' },
+      zh: { title: 'Final Quality Pipeline 使用手冊｜Blender Cycles 出片與降噪外掛', desc: 'Final Quality Pipeline 使用手冊。這個 Blender 外掛幫 Cycles 場景找出需要的取樣數與彈跳次數，並建好出片用的降噪。' },
+    },
+  },
+];
+const addonOg = (a) => `photos/og/og-addon-${a.key}.jpg`;
+const addonPaths = (a) => ({
+  product: `/3daddon/${a.key}/product/`,
+  manualEn: `/3daddon/${a.key}/`,
+  manualZh: `/3daddon/${a.key}/zh.html`,
+});
+const AUTHOR_LD = { '@type': 'Person', name: 'Jerrythepopper', url: `${SITE_ORIGIN}/` };
+
+function addonApp(a) {
+  return {
+    '@type': 'SoftwareApplication',
+    name: a.name,
+    applicationCategory: 'DesignApplication',
+    operatingSystem: 'Windows, macOS, Linux',
+    softwareRequirements: a.specs.replace(' · ', ', '),
+    description: a.blurb.en,
+    url: SITE_ORIGIN + addonPaths(a).product,
+    image: `${SITE_ORIGIN}/${a.hero}`,
+    author: AUTHOR_LD,
+    offers: { '@type': 'Offer', price: a.price, priceCurrency: 'USD', url: a.superhive },
+  };
+}
+
+/* static\ 六頁的 head 補丁：key＝static\ 底下的相對路徑（正斜線）。
+   商品頁只有英文，不掛 hreflang；手冊中英成對，x-default 指英文（與網站其他頁同規則）。 */
+const ADDON_STATIC_SEO = {};
+for (const a of ADDONS) {
+  const p = addonPaths(a);
+  const alt = { en: p.manualEn, zh: p.manualZh };
+  ADDON_STATIC_SEO[`3daddon/${a.key}/product/index.html`] = {
+    title: a.productTitle, path: p.product, lang: 'en', og: addonOg(a),
+    jsonld: { '@context': 'https://schema.org', ...addonApp(a) },
+  };
+  for (const lang of ['en', 'zh']) {
+    const m = a.manual[lang];
+    ADDON_STATIC_SEO[`3daddon/${a.key}/${lang === 'en' ? 'index.html' : 'zh.html'}`] = {
+      title: m.title, desc: m.desc, path: lang === 'en' ? p.manualEn : p.manualZh, lang, alt, og: addonOg(a),
+      jsonld: {
+        '@context': 'https://schema.org',
+        '@type': 'TechArticle',
+        headline: m.title,
+        description: m.desc,
+        inLanguage: lang === 'en' ? 'en' : 'zh-Hant',
+        url: SITE_ORIGIN + (lang === 'en' ? p.manualEn : p.manualZh),
+        author: AUTHOR_LD,
+        about: addonApp(a),
+      },
+    };
+  }
+}
+
+function addonStaticHead(html, rel, s) {
+  const once = (re, what) => {
+    const n = (html.match(re) || []).length;
+    if (n !== 1) throw new Error(`static\\${rel}：${what} 應該剛好 1 個，實際 ${n} 個`);
+  };
+  once(/<title>[^<]*<\/title>/g, '<title>');
+  once(/<meta name="description" content="[^"]*">/g, 'description');
+  if (/<meta property="og:|application\/ld\+json/.test(html)) {
+    throw new Error(`static\\${rel}：頁面自己已經有 og／JSON-LD，ADDON_STATIC_SEO 會重複，先決定留哪一份`);
+  }
+  let h = html
+    .replace(/<meta name="robots" content="noindex">\s*\n?/g, '')
+    .replace(/<link rel="canonical"[^>]*>\s*\n?/g, '')
+    .replace(/<title>[^<]*<\/title>/, () => `<title>${esc(s.title)}</title>`);
+  if (s.desc) h = h.replace(/<meta name="description" content="[^"]*">/, () => `<meta name="description" content="${esc(s.desc)}">`);
+  const desc = s.desc || h.match(/<meta name="description" content="([^"]*)">/)[1];   // 原值已是轉義過的屬性
+  if (!fs.existsSync(path.join(ROOT, s.og))) throw new Error(`static\\${rel}：分享圖 ${s.og} 不存在（要有 sharp 才產得出來）`);
+  const canonical = SITE_ORIGIN + s.path;
+  const ogAbs = `${SITE_ORIGIN}/${s.og}`;
+  const d = s.desc ? esc(desc) : desc;
+  const block =
+    `<link rel="canonical" href="${esc(canonical)}">\n` +
+    (s.alt
+      ? `<link rel="alternate" hreflang="zh-Hant" href="${esc(SITE_ORIGIN + s.alt.zh)}">\n` +
+        `<link rel="alternate" hreflang="en" href="${esc(SITE_ORIGIN + s.alt.en)}">\n` +
+        `<link rel="alternate" hreflang="x-default" href="${esc(SITE_ORIGIN + s.alt.en)}">\n`
+      : '') +
+    `<meta property="og:type" content="website">\n` +
+    `<meta property="og:site_name" content="Jerrythepopper">\n` +
+    `<meta property="og:locale" content="${s.lang === 'en' ? 'en_US' : 'zh_TW'}">\n` +
+    `<meta property="og:title" content="${esc(s.title)}">\n` +
+    `<meta property="og:description" content="${d}">\n` +
+    `<meta property="og:url" content="${esc(canonical)}">\n` +
+    `<meta property="og:image" content="${esc(ogAbs)}">\n` +
+    `<meta property="og:image:width" content="${OG_ADDON_W}">\n<meta property="og:image:height" content="${OG_ADDON_H}">\n` +
+    `<meta name="twitter:card" content="summary_large_image">\n` +
+    `<meta name="twitter:title" content="${esc(s.title)}">\n` +
+    `<meta name="twitter:description" content="${d}">\n` +
+    `<meta name="twitter:image" content="${esc(ogAbs)}">\n` +
+    `<script type="application/ld+json">\n${JSON.stringify(s.jsonld, null, 2).replace(/</g, '\\u003c')}\n</script>`;
+  return h.replace(/<meta name="description" content="[^"]*">/, (m) => m + '\n' + block);
+}
+
+function addonsPage() {
+  const rel = assetRel('../');
+  const lr = '../';
+  const lhref = langHref(rel, '3daddon/');
+  const L = isEn() ? 'en' : 'zh';
+  const cards = ADDONS.map((a) => {
+    const p = addonPaths(a);
+    const manual = isEn() ? p.manualEn : p.manualZh;
+    return `  <article class="fade-up addon-card" style="transition-delay:0ms">
+    <a class="addon-media" href="${rel}${p.product.slice(1)}" tabindex="-1" aria-hidden="true">
+      <img src="${rel}${esc(a.hero)}" alt="" width="2560" height="1280" loading="lazy" decoding="async">
+    </a>
+    <div class="addon-body">
+      <p class="addon-kicker">${esc(a.kicker[L])}</p>
+      <h2 class="addon-name"><a href="${rel}${p.product.slice(1)}">${esc(a.name)}</a></h2>
+      <p class="addon-question">${esc(a.question)}</p>
+      <p class="addon-blurb">${esc(a.blurb[L])}</p>
+      <p class="addon-specs">${esc(a.specs)}</p>
+      <ul class="addon-links">
+        <li><a href="${rel}${p.product.slice(1)}">${isEn() ? 'Product page' : '介紹頁'}</a></li>
+        <li><a href="${rel}${manual.slice(1)}">${isEn() ? 'Manual' : '使用手冊'}</a></li>
+        <li><a href="${esc(a.superhive)}" target="_blank" rel="noopener">${isEn() ? 'Buy on Superhive' : '到 Superhive 購買'} ↗</a></li>
+      </ul>
+    </div>
+  </article>`;
+  }).join('\n');
+
+  const desc = isEn()
+    ? 'Blender add-ons by Jerrythepopper for Cycles: Studio Shapers (studio lighting gear as real geometry) and Final Quality Pipeline (samples, bounces and denoise for the final render).'
+    : 'Jerrythepopper 做的 Blender 外掛：Studio Shapers（棚拍打光器材，真的幾何體）與 Final Quality Pipeline（取樣、彈跳與出片降噪），給 Cycles 使用。';
+
+  const main = `<main class="page" data-screen-label="10 Add-ons">
+  <div class="fade-up page-head" style="transition-delay:0ms">
+    <div class="eyebrow">
+      <span class="n">09</span>
+      <span class="flow-line in" style="width:56px"></span>
+      <span>Blender · Cycles</span>
+    </div>
+    <h1>Add-ons${isEn() ? '' : '<span class="jp">外掛</span>'}</h1>
+    <p class="subtitle">${isEn()
+      ? 'Two Blender add-ons for Cycles: one for studio lighting, one for the final render. Both are on Superhive, with manuals in English and Traditional Chinese.'
+      : '兩個 Cycles 用的 Blender 外掛：一個打棚拍光，一個顧最後出片。都在 Superhive 販售，手冊有中英文。'}</p>
+  </div>
+
+<section class="addon-list">
+${cards}
+</section>
+</main>`;
+
+  return shell({
+    rel, linkRel: lr, langHref: lhref, current: '3daddon', main,
+    title: isEn() ? `Blender Add-ons | ${EN.meta.siteSuffix}` : 'Blender 外掛 Add-ons｜Jerrythepopper',
+    desc,
+    canonicalPath: isEn() ? '/en/3daddon/' : '/3daddon/',
+    alt: { zh: '/3daddon/', en: '/en/3daddon/' },
+    ogImage: addonOg(ADDONS[0]),
+    jsonld: {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: isEn() ? 'Blender Add-ons' : 'Blender 外掛',
+      description: desc,
+      url: `${SITE_ORIGIN}${isEn() ? '/en/3daddon/' : '/3daddon/'}`,
+      author: PERSON_LD,
+      hasPart: ADDONS.map(addonApp),
+    },
+  });
+}
+
 // ---------- About ----------
 // 站主本人肖像（originals\about\ 進產線）；About 頁與首頁 about teaser 共用同一張
 const ABOUT_PORTRAIT = 'photos/about-portrait.webp';
@@ -1179,10 +1409,10 @@ function aboutPage() {
   ].map((r) =>
     `      <p><b>${esc(isEn() ? (EN.about.brandLabels[r.k] || r.k) : r.k)}</b><span class="bd">${isEn() ? esc(r.vEn) : seg(r.v)}</span></p>`
   ).join('\n');
-  const main = `<main class="page" data-screen-label="10 About">
+  const main = `<main class="page" data-screen-label="11 About">
   <div class="fade-up page-head" style="transition-delay:0ms">
     <div class="eyebrow">
-      <span class="n">09</span>
+      <span class="n">10</span>
       <span class="flow-line in" style="width:56px"></span>
       <span>Photographer · 3D Creator</span>
     </div>
@@ -1210,6 +1440,12 @@ ${brandRows}
     <h3>${esc(isEn() ? EN.about.exhibitsHead : '展覽・出版・課程')}</h3>
     <ul>
 ${li(isEn() ? EN.about.exhibits : zhExhibits)}
+    </ul>
+
+    <h3>${isEn() ? 'Blender add-ons' : 'Blender 外掛'}</h3>
+    <ul>
+      <li><a href="../3daddon/">Studio Shapers</a>${isEn() ? ': studio lighting gear for Cycles, built as real geometry' : '：Cycles 用的棚拍打光器材，真的幾何體'}</li>
+      <li><a href="../3daddon/">Final Quality Pipeline</a>${isEn() ? ': samples, bounces and denoise for the final render' : '：取樣、彈跳與出片降噪'}</li>
     </ul>
 
     <div class="stats">
@@ -1286,14 +1522,16 @@ function notFoundPage() {
 }
 
 // ---------- 附屬檔 ----------
-const PAGE_URLS = ['/', ...SECTIONS.map((s) => `/${slugOf(s.id)}/`), '/work/', '/about/'];
+const PAGE_URLS = ['/', ...SECTIONS.map((s) => `/${slugOf(s.id)}/`), '/work/', '/3daddon/', '/about/'];
+// static\ 的外掛六頁（手冊中英＋商品頁）：沒有 /en/ 對應，單獨列；priority 照中文子頁 0.8
+const ADDON_STATIC_URLS = Object.values(ADDON_STATIC_SEO).map((s) => s.path);
 // 英文版十頁全數進 sitemap（S29）：優先權比照中文對應頁再降一階（/en/ 給 0.9、其餘 0.7），
 // 表達「中文是原生語版」——與 hreflang 的 x-default 指中文版同一個訊號。
 const PAGE_URLS_EN = PAGE_URLS.map((u) => '/en' + u);
 
 function sitemapXml() {
   const today = new Date().toISOString().slice(0, 10);
-  const urls = [...PAGE_URLS, ...PAGE_URLS_EN].map((u) =>
+  const urls = [...PAGE_URLS, ...PAGE_URLS_EN, ...ADDON_STATIC_URLS].map((u) =>
     `  <url>\n    <loc>${SITE_ORIGIN}${u}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${u === '/' ? '1.0' : u === '/en/' ? '0.9' : u.startsWith('/en/') ? '0.7' : '0.8'}</priority>\n  </url>`
   ).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
@@ -1318,6 +1556,7 @@ function llmsTxt() {
 - [首頁 Home](${SITE_ORIGIN}/)：作品集總覽，七個系列與工作、關於。
 ${lines.join('\n')}
 - [Work 工作](${SITE_ORIGIN}/work/)：品牌合作與商業專案。
+- [Add-ons 外掛](${SITE_ORIGIN}/3daddon/)：Blender 外掛入口頁。
 - [About 關於我](${SITE_ORIGIN}/about/)：簡介、合作品牌、展覽出版與聯絡方式。
 
 ## English (/en/)
@@ -1327,6 +1566,11 @@ ${lines.join('\n')}
 ${SECTIONS.map((s) => `- [${s.en}](${SITE_ORIGIN}/en/${slugOf(s.id)}/): ${oneLine(EN.sections[s.id].lede)}`).join('\n')}
 - [Home](${SITE_ORIGIN}/en/): portfolio overview — seven series plus Work and About.
 - [Work](${SITE_ORIGIN}/en/work/): ${oneLine(EN.home.workLede)}
+- [Blender Add-ons](${SITE_ORIGIN}/en/3daddon/): entry page for the Blender add-ons below.
+
+## Blender add-ons
+
+${ADDONS.map((a) => { const p = addonPaths(a); return `- ${a.name}: ${a.blurb.en} [Product page](${SITE_ORIGIN}${p.product}) · [Manual](${SITE_ORIGIN}${p.manualEn}) · [手冊](${SITE_ORIGIN}${p.manualZh}) · [Superhive](${a.superhive})`; }).join('\n')}
 - [About](${SITE_ORIGIN}/en/about/): biography, collaborations, exhibitions and contact.
 
 ## Contact
@@ -1354,7 +1598,27 @@ function ogSpecs() {
   ];
 }
 
+/* 外掛頁的分享圖（2026-10-29）：來源是商品頁的 2:1 主圖，裁成 1200×630（X／FB 大卡片的比例），
+   不走上面的方形。輸出跟著 photos\og\ 進版控，所以缺 sharp 的機器也有現成檔；連現成檔都沒有
+   就讓 addonStaticHead 擋下來，不發一個指向不存在圖片的 og:image。 */
+const OG_ADDON_W = 1200, OG_ADDON_H = 630;
+
+async function generateAddonOg() {
+  if (!sharp) return;
+  fs.mkdirSync(OG_DIR, { recursive: true });
+  for (const a of ADDONS) {
+    const srcAbs = path.join(ROOT, 'static', a.hero);
+    const outAbs = path.join(ROOT, addonOg(a));
+    if (!fs.existsSync(srcAbs)) throw new Error('外掛 og 來源缺檔：static\\' + a.hero);
+    if (fs.existsSync(outAbs) && fs.statSync(srcAbs).mtimeMs <= fs.statSync(outAbs).mtimeMs) continue;
+    await sharp(srcAbs).resize(OG_ADDON_W, OG_ADDON_H, { fit: 'cover', position: 'centre' })
+      .jpeg({ quality: 85 }).toFile(outAbs);
+    console.log('外掛 og 分享圖：' + addonOg(a));
+  }
+}
+
 async function generateOgImages() {
+  await generateAddonOg();
   if (!sharp) return;   // 警告已在 require 失敗當下印過
   fs.mkdirSync(OG_DIR, { recursive: true });
   let made = 0, skipped = 0, missing = 0;
@@ -1408,6 +1672,7 @@ async function build() {
     written.push(write(`${slugOf(s.id)}/index.html`, categoryPage(s, labels[s.id])));
   }
   written.push(write('work/index.html', workPage()));
+  written.push(write('3daddon/index.html', addonsPage()));
   written.push(write('about/index.html', aboutPage()));
   written.push(write('404.html', notFoundPage()));
 
@@ -1421,6 +1686,7 @@ async function build() {
       written.push(write(`en/${slugOf(s.id)}/index.html`, categoryPage(s, labels[s.id])));
     }
     written.push(write('en/work/index.html', workPage()));
+    written.push(write('en/3daddon/index.html', addonsPage()));
     written.push(write('en/about/index.html', aboutPage()));
     written.push(write('en/404.html', notFoundPage()));
   } finally {
@@ -1498,7 +1764,7 @@ async function build() {
 
   /* static\ 整棵原樣複製（W3d-1a 2026-10-08）：不經模板的獨立頁面住這裡，路徑照搬
      （static\3daddon\fqp\… → dist\3daddon\fqp\…＝FQP 手冊與商品頁）。
-     這些頁面不進 sitemap.xml／llms.txt，也不參與字型子集與 ?v= 指紋。
+     不參與字型子集與 ?v= 指紋。外掛六頁例外：head 由 ADDON_STATIC_SEO 補過、也進 sitemap／llms.txt（2026-10-29）。
      不可覆蓋 dist 既有的任何檔：先整批查衝突，有就中止；複製再用 COPYFILE_EXCL 保一層。
      static\ 不存在就整段跳過，build 不失敗。 */
   let staticBytes = 0, staticFiles = 0;
@@ -1518,12 +1784,21 @@ async function build() {
       throw new Error('static\\ 與 dist 既有檔案衝突，中止（不覆蓋）：\n  '
         + clash.map((p) => path.relative(ROOT, p).replace(/\\/g, '/')).join('\n  '));
     }
+    const seoLeft = new Set(Object.keys(ADDON_STATIC_SEO));
     for (const p of staticList) {
-      const out = path.join(DIST, path.relative(staticDir, p));
+      const rel = path.relative(staticDir, p).replace(/\\/g, '/');
+      const out = path.join(DIST, rel);
       fs.mkdirSync(path.dirname(out), { recursive: true });
-      fs.copyFileSync(p, out, fs.constants.COPYFILE_EXCL);
+      if (ADDON_STATIC_SEO[rel]) {
+        // 外掛六頁：換 head 再寫（'wx'＝與 COPYFILE_EXCL 同樣不覆蓋）；其餘檔原樣複製
+        fs.writeFileSync(out, addonStaticHead(fs.readFileSync(p, 'utf8'), rel, ADDON_STATIC_SEO[rel]), { encoding: 'utf8', flag: 'wx' });
+        seoLeft.delete(rel);
+      } else {
+        fs.copyFileSync(p, out, fs.constants.COPYFILE_EXCL);
+      }
       staticBytes += fs.statSync(out).size; staticFiles++;
     }
+    if (seoLeft.size) throw new Error('ADDON_STATIC_SEO 列了但 static\\ 裡沒有：' + [...seoLeft].join(', '));
   }
 
   // 報告
@@ -1538,7 +1813,7 @@ async function build() {
   console.log(`  ${String((photoBytes / 1024).toFixed(1)).padStart(8)} KB  photos/ (${nPhotos} 檔，含 dz 切片)`);
   if (vendorFiles) console.log(`  ${String((vendorBytes / 1024).toFixed(1)).padStart(8)} KB  vendor/ (${vendorFiles} 檔，按需載入不計首屏)`);
   if (videoFiles) console.log(`  ${String((videoBytes / 1024).toFixed(1)).padStart(8)} KB  video/ (${videoFiles} 檔，hero 影片，load 之後才拉不計首屏)`);
-  if (staticFiles) console.log(`  ${String((staticBytes / 1024).toFixed(1)).padStart(8)} KB  static/ (${staticFiles} 檔，原樣複製；獨立頁面，不進 sitemap／llms.txt)`);
+  if (staticFiles) console.log(`  ${String((staticBytes / 1024).toFixed(1)).padStart(8)} KB  static/ (${staticFiles} 檔，原樣複製；外掛六頁補 head 並進 sitemap)`);
   console.log(`合計（不含照片）${total.toFixed(1)} KB；含照片 ${((total * 1024 + photoBytes) / 1048576).toFixed(1)} MB`);
   console.log(`SITE_ORIGIN = ${SITE_ORIGIN}`);
 }

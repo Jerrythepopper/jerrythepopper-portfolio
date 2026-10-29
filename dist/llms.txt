@@ -13,6 +13,7 @@
 - [Film 底片](https://www.jerrythepopper.com/film/)：底片的驚喜，在於拍完時常會忘記當下的畫面。
 - [Taipei Wholesale Market 果菜市場](https://www.jerrythepopper.com/market/)：輪轉（liàn-tńg）— 台北第一果菜批發市場紀實計畫。
 - [Work 工作](https://www.jerrythepopper.com/work/)：品牌合作與商業專案。
+- [Add-ons 外掛](https://www.jerrythepopper.com/3daddon/)：Blender 外掛入口頁。
 - [About 關於我](https://www.jerrythepopper.com/about/)：簡介、合作品牌、展覽出版與聯絡方式。
 
 ## English (/en/)
@@ -28,6 +29,12 @@
 - [Taipei Wholesale Market](https://www.jerrythepopper.com/en/market/): Lian-tng, the turning of wheels: a documentary project inside the Taipei First Wholesale Fruit and Vegetable Market.
 - [Home](https://www.jerrythepopper.com/en/): portfolio overview — seven series plus Work and About.
 - [Work](https://www.jerrythepopper.com/en/work/): Selected brand collaborations and commissioned work.
+- [Blender Add-ons](https://www.jerrythepopper.com/en/3daddon/): entry page for the Blender add-ons below.
+
+## Blender add-ons
+
+- Studio Shapers: Softboxes, grids, snoots, flags and scrims built as real meshes, brightness in stops against your main light, a top map for placing lights, and 14 setups that scale to your subject. [Product page](https://www.jerrythepopper.com/3daddon/studio-shapers/product/) · [Manual](https://www.jerrythepopper.com/3daddon/studio-shapers/) · [手冊](https://www.jerrythepopper.com/3daddon/studio-shapers/zh.html) · [Superhive](https://superhivemarket.com/products/studio-shapers)
+- Final Quality Pipeline: Finds how many samples and bounces your scene needs, then builds the denoise for the final render. Temporal Denoise steadies animation frames already on disk. [Product page](https://www.jerrythepopper.com/3daddon/fqp/product/) · [Manual](https://www.jerrythepopper.com/3daddon/fqp/) · [手冊](https://www.jerrythepopper.com/3daddon/fqp/zh.html) · [Superhive](https://superhivemarket.com/products/final-quality-pipeline)
 - [About](https://www.jerrythepopper.com/en/about/): biography, collaborations, exhibitions and contact.
 
 ## Contact
