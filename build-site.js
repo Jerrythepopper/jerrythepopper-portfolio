@@ -1007,13 +1007,21 @@ ${flowRuleHTML()}
 ${s.id === '3d' ? addonXlink() : ''}${nextSeriesBlock(s)}
 </main>`;
 
-  // nature 頁改用專屬 SEO description（英文開場句 + 定稿中文前 60 字），非套用預設 subtitle/lede 生成規則
+  // 中文版：nature/street/hasselblad/film/market 各有專屬 SEO description（11-04 定稿，見下方分支註解），其餘照 subtitle/lede 的 clip 規則
   // 英文版：3D 頁有站主指定的專屬 title/desc（文案檔 Meta 節），其餘照同一套 clip 規則走英文 subtitle
   const desc = isEn()
     ? (s.id === '3d' ? EN.meta.threeDDesc
       : clip(oneLine(EN.sections[s.id].subtitle || EN.sections[s.id].lede), 155))
+    /* 11-04 站主核准：哈蘇/自然/底片/果菜市場與街拍同一招——「這是什麼」放最前，素材取站主系列
+       文案與 About 原句（自然頁原本開頭是英文句,中文頁搜尋結果看起來怪,一併換掉） */
+    : s.id === 'hasselblad'
+    ? '台北攝影師洪立楷與哈蘇的兩次合作作品：人像、街景、風景與更私密的視角，並可用 Deep Zoom 放大檢視原始解析度細節。'
     : s.id === 'nature'
-    ? 'Tall clouds, open sea, old trees, mountains. I try to keep a record of how they look. ' + s.subtitle.slice(0, 60)
+    ? '台北攝影師洪立楷的自然風景作品：高聳的雲、無邊際的海、百年的樹與山脈。我喜歡走進山裡，等待光落在稜線、雲海或森林上的那一刻。'
+    : s.id === 'film'
+    ? '台北攝影師洪立楷的底片攝影作品。底片的驚喜，在於拍完時常會忘記當下的畫面；化學顯影，解讀出與數位不同的樣貌。'
+    : s.id === 'market'
+    ? '「輪轉」是洪立楷在台北第一果菜批發市場的紀實攝影計畫，記錄改建前市場裡的人們、文化與建築，並已集資出版攝影集。'
     : s.id === '3d'
     ? '攝影與 3D 的邊界實驗——台灣 3D 視覺創作、CGI 場景設計與虛實整合作品。'
     // 人像頁 subtitle 只有 22 字、不含任何搜尋詞：前面補一句定位，站主原句一字不改接在後面
@@ -1028,6 +1036,10 @@ ${s.id === '3d' ? addonXlink() : ''}${nextSeriesBlock(s)}
     ? (s.id === '3d' ? EN.meta.threeDTitle : `${s.en} | ${EN.meta.siteSuffix}`)
     : s.id === '3d' ? '3D 視覺創作 CGI｜Jerrythepopper'
     : s.id === 'street' ? '街拍攝影作品集｜台北街頭 Street Photography｜Jerrythepopper'
+    : s.id === 'hasselblad' ? '哈蘇 Hasselblad 攝影作品｜品牌合作｜Jerrythepopper'
+    : s.id === 'nature' ? '自然風景攝影作品｜高山・雲海・森林｜Jerrythepopper'
+    : s.id === 'film' ? '底片攝影作品｜Film Photography｜Jerrythepopper'
+    : s.id === 'market' ? '輪轉：台北第一果菜批發市場紀實攝影｜Jerrythepopper'
     : `${enZh(s)}｜Jerrythepopper Photography`;
   const zhPath = `/${slugOf(s.id)}/`;
   return shell({
