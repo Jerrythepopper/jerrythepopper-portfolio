@@ -16,11 +16,13 @@
 
    輸出（photos\）：
      {prefix}_{i}.avif / .webp          ← 主檔＝1600 tier（若原圖較小＝最大可用 tier）
-     {prefix}_{i}@{size}.avif / .webp   ← 其餘 tier（800 / 2560）
+     {prefix}_{i}@{size}.avif / .webp   ← 其餘 tier（800 / 2560；2560 只出 AVIF，見下）
      長邊 800 / 1600 / 2560 三檔；**絕不放大**（原圖長邊小於某 tier 就跳過該 tier，
      全部跳過時保底輸出一檔＝原生長邊）。
      品質：AVIF 60、WebP 82；2560 tier 各 +3 保細節，色度另加高（AVIF 4:4:4／
      WebP smartSubsample）——2560 是燈箱/大圖檔，色度不再抽樣。
+     WebP 封頂 1600（2026-11-04 站主核准）：2560 WebP 只服務不支援 AVIF 的少數瀏覽器，
+     全站 215 檔佔 168MB，GitHub Pages 1GB 上限吃緊 → 不再產出；那些瀏覽器燈箱退回 1600。
 
    色彩管理：輸入若內嵌 ICC profile（Adobe RGB／Display P3／相機空間…），一律先依該
      profile 轉換到 sRGB 再輸出；輸出不附 profile（見下方隱私），瀏覽器以 sRGB 判讀＝
@@ -70,6 +72,7 @@ const MAIN_TIER = 1600;                // 主檔（無 @ 後綴）優先綁這�
 const Q = { avif: 60, webp: 82 };      // 基礎品質
 const Q_BOOST_LARGE = 3;               // 2560 tier 加成（大檔要留細節）
 const HI_CHROMA_TIER = 2560;           // 這一 tier 起改用最高色度規格（同上，見檔頭）
+const WEBP_MAX_TIER = 1600;            // WebP 封頂（更大的 tier 只出 AVIF，見檔頭）
 const LQIP_W = 24;                     // blur-up 微型圖寬度
 
 const IN_EXT = /\.(jpe?g|png)$/i;       // 可轉檔的輸入（order.json 天然不在其中）
@@ -270,6 +273,7 @@ async function processOne(inFile, prefix, i) {
     const suffix = tier === mainTier ? '' : '@' + tier;
     const boost = tier >= 2560 ? Q_BOOST_LARGE : 0;
     for (const fmt of ['avif', 'webp']) {
+      if (fmt === 'webp' && tier > WEBP_MAX_TIER && tier !== mainTier) continue;
       const name = `${prefix}_${i}${suffix}.${fmt}`;
       const r = await encode(inFile, path.join(PHOTOS, name), tier, fmt, Q[fmt] + boost, src);
       entry.formats[fmt].push({ f: name, w: r.w, h: r.h, tier });
@@ -280,11 +284,11 @@ async function processOne(inFile, prefix, i) {
     }
   }
 
-  // 最大可用 tier（燈箱吃這個）
+  // 最大可用 tier（燈箱吃這個）；WebP 封頂後 webp 取它自己的最大一檔，w/h 描述 AVIF 那檔
   const maxTier = tiers[tiers.length - 1];
-  const pick = (fmt) => entry.formats[fmt].find((x) => x.tier === maxTier);
-  const mw = pick('webp');
-  entry.max = { tier: maxTier, avif: pick('avif').f, webp: mw.f, w: mw.w, h: mw.h };
+  const ma = entry.formats.avif.find((x) => x.tier === maxTier);
+  const mw = entry.formats.webp[entry.formats.webp.length - 1];
+  entry.max = { tier: maxTier, avif: ma.f, webp: mw.f, w: ma.w, h: ma.h };
 
   entry.lqip = await makeLqip(inFile, src);
   return { entry, bytes, nFiles, srcLong, tiers, src };

@@ -956,6 +956,9 @@ function categoryPage(s, screenLabel) {
     : '';
 
   const wide = s.layout === 'single';
+  /* 首屏不 lazy（2026-11-04 PSI：哈蘇頁 LCP 6.2s，LCP 元素＝第 0 張且帶 loading=lazy）：
+     第 0 張＝LCP → fetchpriority=high；masonry 桌機兩欄的第 1 張也在首屏 → eager；其餘照舊 lazy */
+  const firstFold = (i) => (i === 0 ? { priority: true } : i === 1 && !wide ? { loading: 'eager' } : {});
   const frames = photos.map((src, i) => {
     const dz = dzFor(i);
     const a = altOf(src, s.en + ' ' + (i + 1));
@@ -970,7 +973,7 @@ function categoryPage(s, screenLabel) {
     const e = mEntry(src);
     const ar = e && e.w && e.h ? `;--ar:${(e.h / e.w).toFixed(4)}` : '';
     return `  <button type="button" class="gframe${dz ? ' has-dz' : ''}" style="${lqipBg(src)}${ar}"${fullAttrs(src, rel)}${dzAttr}>
-    ${pictureTag(src, rel, { alt: a, sizes: wide ? SIZES.single : SIZES.masonry })}${badge}
+    ${pictureTag(src, rel, { alt: a, sizes: wide ? SIZES.single : SIZES.masonry, ...firstFold(i) })}${badge}
   </button>`;
   }).join('\n');
 
