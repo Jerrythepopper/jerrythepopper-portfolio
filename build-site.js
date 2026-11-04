@@ -1017,12 +1017,18 @@ ${s.id === '3d' ? addonXlink() : ''}${nextSeriesBlock(s)}
     : s.id === '3d'
     ? '攝影與 3D 的邊界實驗——台灣 3D 視覺創作、CGI 場景設計與虛實整合作品。'
     // 人像頁 subtitle 只有 22 字、不含任何搜尋詞：前面補一句定位，站主原句一字不改接在後面
+    /* 街拍頁（11-04 站主核准）：GSC「街拍」一字佔全站 64% 點擊、均排 5.9——說明句把「這是什麼」
+       放最前，素材全取站主系列文案原句；頁面上的 subtitle 一字不動，只換搜尋結果那兩行 */
+    : s.id === 'street'
+    ? '台北攝影師洪立楷的街拍作品：建築間的光影、人與環境互動的樣貌、城市裡不起眼的角落。街拍，是我記錄與解讀各座城市的方式。'
     : s.id === 'portraits'
     ? clip('台北人像攝影作品集。' + oneLine(s.subtitle), 155)
     : clip(oneLine(s.subtitle || s.lede), 155);
   const pageTitle = isEn()
     ? (s.id === '3d' ? EN.meta.threeDTitle : `${s.en} | ${EN.meta.siteSuffix}`)
-    : s.id === '3d' ? '3D 視覺創作 CGI｜Jerrythepopper' : `${enZh(s)}｜Jerrythepopper Photography`;
+    : s.id === '3d' ? '3D 視覺創作 CGI｜Jerrythepopper'
+    : s.id === 'street' ? '街拍攝影作品集｜台北街頭 Street Photography｜Jerrythepopper'
+    : `${enZh(s)}｜Jerrythepopper Photography`;
   const zhPath = `/${slugOf(s.id)}/`;
   return shell({
     rel, linkRel: '../', langHref: lhref, current: s.id, main,
