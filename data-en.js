@@ -136,7 +136,7 @@
 
     // ---------- Meta（文案檔「Meta（英文版 SEO）」節） ----------
     meta: {
-      homeTitle: 'Jerrythepopper | Taipei Photographer & 3D Artist | Portraits, Film & 3D Portfolio',
+      homeTitle: 'Jerrythepopper | Taipei Photographer & 3D Artist Portfolio',
       homeDesc: 'Portfolio of Taipei photographer and 3D artist Jerry Hong (Jerrythepopper): portraits, street, film and nature photography alongside 3D visual work. Collaborations with Hasselblad, Leica and Sony. Based in Taipei, available worldwide.',
       threeDTitle: '3D & CGI Visual Work | Jerrythepopper',
       threeDDesc: 'Experiments on the border of photography and 3D: CGI scene design and mixed-reality visual work from Taipei.',

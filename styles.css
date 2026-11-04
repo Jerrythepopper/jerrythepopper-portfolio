@@ -888,7 +888,7 @@ button { font: inherit; letter-spacing: inherit; }
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
-.foot h4 {
+.foot h2 {
   font-family: var(--font-sans);
   font-size: 10px;
   font-weight: 500;

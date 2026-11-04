@@ -638,13 +638,13 @@ function footer(rel) {
       </div>
     </div>
     <div>
-      <h4>Series</h4>
+      <h2>Series</h2>
       <ul>
 ${series}
       </ul>
     </div>
     <div>
-      <h4>Office</h4>
+      <h2>Office</h2>
       <ul>
         <li><a href="${rel}work/">${isEn() ? 'Work' : 'Work 工作'}</a></li>
         <li><a href="${rel}3daddon/">${isEn() ? 'Blender Add-ons' : 'Add-ons 外掛'}</a></li>
@@ -652,7 +652,7 @@ ${series}
       </ul>
     </div>
     <div>
-      <h4>Connect</h4>
+      <h2>Connect</h2>
       <ul>
         <li><a href="https://www.instagram.com/jerrythepopper" target="_blank" rel="noopener noreferrer">Instagram ↗</a></li>
         <li><a href="mailto:jerrythepopper@gmail.com">Email ↗</a></li>
@@ -1001,6 +1001,9 @@ ${s.id === '3d' ? addonXlink() : ''}${nextSeriesBlock(s)}
     ? 'Tall clouds, open sea, old trees, mountains. I try to keep a record of how they look. ' + s.subtitle.slice(0, 60)
     : s.id === '3d'
     ? '攝影與 3D 的邊界實驗——台灣 3D 視覺創作、CGI 場景設計與虛實整合作品。'
+    // 人像頁 subtitle 只有 22 字、不含任何搜尋詞：前面補一句定位，站主原句一字不改接在後面
+    : s.id === 'portraits'
+    ? clip('台北人像攝影作品集。' + oneLine(s.subtitle), 155)
     : clip(oneLine(s.subtitle || s.lede), 155);
   const pageTitle = isEn()
     ? (s.id === '3d' ? EN.meta.threeDTitle : `${s.en} | ${EN.meta.siteSuffix}`)
@@ -1022,6 +1025,18 @@ ${s.id === '3d' ? addonXlink() : ''}${nextSeriesBlock(s)}
       url: `${SITE_ORIGIN}${isEn() ? '/en' + zhPath : zhPath}`,
       author: PERSON_LD,
       numberOfItems: photos.length,
+      /* 逐張 ImageObject：Google 圖片搜尋的「可授權」標章看 creator/creditText/copyrightNotice
+         ＋ license 或 acquireLicensePage 其一。contentUrl 必須等於頁面 <img src>（picture 的
+         退路 webp 主檔），Google 才會把這組 metadata 對到那張圖。授權洽詢導向 About（聯絡方式在那頁）。 */
+      image: photos.map((src, i) => ({
+        '@type': 'ImageObject',
+        contentUrl: `${SITE_ORIGIN}/${src}`,
+        caption: altOf(src, s.en + ' ' + (i + 1)),
+        creator: { '@type': 'Person', name: PERSON_LD.name },
+        creditText: PERSON_LD.alternateName,
+        copyrightNotice: `© ${PERSON_LD.name}`,
+        acquireLicensePage: `${SITE_ORIGIN}${isEn() ? '/en/about/' : '/about/'}`,
+      })),
     },
   });
 }
@@ -1304,7 +1319,7 @@ function addonsPage() {
     const manual = isEn() ? p.manualEn : p.manualZh;
     return `  <article class="fade-up addon-card" style="transition-delay:0ms">
     <a class="addon-media" href="${rel}${p.product.slice(1)}" tabindex="-1" aria-hidden="true">
-      <img src="${rel}${esc(a.hero)}" alt="" width="2560" height="1280" loading="lazy" decoding="async">
+      <img src="${rel}${esc(a.hero)}" alt="${esc(a.name)} ${isEn() ? 'render' : '渲染畫面'}" width="2560" height="1280" loading="lazy" decoding="async">
     </a>
     <div class="addon-body">
       <p class="addon-kicker">${esc(a.kicker[L])}</p>
