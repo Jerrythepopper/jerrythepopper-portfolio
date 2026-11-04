@@ -329,8 +329,21 @@ const altOf = (src, fallback) => {
   if (!k) return fallback;
   return (isEn() && ALTS_EN[k]) || ALTS[k] || fallback;
 };
+/* 照片網址指紋（2026-11-04）：產線檔名照序號編（na_0、na_1…），換照片後同名檔換了內容，
+   而 /photos/ 在 Cloudflare 邊緣＋瀏覽器都快取 1 個月 → 新頁配到舊圖（11-04 Nature 實錄：
+   序號位移後同一張圖出現兩次）。網址一律帶 ?v=<內容雜湊 8 碼>，內容一變網址就變，跟
+   styles.css 的 ASSET_V 同一招；內容沒變的圖網址也不變，快取照樣命中。檔案不存在就原樣回傳。 */
+const _pv = new Map();
+function pv(p) {
+  if (_pv.has(p)) return _pv.get(p);
+  const f = path.join(ROOT, p);
+  let out = p;
+  if (fs.existsSync(f)) out = p + '?v=' + require('crypto').createHash('md5').update(fs.readFileSync(f)).digest('hex').slice(0, 8);
+  _pv.set(p, out);
+  return out;
+}
 const srcsetOf = (e, fmt, rel) =>
-  e.formats[fmt].map((x) => `${rel}photos/${x.f} ${x.w}w`).join(', ');
+  e.formats[fmt].map((x) => `${rel}${pv('photos/' + x.f)} ${x.w}w`).join(', ');
 
 /* pictureTag(src, rel, o)
    o: { alt, sizes, loading, cls, priority, deferred, extra }
@@ -350,7 +363,7 @@ function pictureTag(src, rel, o) {
   if (!e) {
     const d = jpegSize(path.join(ROOT, src));
     const dim = d ? ` width="${d.w}" height="${d.h}"` : '';
-    return `<img src="${esc(rel + src)}"${dim}${alt}${load} decoding="async"${cls}${o.extra || ''}>`;
+    return `<img src="${esc(rel + pv(src))}"${dim}${alt}${load} decoding="async"${cls}${o.extra || ''}>`;
   }
 
   const sizes = o.sizes && e.formats.webp.length > 1 ? ` sizes="${esc(o.sizes)}"` : '';
@@ -362,7 +375,7 @@ function pictureTag(src, rel, o) {
     .join('');
   // <picture> 吃 display:contents（patch.css），版面等同直接放 <img> ＝ 零版面變動
   return `<picture class="bu">${sources}` +
-    `<img ${S}="${esc(rel + 'photos/' + e.main)}" width="${e.w}" height="${e.h}"${alt}${load}` +
+    `<img ${S}="${esc(rel + pv('photos/' + e.main))}" width="${e.w}" height="${e.h}"${alt}${load}` +
     ` decoding="async" class="bu-img${o.cls ? ' ' + o.cls : ''}"` +
     ` onload="this.classList.add('is-loaded')"${o.extra || ''}></picture>`;
 }
@@ -377,9 +390,9 @@ function lqipBg(src) {
 // 最大可用 tier（燈箱吃它）；沒有 manifest 條目就回原 src
 function fullAttrs(src, rel) {
   const e = mEntry(src);
-  if (!e || !e.max) return ` data-full="${esc(rel + src)}"`;
-  return ` data-full="${esc(rel + 'photos/' + e.max.webp)}"` +
-    ` data-full-avif="${esc(rel + 'photos/' + e.max.avif)}"` +
+  if (!e || !e.max) return ` data-full="${esc(rel + pv(src))}"`;
+  return ` data-full="${esc(rel + pv('photos/' + e.max.webp))}"` +
+    ` data-full-avif="${esc(rel + pv('photos/' + e.max.avif))}"` +
     ` data-full-w="${e.max.w}" data-full-h="${e.max.h}" data-full-tier="${e.max.tier}"`;
 }
 
@@ -387,13 +400,13 @@ function fullAttrs(src, rel) {
 // 前一行純 url() 是不支援 image-set 的瀏覽器的退路（後宣告覆蓋先宣告）
 function bgImage(src, rel) {
   const e = mEntry(src);
-  const webp = `url('${rel}${src}')`;
+  const webp = `url('${rel}${pv(src)}')`;
   if (!e || !e.formats.avif || !e.formats.avif.length) return `background-image:${webp}`;
   const avif = e.formats.avif[e.formats.avif.length - 1].f;
   const wf = e.formats.webp[e.formats.webp.length - 1].f;
   return `background-image:${webp};background-image:image-set(` +
-    `url('${rel}photos/${avif}') type('image/avif'),` +
-    `url('${rel}photos/${wf}') type('image/webp'))`;
+    `url('${rel}${pv('photos/' + avif)}') type('image/avif'),` +
+    `url('${rel}${pv('photos/' + wf)}') type('image/webp'))`;
 }
 
 /* work-featured 的兩塊精選磚：背景掛在 ::before 偽元素上（styles.css:626），偽元素拿不到
@@ -404,13 +417,13 @@ function bgImage(src, rel) {
    @supports 決定要不要換上後者。styles.css 原檔零觸及。 */
 function bgVars(n, src, rel) {
   const e = mEntry(src);
-  const webp = `url('${rel}${src}')`;
+  const webp = `url('${rel}${pv(src)}')`;
   if (!e || !e.formats.avif || !e.formats.avif.length) return `--bg-${n}:${webp}`;
   const avif = e.formats.avif[e.formats.avif.length - 1].f;
   const wf = e.formats.webp[e.formats.webp.length - 1].f;
   return `--bg-${n}:${webp};--bg-${n}s:image-set(` +
-    `url('${rel}photos/${avif}') type('image/avif'),` +
-    `url('${rel}photos/${wf}') type('image/webp'))`;
+    `url('${rel}${pv('photos/' + avif)}') type('image/avif'),` +
+    `url('${rel}${pv('photos/' + wf)}') type('image/webp'))`;
 }
 
 // 導覽列（frosted 與 footer 共用）
@@ -1032,7 +1045,7 @@ ${s.id === '3d' ? addonXlink() : ''}${nextSeriesBlock(s)}
          退路 webp 主檔），Google 才會把這組 metadata 對到那張圖。授權洽詢導向 About（聯絡方式在那頁）。 */
       image: photos.map((src, i) => ({
         '@type': 'ImageObject',
-        contentUrl: `${SITE_ORIGIN}/${src}`,
+        contentUrl: `${SITE_ORIGIN}/${pv(src)}`,
         caption: altOf(src, s.en + ' ' + (i + 1)),
         creator: { '@type': 'Person', name: PERSON_LD.name },
         creditText: PERSON_LD.alternateName,
