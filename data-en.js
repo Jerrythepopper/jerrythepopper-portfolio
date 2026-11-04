@@ -38,19 +38,19 @@
       },
       portraits: {
         lede: 'Pictures of my friends, and the people who matter, the way they are.',
-        subtitle: 'I like taking pictures of my friends, and the people who matter to me, the way they are.',
+        subtitle: 'I like working with natural light, and with the light and shadow found on the street and out in nature, to capture beautiful moments of my friends and the people who matter to me.',
       },
       street: {
         lede: 'Street photography is how I read a city.',
-        subtitle: 'Since I first picked up a camera, I have loved catching scenes of people on the street. Everyone reads the world their own way. Street photography is how I read each city.',
+        subtitle: 'Since I first picked up a camera, I have loved catching scenes of people on the street: light and shadow between buildings, the way people interact with each other and their surroundings, even the corners most people walk past. Everyone reads the world their own way. Street photography is how I record and read each city, and perhaps a way to keep a record of what this era looks like.',
       },
       nature: {
         lede: 'Nature keeps stunning me, so I do my best to keep a record of them.',
-        subtitle: 'Nature keeps stunning me: towering clouds, the open sea, trees that have stood for hundreds of years, mountains that hold countless lives. I like to glimpse their beauty and note down how they look.',
+        subtitle: 'Nature keeps stunning me: towering clouds, the open sea, trees that have stood for hundreds of years, mountains that hold countless lives. I like heading into the mountains and waiting for the moment light falls on a ridge, a sea of clouds or a forest, then keeping a record of how it looks.',
       },
       '3d': {
         lede: 'Exploring the edge between photography and 3D.',
-        subtitle: 'I like exploring the border between photography and 3D, and the possibilities that open up inside virtual worlds.',
+        subtitle: 'I like exploring the border between photography and 3D, and trying out what virtual worlds make possible: placing 3D objects into my photographs, blending photographs with 3D environments, or building the worlds I love in 3D and capturing them through a photographer\'s eye. Most of this work is made in Blender.',
       },
       film: {
         lede: 'The surprise of film is that I often forget the frame by the time it comes back.',
