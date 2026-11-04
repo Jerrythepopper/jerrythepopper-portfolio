@@ -884,7 +884,7 @@ ${SECTIONS.map((s, i) => categorySection(s, i, rel)).join('\n' + rule + '\n')}
 ${rule}
 ${teaser({
     label: '08 Work', cls: ' _alt', reverse: false, href: 'work/', num: '08', rel,
-    cover: PHOTOS.hasselblad[7], alt: 'Work', eyebrow: 'Selected · 2023 — 2026',
+    cover: PHOTOS.hasselblad[7], alt: 'Work', eyebrow: 'Selected · 2022 — 2026',
     h2en: 'Work', h2zh: '工作',
     lede: isEn() ? EN.home.workLede : '品牌合作與商業工作精選。',
     metas: ['Hasselblad', 'Leica', 'Sony', 'Oppo', 'Goopi', 'Reto'], cta: 'View work',
@@ -1061,22 +1061,24 @@ ${s.id === '3d' ? addonXlink() : ''}${nextSeriesBlock(s)}
      'work/<slug>'  ← 該案子的專屬磚圖（originals\work\ 進產線，photos\work\<slug>.avif|webp）
      '<prefix>_<n>' ← 向某系列借第 N 張（目前只剩 Yotta 底片課程沒有專屬圖，借底片第一張）
    借圖那條保留是有原因的：ingest-photos.js 的 checkIndexRefs 會掃這個字面樣式，
-   確保借的索引沒有超出該系列現有張數。 */
+   確保借的索引沒有超出該系列現有張數。
+   y＝年份、d＝「我做了什麼」一行（站主 2026-11-04 口述定稿）；磚上顯示「y · d」，
+   沒有 d 才退回分類標籤 c。y 留空＝站主記不得年份，就只顯示 d。英文 d 走 EN.work.descs。 */
 const WORK_TILES = [
-  { url: 'https://www.instagram.com/p/DYRy7e2meZS/?igsh=MWIzdTU0NjZuN2FzdA==', t: 'OPPO Find X9 Ultra', c: '品牌形象拍攝', src: 'work/oppo' },
-  { url: 'https://www.instagram.com/p/DUDZPGbE53K/?igsh=MTAxYnQ3Mzd2Z2czag==', t: 'Hasselblad × Jerry', c: '品牌合作計畫', src: 'work/hasselblad-jerry' },
-  { url: 'https://www.instagram.com/reel/DCB6M24IH6T/?igsh=MW11YTU4eGk5b2p2dA==', t: 'Goopi 2024', c: '品牌形象動畫', src: 'work/goopi-2024' },
-  { url: 'https://www.instagram.com/p/DTurh4DkX3V/?igsh=MXY2MDFqNGY3YW1nbQ==', t: 'GIANT', c: '品牌形象動畫', src: 'work/giant' },
-  { url: 'https://www.instagram.com/p/CygDcVGSBuS/?igsh=bThtcnozbnFmeTMw', t: 'Goopi 2023', c: '品牌形象合作', src: 'work/goopi-2023' },
-  { url: 'https://www.instagram.com/p/DVhoPFdmned/', t: 'Giant Liv', c: '品牌形象動畫', src: 'work/giant-liv' },
-  { url: 'https://www.instagram.com/p/DWoPExxmdXd/?img_index=2', t: '新光攝影展講座', c: '攝影展覽講座', src: 'work/shinkong' },
-  { url: 'https://www.instagram.com/p/CjK7UdTJl36/?img_index=1', t: 'Rolls-Royce', c: '品牌形象拍攝', src: 'work/rolls-royce' },
-  { url: 'https://www.instagram.com/reel/DJ6w-6ah0QN/?igsh=ZGs3MjFnM3o5NTdz', t: 'Reto 相機', c: '產品動畫製作', src: 'work/reto' },
-  { url: 'https://www.instagram.com/p/Cl3lNf9h8cm/?igsh=MTlqcXhudWUyZHBvag==', t: 'TEDxChungChengU', c: '品牌演講活動', src: 'work/tedx' },
-  { url: 'https://www.youtube.com/watch?v=S7ng0s7i1FE', t: 'Sony YouTube', c: '品牌影片內容', src: 'work/sony-yt' },
-  { url: 'https://www.yottau.com.tw/course/intro/1421#intro', t: 'Yotta 底片課程', c: '線上攝影課程', src: 'fm_0' },
-  { url: 'https://www.instagram.com/p/C1GslZYBrSX/?img_index=1&igsh=MXdoNmE0eGNmNWo1cA==', t: '晶悅建設', c: '品牌形象拍攝', src: 'work/jingyue' },
-  { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?story_media_id=3239957459305757128&igsh=MXhhZnRoamoxc2QxZw==', t: '仁發建設', c: '品牌形象拍攝', src: 'work/renfa' },
+  { url: 'https://www.instagram.com/p/DYRy7e2meZS/?igsh=MWIzdTU0NjZuN2FzdA==', t: 'OPPO Find X9 Ultra', c: '品牌形象拍攝', src: 'work/oppo', y: '2026', d: '新機形象與社群合作' },
+  { url: 'https://www.instagram.com/p/DUDZPGbE53K/?igsh=MTAxYnQ3Mzd2Z2czag==', t: 'Hasselblad × Jerry', c: '品牌合作計畫', src: 'work/hasselblad-jerry', y: '2025 — 2026', d: '品牌社群合作' },
+  { url: 'https://www.instagram.com/reel/DCB6M24IH6T/?igsh=MW11YTU4eGk5b2p2dA==', t: 'Goopi 2024', c: '品牌形象動畫', src: 'work/goopi-2024', y: '2024', d: '品牌周年 3D 動畫製作' },
+  { url: 'https://www.instagram.com/p/DTurh4DkX3V/?igsh=MXY2MDFqNGY3YW1nbQ==', t: 'GIANT', c: '品牌形象動畫', src: 'work/giant', y: '2025', d: '品牌新品 3D 動畫製作' },
+  { url: 'https://www.instagram.com/p/CygDcVGSBuS/?igsh=bThtcnozbnFmeTMw', t: 'Goopi 2023', c: '品牌形象合作', src: 'work/goopi-2023', y: '2023', d: '品牌周年 3D 動畫製作' },
+  { url: 'https://www.instagram.com/p/DVhoPFdmned/', t: 'Giant Liv', c: '品牌形象動畫', src: 'work/giant-liv', y: '2026', d: '品牌新品 3D 動畫製作' },
+  { url: 'https://www.instagram.com/p/DWoPExxmdXd/?img_index=2', t: '新光攝影展講座', c: '攝影展覽講座', src: 'work/shinkong', y: '2026', d: '新光攝影獎講師' },
+  { url: 'https://www.instagram.com/p/CjK7UdTJl36/?img_index=1', t: 'Rolls-Royce', c: '品牌形象拍攝', src: 'work/rolls-royce', y: '2022', d: '品牌新車巡迴攝影' },
+  { url: 'https://www.instagram.com/reel/DJ6w-6ah0QN/?igsh=ZGs3MjFnM3o5NTdz', t: 'Reto 相機', c: '產品動畫製作', src: 'work/reto', y: '2025', d: '品牌新品 3D 動畫製作' },
+  { url: 'https://www.instagram.com/p/Cl3lNf9h8cm/?igsh=MTlqcXhudWUyZHBvag==', t: 'TEDxChungChengU', c: '品牌演講活動', src: 'work/tedx', y: '2022', d: '講者' },
+  { url: 'https://www.youtube.com/watch?v=S7ng0s7i1FE', t: 'Sony YouTube', c: '品牌影片內容', src: 'work/sony-yt', y: '2025', d: 'Sony 台灣 YouTube 頻道合作攝影師' },
+  { url: 'https://www.yottau.com.tw/course/intro/1421#intro', t: 'Yotta 底片課程', c: '線上攝影課程', src: 'fm_0', y: '', d: '線上底片攝影課程' },
+  { url: 'https://www.instagram.com/p/C1GslZYBrSX/?img_index=1&igsh=MXdoNmE0eGNmNWo1cA==', t: '晶悅建設', c: '品牌形象拍攝', src: 'work/jingyue', y: '', d: '建案室內空間攝影' },
+  { url: 'https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?story_media_id=3239957459305757128&igsh=MXhhZnRoamoxc2QxZw==', t: '仁發建設', c: '品牌形象拍攝', src: 'work/renfa', y: '', d: '建案室內空間攝影' },
 ];
 
 /* Work 磚牆後的「找我合作」出口（站主 2026-08-11 核准）。頁尾那條 .foot-hire 是
@@ -1109,6 +1111,8 @@ function workPage() {
   // 磚的分類標籤走對照表（data-en.js）；查無對照就原樣輸出。磚的專案標題（w.t）不譯
   // ——與「合作品牌名本身不譯」同一條裁示（_content-en-draft.md）。
   const catOf = (c) => (isEn() ? (EN.work.cats[c] || c) : c);
+  const descOf = (d) => (isEn() ? (EN.work.descs[d] || d) : d);
+  const lineOf = (w) => (w.d ? (w.y ? w.y + ' · ' : '') + descOf(w.d) : catOf(w.c));
   const tiles = WORK_TILES.map((w) => {
     const photoSrc = tileSrc(w.src);
     const linkLabel = w.url.includes('youtube.com') ? 'YouTube' : w.url.includes('yottau.com') ? 'YottaU' : 'Instagram';
@@ -1117,35 +1121,36 @@ function workPage() {
     <div class="ig">${linkLabel} ↗</div>
     <div class="meta">
       <div class="t">${esc(w.t)}</div>
-      <div class="c">${esc(catOf(w.c))}</div>
+      <div class="c">${esc(lineOf(w))}</div>
     </div>
   </a>`;
   }).join('\n');
 
   const desc = isEn() ? clip(oneLine(EN.meta.workDesc), 155)
-    : clip(oneLine('Brand collaborations and editorial projects — 品牌合作與商業工作。Hasselblad、Leica、Sony、Oppo、Goopi、Reto，2020 — 2026。'), 155);
+    : clip(oneLine('Brand collaborations and editorial projects — 品牌合作與商業工作：形象照拍攝、室內攝影、3D 產品動畫、攝影講座與線上課程。Hasselblad、OPPO、Sony、GIANT、Goopi、Reto，2022 — 2026。'), 155);
 
   const main = `<main class="page" data-screen-label="09 Work">
   <div class="fade-up page-head" style="transition-delay:0ms">
     <div class="eyebrow">
       <span class="n">08</span>
       <span class="flow-line in" style="width:56px"></span>
-      <span>Selected · 2023 — 2026</span>
+      <span>Selected · 2022 — 2026</span>
     </div>
     <h1>Work${isEn() ? '' : '<span class="jp">工作</span>'}</h1>
-    <p class="subtitle">${isEn() ? esc(EN.work.subtitle) : `Brand collaborations and editorial projects. Click any tile to view the project.
-品牌合作與商業工作。點擊任一方塊查看專案。`}</p>
-    <div class="meta"><span>HASSELBLAD</span><span>LEICA</span><span>SONY</span><span>OPPO</span><span>GOOPI</span><span>RETO</span><span>2020 — 2026</span></div>
+    <p class="subtitle">${isEn() ? esc(EN.work.subtitle) : '這裡收錄我和品牌合作的案子：從形象照拍攝、室內攝影、3D 產品動畫，到攝影講座、線上課程與社群合作。每個方塊都連到原始貼文或影片。'}</p>
+    <div class="meta"><span>HASSELBLAD</span><span>LEICA</span><span>SONY</span><span>OPPO</span><span>GOOPI</span><span>RETO</span><span>2022 — 2026</span></div>
   </div>
 
 <section class="fade-up work-featured" style="transition-delay:0ms;${bgVars(1, 'photos/work/featured-1.webp', rel)};${bgVars(2, 'photos/work/featured-2.webp', rel)}">
   <a href="https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDY2OTM1Njg3MTE5MjI3?igsh=MTVqaG9kcG8waDNzMQ==" target="_blank" rel="noopener noreferrer">
     <div class="ft-title">Selected Works Vol.1</div>
     <div class="ft-sub">${isEn() ? esc(EN.work.featuredSub) : '品牌合作與創作精選'}</div>
+    <div class="ft-note">${isEn() ? esc(EN.work.featuredNote) : '點進去可看全部 IG 精選動態'}</div>
   </a>
   <a href="https://www.instagram.com/s/aGlnaGxpZ2h0OjE4MDAwMDA1OTA5NTk3Mjcz?igsh=MXhhZnRoamoxc2QxZw==" target="_blank" rel="noopener noreferrer">
     <div class="ft-title">Selected Works Vol.2</div>
     <div class="ft-sub">${isEn() ? esc(EN.work.featuredSub) : '品牌合作與創作精選'}</div>
+    <div class="ft-note">${isEn() ? esc(EN.work.featuredNote) : '點進去可看全部 IG 精選動態'}</div>
   </a>
 </section>
 

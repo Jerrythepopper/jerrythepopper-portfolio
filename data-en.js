@@ -72,8 +72,24 @@
     // ---------- Work ----------
     work: {
       // 中文版 subtitle 是「英文一行＋中文一行」，英文版只留英文那行
-      subtitle: 'Brand collaborations and editorial projects. Click any tile to view the project.',
+      /* 11-04 站主改寫 Work 開頭與每格說明（中文為站主定稿），以下英文是本次新譯，
+         與 ctaTitle 同屬「文案檔尚未收錄」的記錄有案例外。 */
+      subtitle: 'A collection of my brand work, from image shoots, interior photography and 3D product animation to photography talks, online courses and social media collaborations. Each tile links to the original post or video.',
       featuredSub: 'Selected collaborations and personal work',
+      featuredNote: 'Opens the full Instagram highlight',
+      // 磚上「我做了什麼」那行：key＝build-site.js WORK_TILES 的中文 d
+      descs: {
+        '新機形象與社群合作': 'Launch imagery and social campaign',
+        '品牌社群合作': 'Social media collaboration',
+        '品牌周年 3D 動畫製作': 'Anniversary 3D animation',
+        '品牌新品 3D 動畫製作': 'New product 3D animation',
+        '新光攝影獎講師': 'Speaker, Shin Kong Photography Award',
+        '品牌新車巡迴攝影': 'New model roadshow photography',
+        '講者': 'Speaker',
+        'Sony 台灣 YouTube 頻道合作攝影師': 'Featured photographer, Sony Taiwan YouTube',
+        '線上底片攝影課程': 'Online film photography course',
+        '建案室內空間攝影': 'Interior photography for a residential development',
+      },
       /* 磚牆後的「找我合作」出口（站主 2026-08-11 核准新增）。
          這兩句是本次新寫的 CTA 文案，不是 _content-en-draft.md 的既有句
          ——本檔「逐字照抄文案檔」的紀律在此開一個記錄有案的例外，
@@ -141,7 +157,7 @@
       threeDTitle: '3D & CGI Visual Work | Jerrythepopper',
       threeDDesc: 'Experiments on the border of photography and 3D: CGI scene design and mixed-reality visual work from Taipei.',
       // 以下三條沒有站主指定版，照中文版的組字規則轉英文（全形｜換半形 |）
-      workDesc: 'Selected brand collaborations and commissioned work. Hasselblad, Leica, Sony, Oppo, Goopi, Reto, 2020 — 2026.',
+      workDesc: 'Selected brand collaborations and commissioned work. Image shoots, interior photography, 3D product animation, talks and online courses. Hasselblad, OPPO, Sony, GIANT, Goopi, Reto, 2022 — 2026.',
       notFoundDesc: 'There is no such page.',
       siteSuffix: 'Jerrythepopper Photography',
     },

@@ -647,6 +647,15 @@ button { font: inherit; letter-spacing: inherit; }
   text-transform: uppercase;
   color: rgba(255,255,255,0.78);
 }
+/* 11-04：精選兩格補一行「點進去看全部 IG 精選動態」，比 ft-sub 再退一階 */
+.work-featured a .ft-note {
+  position: relative; z-index: 2;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: rgba(255,255,255,0.6);
+  margin-top: 10px;
+}
 
 .work-grid {
   max-width: var(--container-max);
