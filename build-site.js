@@ -20,6 +20,7 @@ const SITE_ORIGIN = 'https://www.jerrythepopper.com';
 const ROOT = __dirname;
 const DIST = path.join(ROOT, 'dist');
 const SRC = path.join(ROOT, 'src-site');
+const { selfHostFonts } = require('./fonts-selfhost');   // 2026-11-04 字型自託管（翻案 D16）
 
 // ---------- data.js（用假 window 取出三個常數） ----------
 const win = {};
@@ -516,7 +517,7 @@ function fontLinks(groups) {
   const rest = chunkUrls(groups.rest, 'rest');
   const links = [`<link rel="stylesheet" href="${FONT_LATIN_HREF}">`];
   for (const u of vis.concat(rest)) links.push(`<link rel="stylesheet" href="${u}">`);
-  return { html: links.join('\n'), visChunks: vis.length, restChunks: rest.length, visible: groups.visible.length, rest: groups.rest.length };
+  return { urls: [FONT_LATIN_HREF, ...vis, ...rest], html: links.join('\n'), visChunks: vis.length, restChunks: rest.length, visible: groups.visible.length, rest: groups.rest.length };
 }
 
 function head(o) {
@@ -567,8 +568,6 @@ ${ogDims}<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:description" content="${esc(o.desc)}">
 <meta name="twitter:image" content="${esc(ogAbs)}">
 <link rel="icon" type="image/svg+xml" href="${o.rel}favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 ${FONT_LINKS_PLACEHOLDER}
 <link rel="stylesheet" href="${o.rel}styles.css?v=${ASSET_V}">
 <noscript><style>.fade-up{opacity:1;transform:none}.hero-title .ch{opacity:1;transform:none;animation:none}</style></noscript>
@@ -1716,11 +1715,18 @@ async function build() {
   const siteJsSrc = fs.readFileSync(path.join(SRC, 'site.js'), 'utf8');
   const cssSrc = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8') + fs.readFileSync(path.join(SRC, 'patch.css'), 'utf8');
   const fl = fontLinks(collectCharGroups(htmlFiles.map((f) => fs.readFileSync(f, 'utf8')), siteJsSrc, cssSrc));
+  /* 2026-11-04 起不再輸出 Google Fonts <link>：同一組子集連結改由 fonts-selfhost.js 在 build 期
+     抓回 woff2 存 dist/fonts/，@font-face 內嵌進每頁 <head>（零外部請求、少 4 支擋算繪 CSS）。
+     fl.html（舊的 <link> 版）留在回傳值裡只供對照，不再寫進頁面。 */
+  const fh = await selfHostFonts(fl.urls, DIST);
+  const fontHtml = `<style id="fonts">${fh.css}</style>`;
   for (const f of htmlFiles) {
     const h = fs.readFileSync(f, 'utf8');
     if (!h.includes(FONT_LINKS_PLACEHOLDER)) throw new Error('字型連結佔位符不見了：' + f);
-    fs.writeFileSync(f, h.replace(FONT_LINKS_PLACEHOLDER, () => fl.html), 'utf8');
+    fs.writeFileSync(f, h.replace(FONT_LINKS_PLACEHOLDER, () => fontHtml), 'utf8');
   }
+  console.log(`字型自託管：${fh.files} 檔 → dist/fonts/（新寫入 ${(fh.bytes / 1024).toFixed(1)} KB` +
+    `${fh.cached ? `，其中 ${fh.cached} 項讀自 fonts-cache 離線快取` : ''}）；內嵌 @font-face ${(fontHtml.length / 1024).toFixed(1)} KB/頁`);
   console.log(`字型子集：可見 ${fl.visible} 字 → Noto ${fl.visChunks} 條（首屏會拉）＋僅屬性 ${fl.rest} 字 → ${fl.restChunks} 條（按需）＋拉丁 1 條；每條 ≤${FONT_TEXT_MAX} 字／≤${FONT_URL_MAX} bytes；build 後跑 node verify-fonts.js 實抓確認`);
 
   // styles.css = 既有檔原樣（剝除 @import，字型改由 head() 的 preconnect+<link>

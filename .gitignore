@@ -20,3 +20,6 @@ _review-uiux-*/phone-debug.log
 
 # FQP 商品頁原型＝工作區（含備份與 35 MB 沒用到的圖），不進版控；上線的來源是 static/3daddon/fqp/
 _proto-fqp/
+
+# 字型自託管的下載快取（fonts-selfhost.js；網路失敗時 build 讀這裡，產物在 dist/fonts/）
+fonts-cache/
